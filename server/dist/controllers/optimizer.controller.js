@@ -388,16 +388,43 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Calculate cutting fee (same as in PDF quote - R70 per board)
         const cuttingFeePerBoard = 70; // R70 per board
         const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+        // Get banking details based on branch trading_as (fx_branch)
+        let bankingDetails = null;
+        if (branchData && branchData.trading_as) {
+            console.log(`Fetching banking details for branch: ${branchData.trading_as}`);
+            const bankingResult = yield supabase_service_1.default.getBankingDetailsByBranch(branchData.trading_as);
+            if (bankingResult.success && bankingResult.data) {
+                console.log('Banking details found:', bankingResult.data.bank);
+                bankingDetails = bankingResult.data;
+            }
+            else {
+                console.warn(`Banking details not found for branch: ${branchData.trading_as}`);
+                console.warn('Error or message:', bankingResult.error || 'No data returned');
+            }
+        }
+        else {
+            console.warn('Cannot fetch banking details: No branch data or trading_as field provided');
+        }
         // Generate PDF with all required data
         const quoteData = {
+            quoteId, // Include the quote ID for reference
             customerName,
             projectName,
+            date: now.toISOString(),
             sections: pdfSections,
             grandTotal,
             totalCuttingFee,
             phoneNumber,
-            branchData
+            branchData,
+            bankingDetails // Add the matched banking details
         };
+        console.log(`Generating PDF quote with ID: ${quoteId}`);
+        if (bankingDetails) {
+            console.log(`Using banking details for: ${bankingDetails.bank}, Account: ${bankingDetails.account_holder}`);
+        }
+        else {
+            console.log('No banking details found, using fallback information');
+        }
         const pdfResult = yield (0, optimizer_service_1.generateQuotePdf)(quoteData);
         const pdfId = pdfResult.id;
         // Upload PDF to storage and get URL

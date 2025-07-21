@@ -588,84 +588,6 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       return;
     }
     
-    // Enhanced validation for quantity values >100
-    // Check for suspiciously high quantities that might be errors
-    const highQuantityPieces = cutPieces.filter(piece => piece.quantity && piece.quantity > 100);
-    
-    console.log('High quantity pieces found:', highQuantityPieces.length);
-    if (highQuantityPieces.length > 0) {
-      // Find the first piece with high quantity
-      const firstHighQuantityPiece = highQuantityPieces[0];
-      const pieceIndex = cutPieces.findIndex(piece => piece.id === firstHighQuantityPiece.id);
-      
-      // Set validation state to true to show validation errors
-      console.log('Setting validation state to true for quantity validation');
-      setIsValidating(true);
-      
-      // Scroll to the first high quantity field
-      const quantityFieldId = `quantity-field-${pieceIndex}`;
-      console.log('Looking for quantity field with ID:', quantityFieldId);
-      const quantityFieldElement = document.getElementById(quantityFieldId);
-      
-      if (quantityFieldElement) {
-        console.log('Found quantity field element, scrolling to it');
-        // Scroll to the element with smooth behavior
-        quantityFieldElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
-        
-        // Add a visual highlight to the field
-        quantityFieldElement.style.boxShadow = '0 0 8px 2px rgba(255, 152, 0, 0.6)';
-        
-        // Add a slight delay then focus the field
-        setTimeout(() => {
-          // Find the input element within the field
-          const inputElement = quantityFieldElement.querySelector('input') as HTMLInputElement;
-          if (inputElement) {
-            console.log('Focusing and animating quantity input element');
-            inputElement.focus();
-            inputElement.select(); // Select the text for easy editing
-            // Add a pulsing animation to draw attention
-            inputElement.animate(
-              [
-                { boxShadow: '0 0 0 0 rgba(255, 152, 0, 0.7)' },
-                { boxShadow: '0 0 0 10px rgba(255, 152, 0, 0)' },
-              ],
-              {
-                duration: 1500,
-                iterations: 3,
-              }
-            );
-          } else {
-            console.log('Could not find input element within quantity field');
-          }
-          
-          // Remove the highlight after animation completes
-          setTimeout(() => {
-            if (quantityFieldElement) {
-              quantityFieldElement.style.boxShadow = '';
-            }
-            // Keep validation state active for a while to ensure user sees the error
-            setTimeout(() => {
-              setIsValidating(false);
-            }, 10000); // Reset validation state after 10 seconds
-          }, 4500); // 1500ms * 3 iterations
-        }, 500);
-      } else {
-        console.log('Could not find quantity field element with ID:', quantityFieldId);
-        // Even if we can't find the element, keep validation state active for a while
-        setTimeout(() => {
-          setIsValidating(false);
-        }, 10000); // Reset validation state after 10 seconds
-      }
-      
-      setSnackbarMessage(`⚠️ Quantity ${firstHighQuantityPiece.quantity} seems unusually high. Please verify this is correct.`);
-      setSnackbarSeverity('warning');
-      setSnackbarOpen(true);
-      return;
-    }
-    
     // All validations passed, open the confirmation dialog
     setConfirmationDialogOpen(true);
   };
@@ -681,33 +603,17 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       const sections = getSections();
       
       // Prepare data for the backend
-      const sectionData = sections.map(section => {
-        console.log(`\n=== FRONTEND SECTION DEBUG: ${section.material} ===`);
-        console.log(`Processing ${section.pieces.length} pieces:`);
-        
-        const cutPieces = section.pieces.map(piece => {
-          const edgingResult = calculateEdging(piece);
-          console.log(`\nPiece: ${piece.name || 'Unnamed'} (${piece.width}x${piece.length}mm, qty: ${piece.quantity || 1})`);
-          console.log(`Tick boxes: L1=${piece.lengthTick1}, L2=${piece.lengthTick2}, W1=${piece.widthTick1}, W2=${piece.widthTick2}`);
-          console.log(`Calculated edging: "${edgingResult}"`);
-          
-          return {
-            id: piece.id,
-            width: piece.width || 0,
-            length: piece.length || 0,
-            amount: piece.quantity || 1,
-            edging: edgingResult, // This now returns a string like "L1,W2"
-            name: piece.name
-          };
-        });
-        
-        console.log(`=== END FRONTEND SECTION DEBUG ===\n`);
-        
-        return {
-          material: section.material,
-          cutPieces
-        };
-      });
+      const sectionData = sections.map(section => ({
+        material: section.material,
+        cutPieces: section.pieces.map(piece => ({
+          id: piece.id,
+          width: piece.width || 0,
+          length: piece.length || 0,
+          amount: piece.quantity || 1,
+          edging: calculateEdging(piece), // This now returns a string like "L1,W2"
+          name: piece.name
+        }))
+      }));
       
       // Prepare the request payload
       const quotePayload = {
@@ -1340,10 +1246,7 @@ Thank you for your business!
                             </TableCell>
                           </TableRow>
                         ) : (
-                          section.pieces.map((piece, pieceIndex) => {
-                            // Calculate global piece index for validation targeting
-                            const globalPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
-                            return (
+                          section.pieces.map((piece) => (
                             <TableRow key={piece.id}>
                               {!isConfirmed && (
                                 <TableCell>
@@ -1387,7 +1290,6 @@ Thank you for your business!
                               </TableCell>
                               <TableCell align="right">
                                 <TextField
-                                  id={`quantity-field-${globalPieceIndex}`}
                                   variant="standard"
                                   value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1}
                                   onChange={(e) => handleCutPieceChange(piece.id, 'quantity', Number(e.target.value))}
@@ -1429,8 +1331,7 @@ Thank you for your business!
                                 </>
                               )}
                             </TableRow>
-                          );
-                          })
+                          ))
                         )}
                       </TableBody>
                     </Table>

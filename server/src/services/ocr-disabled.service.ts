@@ -105,8 +105,6 @@ const extractFromHDSTable = (ocrText: string): { dimensions: Dimension[], unit: 
         
         // Analyze the found numbers using positional logic for HDS table structure
         // HDS Table: Height | Width | Qty | Edging Length | Edging Width | Pot Holes
-        console.log(`  → DEBUG: All found numbers in order:`, foundNumbers);
-        
         if (foundNumbers.length >= 3) {
           // For HDS tables, we expect the first 3 numbers to be: Height, Width, Quantity
           const potentialHeight = foundNumbers[0];
@@ -125,38 +123,24 @@ const extractFromHDSTable = (ocrText: string): { dimensions: Dimension[], unit: 
             height = potentialHeight;
             width = potentialWidth;
             
-            // CRITICAL FIX: Be more strict about quantity validation
-            // Only use 3rd position if it's clearly a quantity (1-20 range, not a dimension)
-            if (potentialQuantity >= 1 && potentialQuantity <= 20 && 
-                potentialQuantity !== potentialHeight && potentialQuantity !== potentialWidth) {
+            // For quantity, use the 3rd number if it's reasonable (1-50 range)
+            // Extended range to 50 to handle edge cases but prefer smaller values
+            if (potentialQuantity >= 1 && potentialQuantity <= 50) {
               quantity = potentialQuantity;
-              console.log(`    → ✅ Using positional quantity (3rd number): ${quantity}`);
+              console.log(`    → Using positional quantity (3rd number): ${quantity}`);
             } else {
-              console.log(`    → ⚠️ 3rd position rejected: ${potentialQuantity} (not in 1-20 range or matches dimension)`);
-              
-              // Look for ANY small number (1-20) that's NOT a dimension
-              const validQuantities = foundNumbers.filter(n => 
-                n >= 1 && n <= 20 && n !== potentialHeight && n !== potentialWidth
-              );
-              
-              console.log(`    → Valid quantity candidates:`, validQuantities);
-              
-              if (validQuantities.length > 0) {
-                quantity = validQuantities[0]; // Use first valid quantity found
-                console.log(`    → ✅ Using first valid quantity: ${quantity}`);
+              // Fallback: look for other small numbers in the sequence
+              const reasonableQuantities = foundNumbers.filter(n => n >= 1 && n <= 20);
+              if (reasonableQuantities.length > 0) {
+                quantity = Math.min(...reasonableQuantities);
+                console.log(`    → Using fallback quantity: ${quantity}`);
               } else {
-                quantity = 1; // Safe default
-                console.log(`    → ✅ No valid quantities found, using default: 1`);
+                quantity = 1;
+                console.log(`    → Using default quantity: 1`);
               }
             }
             
-            // SAFETY CHECK: Never let quantity be a dimension value
-            if (quantity === height || quantity === width) {
-              console.log(`    → ❌ SAFETY: Quantity ${quantity} matches dimension, forcing to 1`);
-              quantity = 1;
-            }
-            
-            console.log(`    → ✅ FINAL assignment - Height: ${height}, Width: ${width}, Quantity: ${quantity}`);
+            console.log(`    → Final assignment - Height: ${height}, Width: ${width}, Quantity: ${quantity}`);
           } else {
             console.log(`    → Positional validation failed - not valid dimensions`);
             console.log(`    → Height ${potentialHeight} valid: ${potentialHeight >= 50 && potentialHeight <= 3000}`);

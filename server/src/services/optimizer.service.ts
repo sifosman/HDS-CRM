@@ -1197,27 +1197,15 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   doc.text(`Project: ${projectName}`, detailsRightX + 10, detailsStartY + 50, { width: infoWidth - 20 });
   
   // Continue with main content
-  doc.y = Math.max(doc.y, detailsStartY + infoHeight + 30); // Reduced spacing for better utilization
+  doc.y = Math.max(doc.y, detailsStartY + infoHeight + 50); // Ensure we're past the details section
   
   // For each material section
   sections.forEach((section: any, index: number) => {
     const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
     
-    // IMPROVED: More intelligent page break logic
-    // For single material sections, we need to be more space-efficient
-    const isSingleSection = sections.length === 1;
-    // Reduced space requirement for single sections to prevent pushing to next page
-    const spaceNeeded = isSingleSection ? 200 : 250; 
-    const availableSpace = doc.page.height - doc.y - 50; // Account for bottom margin
-    
-    // Only add page break if we truly don't have enough space
-    if (availableSpace < spaceNeeded && index > 0) {
-      console.log(`Adding page break for section ${index + 1}, available space: ${availableSpace}, needed: ${spaceNeeded}`);
+    // Check if we need a new page for this section (estimate 200px needed)
+    if (doc.y > doc.page.height - 250) {
       doc.addPage();
-    } else if (isSingleSection) {
-      console.log(`Single section detected, keeping on first page. Available space: ${availableSpace}`);
-      // For single sections, use a more compact layout
-      doc.moveDown(0.5); // Reduced spacing for better first page utilization
     }
     
     // Material header with clearer styling
@@ -1390,23 +1378,13 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   
   // ===== CONTACT & PAYMENT INFORMATION SECTION =====
   // Check if we need to add a page break based on remaining space
-  // Use a more aggressive space optimization strategy for single sections
-  // Note: We're reusing the isSingleSection variable that was defined earlier
-  // Reduce required height for single section layouts to fit on first page
-  const contactInfoHeight = sections.length === 1 ? 200 : 300;
+  const contactInfoHeight = 300; // Approximate height needed for contact & banking info
   const remainingSpace = doc.page.height - doc.y - 50; // Space left on current page minus footer
   
   // If there's not enough room for contact info, start a new page
-  // But for single sections, try to fit on the first page if we have at least 180pt
-  const hasSingleSection = sections.length === 1;
-  if (remainingSpace < contactInfoHeight && !(hasSingleSection && remainingSpace >= 180)) {
-    console.log(`Adding page break for contact info. Available: ${remainingSpace}, needed: ${contactInfoHeight}`);
+  if (remainingSpace < contactInfoHeight) {
     doc.addPage();
     doc.y = 50; // Reset y position at top of new page
-  } else {
-    console.log(`Keeping contact info on same page. Available: ${remainingSpace}`);
-    // Use tighter spacing for single-section layouts
-    doc.moveDown(hasSingleSection ? 0.5 : 1);
   }
   
   // Add section header
@@ -1481,23 +1459,7 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // First collect all banking detail lines
   const bankingLines: string[] = [];
   if (bankingDetails && Object.keys(bankingDetails).length > 0) {
-    console.log('Using matched banking details for branch in PDF quote');
-    
-    // Define which keys to exclude and their display order
     const excludeKeys = ['id', 'created_at', 'updated_at', 'uuid', 'fx_branch'];
-    const displayOrder = [
-      'account_holder',
-      'bank',
-      'account_number', 
-      'branch_code',
-      'account_type',
-      'reference',
-      'swift_code',
-      'iban',
-      'notes'
-    ];
-    
-    // Define pretty labels for banking fields
     const prettyLabels: Record<string, string> = {
       account_holder: 'Account Holder',
       bank: 'Bank',
@@ -1507,43 +1469,26 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
       reference: 'Reference',
       swift_code: 'SWIFT Code',
       iban: 'IBAN',
-      notes: 'Notes'
+      notes: 'Notes',
       // Add more as needed
     };
-    
-    // First add keys in the preferred order
-    for (const key of displayOrder) {
-      if (bankingDetails[key]) {
-        const label = prettyLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        bankingLines.push(`${label}: ${bankingDetails[key]}`);
-      }
-    }
-    
-    // Then add any remaining keys not in the display order
     Object.keys(bankingDetails).forEach((key) => {
-      if (excludeKeys.includes(key) || displayOrder.includes(key)) return;
+      if (excludeKeys.includes(key)) return;
       const value = bankingDetails[key];
       if (!value) return;
       const label = prettyLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       bankingLines.push(`${label}: ${value}`);
     });
     
-    // Always add reference note if not already present
-    const hasReference = bankingLines.some(line => line.startsWith('Reference:'));
-    if (!hasReference && quoteId) {
-      bankingLines.push(`Reference: Quote ${quoteId}`);
-    }
-    
     // Ensure we have at least one line
     if (bankingLines.length === 0) {
       bankingLines.push('Please contact us for payment information.');
     }
   } else {
-    console.log('No banking details found, using fallback information in PDF quote');
     // Add fallback banking details
     bankingLines.push('Bank: Standard Bank');
     bankingLines.push('Account Type: Business Account');
-    bankingLines.push(`Reference: Please use your quote number ${quoteId || ''} as reference`);
+    bankingLines.push('Reference: Please use your quote number as reference');
     bankingLines.push('Please contact us for complete banking details.');
   }
   
@@ -1554,19 +1499,10 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // Move down a bit
   doc.moveDown(2);
 
-  // IMPROVED: Don't force footer to bottom for single-material quotes
-  // This was causing unnecessary blank space and page breaks
-  const isSingleSection = sections.length === 1;
-  
-  if (!isSingleSection) {
-    // For multi-section quotes, position footer at bottom
-    if (doc.y < doc.page.height - 100) {
-      doc.y = doc.page.height - 100;
-    }
-  } else {
-    // For single-section quotes, keep footer closer to content
-    console.log('Single section quote: keeping footer close to content to avoid blank pages');
-    doc.moveDown(1);
+  // Add a generic footer to the last page
+  // First make sure we're near the bottom of the page
+  if (doc.y < doc.page.height - 100) {
+    doc.y = doc.page.height - 100;
   }
   
   // Add page numbers to all pages - with enhanced error handling and logging

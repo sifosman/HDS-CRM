@@ -953,23 +953,13 @@ const generateQuotePdf = (quoteData) => {
     doc.text(`Customer: ${customerName}`, detailsRightX + 10, detailsStartY + 30, { width: infoWidth - 20 });
     doc.text(`Project: ${projectName}`, detailsRightX + 10, detailsStartY + 50, { width: infoWidth - 20 });
     // Continue with main content
-    doc.y = Math.max(doc.y, detailsStartY + infoHeight + 30); // Reduced spacing for better utilization
+    doc.y = Math.max(doc.y, detailsStartY + infoHeight + 50); // Ensure we're past the details section
     // For each material section
     sections.forEach((section, index) => {
         const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
-        // IMPROVED: More intelligent page break logic
-        // For single material sections, be more generous with space
-        // For multiple sections, be more conservative
-        const isSingleSection = sections.length === 1;
-        const spaceNeeded = isSingleSection ? 400 : 250; // More space for single sections
-        const availableSpace = doc.page.height - doc.y - 50; // Account for bottom margin
-        // Only add page break if we truly don't have enough space
-        if (availableSpace < spaceNeeded && index > 0) {
-            console.log(`Adding page break for section ${index + 1}, available space: ${availableSpace}, needed: ${spaceNeeded}`);
+        // Check if we need a new page for this section (estimate 200px needed)
+        if (doc.y > doc.page.height - 250) {
             doc.addPage();
-        }
-        else if (isSingleSection) {
-            console.log(`Single section detected, keeping on first page. Available space: ${availableSpace}`);
         }
         // Material header with clearer styling
         doc.rect(50, doc.y, doc.page.width - 100, 30)
@@ -1206,19 +1196,10 @@ const generateQuotePdf = (quoteData) => {
     doc.text(bankingText, 50, doc.y, { width: doc.page.width - 100 });
     // Move down a bit
     doc.moveDown(2);
-    // IMPROVED: Don't force footer to bottom for single-material quotes
-    // This was causing unnecessary blank space and page breaks
-    const isSingleSection = sections.length === 1;
-    if (!isSingleSection) {
-        // For multi-section quotes, position footer at bottom
-        if (doc.y < doc.page.height - 100) {
-            doc.y = doc.page.height - 100;
-        }
-    }
-    else {
-        // For single-section quotes, keep footer closer to content
-        console.log('Single section quote: keeping footer close to content to avoid blank pages');
-        doc.moveDown(1);
+    // Add a generic footer to the last page
+    // First make sure we're near the bottom of the page
+    if (doc.y < doc.page.height - 100) {
+        doc.y = doc.page.height - 100;
     }
     // Add page numbers to all pages - with enhanced error handling and logging
     try {
