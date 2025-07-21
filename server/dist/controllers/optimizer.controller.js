@@ -12,10 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendQuoteToWhatsApp = exports.uploadPdf = exports.generateQuote = exports.importIQData = exports.exportIQData = exports.downloadPdf = exports.optimizeCutting = void 0;
+exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exports.exportIQData = exports.downloadPdf = exports.optimizeCutting = void 0;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const crypto_1 = __importDefault(require("crypto"));
 const optimizer_service_1 = require("../services/optimizer.service");
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 // Optimize cutting layout
@@ -159,6 +158,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         let totalEdgingLength = 0;
         let edgingCostTotal = 0;
         let totalBoardsUsed = 0; // Track total boards used for cutting fee
+        let pdfUrl;
         for (const section of sections) {
             const { material, cutPieces } = section;
             if (!material || !cutPieces || !Array.isArray(cutPieces) || cutPieces.length === 0) {
@@ -298,25 +298,28 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 // Check each edge (L1, L2, W1, W2) and calculate edging needed
                 let pieceEdging = 0;
                 let edgingSides = [];
+                console.log(`\nPiece: ${piece.name || 'Unnamed'} (${piece.length}x${piece.width}mm, qty: ${piece.amount || 1})`);
+                console.log(`Edging data received: ${JSON.stringify(piece.edging)}`);
                 // Parse the edging field if it exists
                 // edging can be a string like "L1,W2" or a number (0 or 1)
                 const edging = piece.edging;
                 console.log(`Piece: ${piece.length}x${piece.width}mm, quantity: ${piece.amount || 1}, edging: ${JSON.stringify(edging)}`);
                 if (edging) {
                     if (typeof edging === 'string') {
-                        const sides = edging.split(',').map(s => s.trim()).filter(s => s);
-                        console.log(`  Edging sides: ${sides.join(', ')}`);
+                        const sides = edging.split(',').filter(s => s.trim()); // Filter empty strings
+                        console.log(`Parsed edging sides: [${sides.join(', ')}]`);
                         // Calculate edging length for each specified side
                         for (const side of sides) {
-                            if (side === 'L1' || side === 'L2') {
-                                pieceEdging += Number(piece.length) || 0;
-                                edgingSides.push(side);
-                                console.log(`    ${side}: +${piece.length}mm`);
+                            const trimmedSide = side.trim();
+                            if (trimmedSide === 'L1' || trimmedSide === 'L2') {
+                                pieceEdging += piece.length;
+                                edgingSides.push(trimmedSide);
+                                console.log(`  ${trimmedSide}: +${piece.length}mm (length side)`);
                             }
-                            else if (side === 'W1' || side === 'W2') {
-                                pieceEdging += Number(piece.width) || 0;
-                                edgingSides.push(side);
-                                console.log(`    ${side}: +${piece.width}mm`);
+                            else if (trimmedSide === 'W1' || trimmedSide === 'W2') {
+                                pieceEdging += piece.width;
+                                edgingSides.push(trimmedSide);
+                                console.log(`  ${trimmedSide}: +${piece.width}mm (width side)`);
                             }
                         }
                     }
@@ -324,15 +327,18 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         // If edging is just set to 1 or true, assume all 4 sides
                         pieceEdging = 2 * (Number(piece.length) || 0) + 2 * (Number(piece.width) || 0);
                         edgingSides = ['L1', 'L2', 'W1', 'W2'];
-                        console.log(`  All sides: 2×${piece.length} + 2×${piece.width} = ${pieceEdging}mm`);
+                        console.log(`  All sides: ${pieceEdging}mm (2x${piece.length} + 2x${piece.width})`);
+                    }
+                    else {
+                        console.log(`  No edging required`);
                     }
                 }
                 // Multiply by quantity
-                const pieceEdgingBeforeQty = pieceEdging;
+                const beforeQuantity = pieceEdging;
                 pieceEdging *= (piece.amount || 1);
-                console.log(`  Before quantity: ${pieceEdgingBeforeQty}mm, after quantity (×${piece.amount || 1}): ${pieceEdging}mm`);
+                console.log(`  Before quantity: ${beforeQuantity}mm, After quantity (x${piece.amount || 1}): ${pieceEdging}mm`);
                 totalEdging += pieceEdging;
-                console.log(`  Running total edging: ${totalEdging}mm`);
+                console.log(`  Running total: ${totalEdging}mm`);
                 // Add to edging breakdown if edging is required
                 if (pieceEdging > 0) {
                     edgingBreakdown.push({
@@ -344,28 +350,14 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     });
                 }
             }
-            console.log(`\n=== EDGING COST CALCULATION ===`);
-            console.log(`Total edging required: ${totalEdging}mm`);
-            console.log(`Converting to meters: ${totalEdging}mm ÷ 1000 = ${totalEdging / 1000}m`);
-            // Calculate edging cost (R14 per metre)
-            const edgingCost = (totalEdging / 1000) * 14;
-            console.log(`Edging cost: ${totalEdging / 1000}m × R14/m = R${edgingCost.toFixed(2)}`);
-            // Add to total edging length accumulator
-            totalEdgingLength += totalEdging;
-            console.log(`Total edging length across all sections: ${totalEdgingLength}mm`);
-            // Add edging cost to grand total
-            const grandTotalBefore = grandTotal;
-            grandTotal += edgingCost;
-            edgingCostTotal += edgingCost;
-            console.log(`Grand total before edging: R${grandTotalBefore.toFixed(2)}, after adding R${edgingCost.toFixed(2)}: R${grandTotal.toFixed(2)}`);
-            console.log(`Total edging cost across all sections: R${edgingCostTotal.toFixed(2)}`);
-            console.log(`=== END EDGING CALCULATION ===\n`);
-            // 10. Format sizes for display (use adjusted dimensions)
-            const boardSize = `${length}×${width}${sizeParts[2] ? '×' + sizeParts[2] : ''}`;
+            console.log(`\n=== FINAL EDGING TOTALS for ${material} ===`);
+            console.log(`Total edging length: ${totalEdging}mm`);
+            console.log(`Total edging cost: R${((totalEdging / 1000) * 14).toFixed(2)}`);
+            console.log(`=== END EDGING DEBUG ===\n`);
             // 11. Add to processed sections with wastage and edging info
             const processedSection = {
                 material,
-                boardSize,
+                boardSize: `${length}x${width}`,
                 boardsNeeded,
                 pricePerBoard: priceNum,
                 sectionTotal,
@@ -379,12 +371,11 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 edging: {
                     length: totalEdging,
                     totalEdging: totalEdging, // Add this for PDF compatibility
-                    cost: edgingCost
+                    cost: ((totalEdging / 1000) * 14).toFixed(2)
                 }
             };
             processedSections.push(processedSection);
-            // 12. Add section details for PDF with enhanced information
-            pdfSections.push(Object.assign(Object.assign({}, processedSection), { cutPieces: cutPieces.map(p => ({
+            pdfSections.push(Object.assign(Object.assign({}, processedSection), { cutPieces: cutPieces.map((p) => ({
                     length: p.length,
                     width: p.width,
                     quantity: p.amount || 1,
@@ -397,89 +388,23 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Calculate cutting fee (same as in PDF quote - R70 per board)
         const cuttingFeePerBoard = 70; // R70 per board
         const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
-        // Add cutting fee to grand total
-        grandTotal += totalCuttingFee;
-        // Debug log to confirm totals before PDF generation
-        console.log('Quote summary for PDF:', { grandTotal, totalCuttingFee, totalBoardsUsed, processedSections });
-        // 8. Generate PDF quotation (now returns buffer instead of file path)
-        // Fetch banking details for the selected branch (match trading_as to fx_branch)
-        let bankingDetails = null;
-        if (branchData && branchData.trading_as) {
-            const bankingRes = yield supabase_service_1.default.getBankingDetailsByBranch(branchData.trading_as);
-            if (bankingRes.success) {
-                bankingDetails = bankingRes.data;
-            }
-            else {
-                console.warn(`No banking details found for branch ${branchData.trading_as}:`, bankingRes.error);
-            }
-        }
-        const pdfResult = yield (0, optimizer_service_1.generateQuotePdf)({
-            quoteId: quoteId,
+        // Generate PDF with all required data
+        const quoteData = {
             customerName,
             projectName,
-            date: new Date().toLocaleDateString(),
             sections: pdfSections,
             grandTotal,
-            branchData: branchData || null,
-            bankingDetails: bankingDetails,
-            edgingLength: totalEdgingLength, // Total in mm
-            edgingCost: edgingCostTotal // Total cost
-        });
-        // 9. Upload PDF to Supabase "hdsquotes" bucket and get public URL
-        console.log(`Uploading quote PDF to Supabase storage (quoteId: ${quoteId})...`);
-        // Create filename for storage
-        const pdfFilename = `quote_${quoteId}_${Date.now()}.pdf`;
-        // Upload the PDF buffer to the Supabase "hdsquotes" bucket
-        const uploadResult = yield supabase_service_1.default.uploadQuotePdf(pdfResult.buffer, pdfFilename);
-        if (!uploadResult.success) {
-            console.error('Error uploading PDF to Supabase:', uploadResult.error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to upload quote PDF to storage',
-                error: uploadResult.error
-            });
-        }
-        // Get the public URL from the upload result
-        const pdfUrl = uploadResult.publicUrl;
-        // Keep this as a fallback in case Supabase upload fails
-        // (Not needed now, but commented out for potential debugging/rollback)
-        // const pdfBase64 = pdfResult.buffer.toString('base64');
-        // const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
-        console.log(`PDF successfully uploaded to Supabase with URL: ${pdfUrl}`);
-        // Save quote in database with the PDF URL
-        try {
-            console.log('Saving quote data to Supabase database...');
-            const quoteData = {
-                quote_id: quoteId, // Match the field name used in the createQuote method
-                customer_name: customerName,
-                project_name: projectName,
-                phone_number: phoneNumber || null,
-                total_amount: grandTotal,
-                pdf_url: pdfUrl,
-                branch_data: branchData || null,
-                created_at: new Date().toISOString(),
-                status: 'pending',
-                sections: JSON.stringify(processedSections) // Store sections as JSON string
-            };
-            const saveResult = yield supabase_service_1.default.createQuote(quoteData);
-            if (!saveResult.success) {
-                console.warn('Failed to save quote to database:', saveResult.error);
-                // Continue anyway as we still have the PDF URL and can return it to the client
-            }
-            else {
-                console.log('Quote saved to database successfully');
-            }
-        }
-        catch (dbError) {
-            console.error('Error saving quote to database:', dbError);
-            // Continue anyway as we still have the PDF URL and can return it to the client
-        }
-        // Send WhatsApp message if phone number provided
-        if (phoneNumber) {
-            // TODO: Send WhatsApp message with quote details and PDF link
-            console.log(`Would send WhatsApp to ${phoneNumber} with quote ${quoteId}`);
-        }
-        // Return the processed data
+            totalCuttingFee,
+            phoneNumber,
+            branchData
+        };
+        const pdfResult = yield (0, optimizer_service_1.generateQuotePdf)(quoteData);
+        const pdfId = pdfResult.id;
+        // Upload PDF to storage and get URL
+        // Note: uploadQuotePdf takes fileBuffer first, then fileName
+        const uploadResult = yield supabase_service_1.default.uploadQuotePdf(pdfResult.buffer, pdfId);
+        pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
+        // Return the processed data without returning the response object
         res.status(200).json({
             success: true,
             message: 'Quote generated successfully',
@@ -496,77 +421,11 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(500).json({
             success: false,
             message: 'Error generating quote',
-            error: error instanceof Error ? error.message : String(error)
-        });
-    }
-});
-exports.generateQuote = generateQuote;
-// Upload PDF and get a shareable URL
-const uploadPdf = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { quoteId, pdfDataUrl } = req.body;
-        if (!quoteId || !pdfDataUrl) {
-            return res.status(400).json({
-                success: false,
-                message: 'Quote ID and PDF data URL are required'
-            });
-        }
-        // Check if it's a valid PDF data URL
-        if (!pdfDataUrl.startsWith('data:application/pdf')) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid PDF data URL format'
-            });
-        }
-        // Extract base64 data
-        const base64Data = pdfDataUrl.split(',')[1];
-        if (!base64Data) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid PDF data URL'
-            });
-        }
-        // Create a unique filename
-        const timestamp = Date.now();
-        const randomString = crypto_1.default.randomBytes(8).toString('hex');
-        const filename = `quote_${quoteId}_${timestamp}_${randomString}.pdf`;
-        // Ensure uploads directory exists
-        const uploadsDir = path_1.default.join(__dirname, '../../uploads');
-        if (!fs_1.default.existsSync(uploadsDir)) {
-            fs_1.default.mkdirSync(uploadsDir, { recursive: true });
-        }
-        // Write the PDF file
-        const filePath = path_1.default.join(uploadsDir, filename);
-        fs_1.default.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-        // Generate a URL for the uploaded file
-        const host = req.get('host');
-        const protocol = req.protocol;
-        const pdfUrl = `${protocol}://${host}/uploads/${filename}`;
-        // Update the quote record with the new PDF URL if needed
-        try {
-            yield supabase_service_1.default.updateQuotePdfUrl(quoteId, pdfUrl);
-        }
-        catch (updateError) {
-            console.error('Failed to update quote record with PDF URL:', updateError);
-            // Continue anyway as we still have the URL
-        }
-        return res.status(200).json({
-            success: true,
-            message: 'PDF uploaded successfully',
-            pdfUrl,
-            quoteId
-        });
-    }
-    catch (error) {
-        console.error('Error uploading PDF:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to upload PDF',
             error: (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error'
         });
     }
 });
-exports.uploadPdf = uploadPdf;
+exports.generateQuote = generateQuote;
 // Send quote to WhatsApp (legacy - now handled in the frontend)
 const sendQuoteToWhatsApp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
