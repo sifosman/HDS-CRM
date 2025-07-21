@@ -266,6 +266,115 @@ const parseOCRText = (text) => {
     };
     const lines = text.split('\n').filter(line => line.trim() !== '');
     console.log(`Processing ${lines.length} lines of text...`);
+    // Check if this is an HDS cutting list format
+    const isHDSFormat = text.includes('HDS') && text.includes('Height/Length') && text.includes('Width');
+    console.log(`Detected HDS format: ${isHDSFormat}`);
+    if (isHDSFormat) {
+        // Parse HDS table format
+        return parseHDSTableFormat(text, result);
+    }
+    else {
+        // Use existing parsing logic for simple formats
+        return parseSimpleFormat(text, result);
+    }
+};
+exports.parseOCRText = parseOCRText;
+/**
+ * Parse HDS cutting list table format
+ * @param text The OCR extracted text
+ * @param result The result structure to populate
+ * @returns Structured cutting list data
+ */
+const parseHDSTableFormat = (text, result) => {
+    console.log('Parsing HDS table format...');
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    let inTableData = false;
+    let tableStartIndex = -1;
+    // Find where the table data starts (after headers)
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        // Look for the header row or first data row
+        if (line.includes('Height/Length') || line.includes('Width') || line.includes('Qty')) {
+            tableStartIndex = i + 1; // Start after header
+            inTableData = true;
+            break;
+        }
+        // Alternative: look for first row with number pattern
+        if (/^\d+\s+/.test(line)) {
+            tableStartIndex = i;
+            inTableData = true;
+            break;
+        }
+    }
+    console.log(`Table data starts at line ${tableStartIndex}`);
+    if (tableStartIndex === -1) {
+        console.log('Could not find table start, falling back to simple parsing');
+        return parseSimpleFormat(text, result);
+    }
+    // Parse each table row
+    for (let i = tableStartIndex; i < lines.length; i++) {
+        const line = lines[i].trim();
+        // Skip empty lines and footer lines
+        if (!line || line.includes('Date:') || line.includes('Client Signed:') || line.includes('X76')) {
+            continue;
+        }
+        console.log(`Parsing table row ${i}: "${line}"`);
+        // Extract numbers from the line - HDS format typically has:
+        // No. | Height/Length | Width | Qty | Edging Length | Edging Width | Pot Holes
+        const numbers = line.match(/\d+/g);
+        if (numbers && numbers.length >= 3) {
+            // Skip the row number (first number) and extract dimensions
+            let rowNum, height, width, qty;
+            // Try to identify the pattern
+            if (numbers.length >= 4) {
+                rowNum = parseInt(numbers[0]);
+                height = parseInt(numbers[1]);
+                width = parseInt(numbers[2]);
+                qty = parseInt(numbers[3]);
+            }
+            else if (numbers.length === 3) {
+                // Sometimes row number might be missing
+                height = parseInt(numbers[0]);
+                width = parseInt(numbers[1]);
+                qty = parseInt(numbers[2]);
+            }
+            // Validate the extracted values
+            if (height && width && qty && height > 0 && width > 0 && qty > 0) {
+                // Filter out unrealistic values (likely parsing errors)
+                if (height > 10000 || width > 10000 || qty > 100) {
+                    console.log(`Skipping unrealistic values: ${height}x${width}, qty: ${qty}`);
+                    continue;
+                }
+                result.cutPieces.push({
+                    id: (0, uuid_1.v4)(),
+                    length: Math.max(height, width), // Larger dimension as length
+                    width: Math.min(height, width), // Smaller dimension as width
+                    quantity: qty,
+                    name: `Piece ${result.cutPieces.length + 1}`,
+                    description: line.trim()
+                });
+                console.log(`Added HDS cut piece: ${Math.max(height, width)}x${Math.min(height, width)}, Qty: ${qty}`);
+            }
+            else {
+                console.log(`Invalid dimensions found in line: "${line}"`);
+            }
+        }
+        else {
+            console.log(`Not enough numbers found in line: "${line}"`);
+        }
+    }
+    console.log(`HDS parsing complete. Found ${result.cutPieces.length} cut pieces.`);
+    return result;
+};
+/**
+ * Parse simple format (existing logic)
+ * @param text The OCR extracted text
+ * @param result The result structure to populate
+ * @returns Structured cutting list data
+ */
+const parseSimpleFormat = (text, result) => {
+    console.log('Parsing simple format...');
+    const lines = text.split('\n').filter(line => line.trim() !== '');
     // More robust regex patterns to find dimensions and quantities
     const dimensionPatterns = [
         // Pattern 1: 1000x500=2, 1000 x 500 = 2, 1000*500=2, etc.
@@ -338,11 +447,10 @@ const parseOCRText = (text) => {
             console.log(`No valid dimension found in line: "${line}"`);
         }
     });
-    console.log('Finished OCR text parsing.');
+    console.log('Simple format parsing complete.');
     console.log('Final extracted data:', JSON.stringify(result, null, 2));
     return result;
 };
-exports.parseOCRText = parseOCRText;
 /**
  * Send WhatsApp confirmation message with the extracted cutting list data
  * @param phoneNumber The customer's phone number

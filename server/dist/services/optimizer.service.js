@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateQuotePdf = exports.importFromIQ = exports.generateIQExport = exports.generatePdf = exports.optimizeCuttingLayout = exports.prepareOptimizationData = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
+const buffer_1 = require("buffer");
 const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 // Convert units
@@ -563,7 +564,6 @@ const generatePdf = (solution, unit, cutWidth = 3, layout = 0) => {
             .fillColor('#FFFFFF')
             .text('CUTTED PARTS', cutPiecesTitleX, cutPiecesTitleY + 8, { align: 'center', width: cutPiecesTitleWidth });
         doc.moveDown(2);
-        // Create a table-like structure for the cut pieces
         const tableTop = doc.y;
         const colWidths = [80, 80, 80, 60, 80, 80];
         const rowHeight = 25;
@@ -953,10 +953,24 @@ const generateQuotePdf = (quoteData) => {
     doc.text(`Customer: ${customerName}`, detailsRightX + 10, detailsStartY + 30, { width: infoWidth - 20 });
     doc.text(`Project: ${projectName}`, detailsRightX + 10, detailsStartY + 50, { width: infoWidth - 20 });
     // Continue with main content
-    doc.y = Math.max(doc.y, detailsStartY + infoHeight + 50); // Ensure we're past the details section
+    doc.y = Math.max(doc.y, detailsStartY + infoHeight + 30); // Reduced spacing for better utilization
     // For each material section
     sections.forEach((section, index) => {
         const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
+        // IMPROVED: More intelligent page break logic
+        // For single material sections, be more generous with space
+        // For multiple sections, be more conservative
+        const isSingleSection = sections.length === 1;
+        const spaceNeeded = isSingleSection ? 400 : 250; // More space for single sections
+        const availableSpace = doc.page.height - doc.y - 50; // Account for bottom margin
+        // Only add page break if we truly don't have enough space
+        if (availableSpace < spaceNeeded && index > 0) {
+            console.log(`Adding page break for section ${index + 1}, available space: ${availableSpace}, needed: ${spaceNeeded}`);
+            doc.addPage();
+        }
+        else if (isSingleSection) {
+            console.log(`Single section detected, keeping on first page. Available space: ${availableSpace}`);
+        }
         // Material header with clearer styling
         doc.rect(50, doc.y, doc.page.width - 100, 30)
             .fillAndStroke('#e6e6e6', '#000000');
@@ -967,16 +981,28 @@ const generateQuotePdf = (quoteData) => {
         const startY = doc.y;
         const colWidths = [200, 100, 100, 100];
         const rowHeight = 25;
+        // Check if table will fit on current page, if not start new page
+        const tableHeight = (cutPieces.length + 3) * rowHeight; // +3 for header and summary rows
+        if (doc.y + tableHeight > doc.page.height - 100) {
+            doc.addPage();
+            // Re-add material header on new page
+            doc.rect(50, doc.y, doc.page.width - 100, 30)
+                .fillAndStroke('#e6e6e6', '#000000');
+            doc.fontSize(12).fillColor('#000000')
+                .text(`Material ${index + 1}: ${material} - ${boardSize} (continued)`, 60, doc.y - 22, { align: 'left' });
+            doc.moveDown(1.5);
+        }
+        const currentStartY = doc.y;
         // Header row
-        doc.rect(50, startY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
+        doc.rect(50, currentStartY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
             .fillAndStroke('#cccccc', '#000000');
         doc.fontSize(10).fillColor('#000000');
-        doc.text('Description', 55, startY + 8, { width: colWidths[0] - 10 });
-        doc.text('Board Size', 55 + colWidths[0], startY + 8, { width: colWidths[1] - 10 });
-        doc.text('Quantity', 55 + colWidths[0] + colWidths[1], startY + 8, { width: colWidths[2] - 10 });
-        doc.text('Price', 55 + colWidths[0] + colWidths[1] + colWidths[2], startY + 8, { width: colWidths[3] - 10 });
+        doc.text('Description', 55, currentStartY + 8, { width: colWidths[0] - 10 });
+        doc.text('Board Size', 55 + colWidths[0], currentStartY + 8, { width: colWidths[1] - 10 });
+        doc.text('Quantity', 55 + colWidths[0] + colWidths[1], currentStartY + 8, { width: colWidths[2] - 10 });
+        doc.text('Price', 55 + colWidths[0] + colWidths[1] + colWidths[2], currentStartY + 8, { width: colWidths[3] - 10 });
         // Data row
-        let currentY = startY + rowHeight;
+        let currentY = currentStartY + rowHeight;
         // Safely render values even if some fields are missing in the API payload
         doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
             .stroke();
@@ -1028,7 +1054,7 @@ const generateQuotePdf = (quoteData) => {
     const pageWidth = doc.page.width - 100; // Account for margins
     doc.fontSize(16).fillColor('#000000').font('Helvetica-Bold');
     doc.text('Quote Summary', 50, doc.y, { align: 'center', width: pageWidth });
-    doc.font('Helvetica');
+    doc.font('Helvetica').fontSize(10).fillColor('#333333');
     doc.moveDown(0.5); // Reduced from 1 to minimize space
     // Create a summary table
     const summaryStartY = doc.y;
@@ -1180,10 +1206,19 @@ const generateQuotePdf = (quoteData) => {
     doc.text(bankingText, 50, doc.y, { width: doc.page.width - 100 });
     // Move down a bit
     doc.moveDown(2);
-    // Add a generic footer to the last page
-    // First make sure we're near the bottom of the page
-    if (doc.y < doc.page.height - 100) {
-        doc.y = doc.page.height - 100;
+    // IMPROVED: Don't force footer to bottom for single-material quotes
+    // This was causing unnecessary blank space and page breaks
+    const isSingleSection = sections.length === 1;
+    if (!isSingleSection) {
+        // For multi-section quotes, position footer at bottom
+        if (doc.y < doc.page.height - 100) {
+            doc.y = doc.page.height - 100;
+        }
+    }
+    else {
+        // For single-section quotes, keep footer closer to content
+        console.log('Single section quote: keeping footer close to content to avoid blank pages');
+        doc.moveDown(1);
     }
     // Add page numbers to all pages - with enhanced error handling and logging
     try {
@@ -1253,8 +1288,9 @@ const generateQuotePdf = (quoteData) => {
         // Wait for the PDF to be fully generated
         doc.on('end', () => {
             // Return the buffer and ID
+            const pdfBuffer = buffer_1.Buffer.concat(buffers);
             resolve({
-                buffer: buffers.length === 1 ? buffers[0] : buffers,
+                buffer: pdfBuffer,
                 id: pdfId
             });
         });

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.webhookDirectController = void 0;
 const axios_1 = __importDefault(require("axios"));
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
+const ocr_disabled_service_1 = require("../services/ocr-disabled.service");
 // Hard-coded webhook URL for direct testing
 const WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
 /**
@@ -122,29 +123,79 @@ exports.webhookDirectController = {
                 // Generate a unique ID for this cutlist
                 const uniqueId = new Date().getTime().toString();
                 const baseUrl = process.env.BASE_URL || 'https://hds-sifosmans-projects.vercel.app';
-                // Simple way to extract dimensions count
-                const dimensionsCount = ocrText ?
-                    ocrText.split('\n').filter((line) => /\d+\s*[xX]\s*\d+/.test(line)).length : 0;
-                // Extract potential cut pieces from OCR text
-                const cutPieces = [];
+                let cutPieces = [];
+                let dimensionsCount = 0;
                 if (ocrText) {
-                    const lines = ocrText.split('\n');
-                    for (const line of lines) {
-                        // Check if line contains dimensions (e.g., 800 x 400)
-                        if (/\d+\s*[xX]\s*\d+/.test(line)) {
-                            const match = line.match(/(\d+)\s*[xX]\s*(\d+)/);
-                            if (match) {
-                                const [_, length, width] = match;
-                                cutPieces.push({
-                                    length: parseInt(length),
-                                    width: parseInt(width),
-                                    quantity: 1,
-                                    description: line
-                                });
+                    console.log('🔍 WEBHOOK: Starting OCR dimension extraction...');
+                    console.log('OCR Text preview:', ocrText.substring(0, 200) + '...');
+                    try {
+                        // Use the robust OCR parsing logic that handles HDS tables
+                        const extractionResult = (0, ocr_disabled_service_1.extractDimensionsFromText)(ocrText);
+                        if (extractionResult && extractionResult.dimensions && extractionResult.dimensions.length > 0) {
+                            console.log(`✅ WEBHOOK: Successfully extracted ${extractionResult.dimensions.length} dimensions using OCR service`);
+                            // Convert dimensions to cut pieces format expected by Supabase
+                            cutPieces = extractionResult.dimensions.map((dim, index) => ({
+                                id: `${uniqueId}-${index}`,
+                                length: dim.length,
+                                width: dim.width,
+                                quantity: dim.quantity,
+                                material: dim.material || 'White Melamine',
+                                description: dim.description || `${dim.length}x${dim.width}`,
+                                name: dim.description || `${dim.length}x${dim.width}`
+                            }));
+                            dimensionsCount = extractionResult.dimensions.length;
+                            console.log('📊 WEBHOOK: Cut pieces prepared for Supabase:', cutPieces.map((cp) => `${cp.length}x${cp.width} (qty: ${cp.quantity})`).join(', '));
+                        }
+                        else {
+                            console.log('⚠️ WEBHOOK: OCR service returned no dimensions, falling back to basic regex');
+                            // Fallback to basic regex for non-HDS formats
+                            const lines = ocrText.split('\n');
+                            for (const line of lines) {
+                                if (/\d+\s*[xX]\s*\d+/.test(line)) {
+                                    const match = line.match(/(\d+)\s*[xX]\s*(\d+)/);
+                                    if (match) {
+                                        const [_, length, width] = match;
+                                        cutPieces.push({
+                                            id: `${uniqueId}-${cutPieces.length}`,
+                                            length: parseInt(length),
+                                            width: parseInt(width),
+                                            quantity: 1,
+                                            material: 'White Melamine',
+                                            description: line.trim(),
+                                            name: line.trim()
+                                        });
+                                    }
+                                }
                             }
+                            dimensionsCount = cutPieces.length;
                         }
                     }
+                    catch (error) {
+                        console.error('❌ WEBHOOK: Error in OCR dimension extraction:', error);
+                        // Fallback to basic regex on error
+                        const lines = ocrText.split('\n');
+                        for (const line of lines) {
+                            if (/\d+\s*[xX]\s*\d+/.test(line)) {
+                                const match = line.match(/(\d+)\s*[xX]\s*(\d+)/);
+                                if (match) {
+                                    const [_, length, width] = match;
+                                    cutPieces.push({
+                                        id: `${uniqueId}-${cutPieces.length}`,
+                                        length: parseInt(length),
+                                        width: parseInt(width),
+                                        quantity: 1,
+                                        material: 'White Melamine',
+                                        description: line.trim(),
+                                        name: line.trim()
+                                    });
+                                }
+                            }
+                        }
+                        dimensionsCount = cutPieces.length;
+                    }
                 }
+                console.log(`📈 WEBHOOK: Final cut pieces count: ${cutPieces.length}`);
+                console.log('📋 WEBHOOK: Cut pieces summary:', cutPieces.map((cp) => `${cp.length}x${cp.width}(${cp.quantity})`).join(', '));
                 // Save cutlist data to Supabase
                 const cutlistData = {
                     id: uniqueId,

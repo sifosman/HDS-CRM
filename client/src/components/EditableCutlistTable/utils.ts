@@ -1,6 +1,215 @@
 // Utility functions for EditableCutlistTable
 import type { CutPiece } from './types';
 
+// Helper function to check if a string is numeric
+function isNumeric(str: string): boolean {
+  return !isNaN(parseFloat(str)) && isFinite(parseFloat(str));
+}
+
+// Helper function to parse HDS table format
+function parseHDSTable(text: string, material: string = 'White Melamine'): Array<{ width: number; length: number; quantity: number; material: string; description: string }> {
+  console.log('=== CLIENT-SIDE HDS TABLE PARSING ===');
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const dimensionMap = new Map<string, { width: number; length: number; quantity: number; material: string; description: string }>();
+  
+  // Extract material name from the OCR text if available
+  const materialNameMatch = text.match(/Board Name:\s*([^\n]+)/i);
+  if (materialNameMatch && materialNameMatch[1]) {
+    material = materialNameMatch[1].trim();
+    console.log(`Found material name in OCR text: ${material}`);
+  }
+  
+  // Find the start of the table data (after "Qoy" or "Qty")
+  let tableStartIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].toLowerCase().includes('qoy') || lines[i].toLowerCase().includes('qty')) {
+      tableStartIndex = i + 1;
+      break;
+    }
+  }
+  
+  if (tableStartIndex === -1) {
+    console.log('No table start found');
+    console.log('=== END CLIENT-SIDE HDS TABLE PARSING ===');
+    return [];
+  }
+  
+  console.log(`Table starts at line ${tableStartIndex}`);
+  
+  // Parse HDS table using sequential pattern recognition
+  // Look for pattern: row number (1-30) → height (50-3000) → width (50-3000) → quantity (1-20)
+  const processedRows = new Set<number>();
+  
+  for (let i = tableStartIndex; i < lines.length - 3; i++) {
+    const line = lines[i];
+    
+    // Check if this line is a row number (1-30 range)
+    if (/^\d+$/.test(line)) {
+      const rowNum = parseInt(line);
+      
+      if (rowNum >= 1 && rowNum <= 30 && !processedRows.has(rowNum)) {
+        console.log(`\n=== Processing Row ${rowNum} ===`);
+        console.log(`Row ${rowNum} starts at line ${i}: "${line}"`);
+        
+        // Look for the next lines to find height, width, and quantity
+        let height: number | null = null;
+        let width: number | null = null;
+        let quantity = 1;
+        const foundNumbers: number[] = [];
+        
+        // Scan the next few lines and collect all numeric values
+        for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
+          const nextLine = lines[j].trim();
+          console.log(`  Line ${j}: "${nextLine}"`);
+          
+          if (isNumeric(nextLine)) {
+            const num = parseFloat(nextLine);
+            foundNumbers.push(num);
+            console.log(`    → Found number: ${num}`);
+          }
+          
+          // Stop if we encounter another row number (1-30)
+          if (/^\d+$/.test(nextLine)) {
+            const nextNum = parseInt(nextLine);
+            if (nextNum >= 1 && nextNum <= 30 && foundNumbers.length >= 2) {
+              console.log(`    → Next row detected (${nextNum}), stopping scan`);
+              break;
+            }
+          }
+          
+          // Stop if we have enough numbers and hit a non-numeric line
+          if (foundNumbers.length >= 3 && !isNumeric(nextLine)) {
+            break;
+          }
+        }
+        
+        console.log(`  → All found numbers for row ${rowNum}:`, foundNumbers);
+        
+        // Analyze the found numbers using positional logic for HDS table structure
+        // HDS Table: Height | Width | Qty | Edging Length | Edging Width | Pot Holes
+        console.log(`  → DEBUG: All found numbers in order:`, foundNumbers);
+        
+        if (foundNumbers.length >= 3) {
+          // For HDS tables, we expect the first 3 numbers to be: Height, Width, Quantity
+          const potentialHeight = foundNumbers[0];
+          const potentialWidth = foundNumbers[1];
+          const potentialQuantity = foundNumbers[2];
+          
+          console.log(`  → Positional analysis:`);
+          console.log(`    Position 1 (Height): ${potentialHeight}`);
+          console.log(`    Position 2 (Width): ${potentialWidth}`);
+          console.log(`    Position 3 (Qty): ${potentialQuantity}`);
+          
+          // Validate that first two numbers are reasonable dimensions
+          if (potentialHeight >= 50 && potentialHeight <= 3000 && 
+              potentialWidth >= 50 && potentialWidth <= 3000) {
+            
+            height = potentialHeight;
+            width = potentialWidth;
+            
+            // CRITICAL FIX: Be more strict about quantity validation
+            // Only use 3rd position if it's clearly a quantity (1-20 range, not a dimension)
+            if (potentialQuantity >= 1 && potentialQuantity <= 20 && 
+                potentialQuantity !== potentialHeight && potentialQuantity !== potentialWidth) {
+              quantity = potentialQuantity;
+              console.log(`    → ✅ Using positional quantity (3rd number): ${quantity}`);
+            } else {
+              console.log(`    → ⚠️ 3rd position rejected: ${potentialQuantity} (not in 1-20 range or matches dimension)`);
+              
+              // Look for ANY small number (1-20) that's NOT a dimension
+              const validQuantities = foundNumbers.filter(n => 
+                n >= 1 && n <= 20 && n !== potentialHeight && n !== potentialWidth
+              );
+              
+              console.log(`    → Valid quantity candidates:`, validQuantities);
+              
+              if (validQuantities.length > 0) {
+                quantity = validQuantities[0]; // Use first valid quantity found
+                console.log(`    → ✅ Using first valid quantity: ${quantity}`);
+              } else {
+                quantity = 1; // Safe default
+                console.log(`    → ✅ No valid quantities found, using default: 1`);
+              }
+            }
+            
+            // SAFETY CHECK: Never let quantity be a dimension value
+            if (quantity === height || quantity === width) {
+              console.log(`    → ❌ SAFETY: Quantity ${quantity} matches dimension, forcing to 1`);
+              quantity = 1;
+            }
+            
+            console.log(`    → ✅ FINAL assignment - Height: ${height}, Width: ${width}, Quantity: ${quantity}`);
+          } else {
+            console.log(`    → Positional validation failed - not valid dimensions`);
+            console.log(`    → Height ${potentialHeight} valid: ${potentialHeight >= 50 && potentialHeight <= 3000}`);
+            console.log(`    → Width ${potentialWidth} valid: ${potentialWidth >= 50 && potentialWidth <= 3000}`);
+          }
+        } else if (foundNumbers.length >= 2) {
+          // Fallback to old logic if we don't have 3+ numbers
+          console.log(`  → Insufficient numbers for positional analysis (${foundNumbers.length}), using fallback`);
+          
+          const dimensions = foundNumbers.filter(n => n >= 50 && n <= 3000);
+          const quantities = foundNumbers.filter(n => n >= 1 && n <= 20);
+          
+          if (dimensions.length >= 2) {
+            height = dimensions[0];
+            width = dimensions[1];
+            
+            if (quantities.length > 0) {
+              quantity = Math.min(...quantities);
+              console.log(`    → Using smallest quantity: ${quantity}`);
+            } else {
+              quantity = 1;
+              console.log(`    → Using default quantity: 1`);
+            }
+            
+            console.log(`    → Fallback assignment - Height: ${height}, Width: ${width}, Quantity: ${quantity}`);
+          } else {
+            console.log(`    → Insufficient dimensions found (need 2, got ${dimensions.length})`);
+          }
+        } else {
+          console.log(`    → Insufficient numbers found (need at least 2, got ${foundNumbers.length})`);
+        }
+        
+        // If we found valid dimensions, add them
+        if (height !== null && width !== null && height > 0 && width > 0) {
+          processedRows.add(rowNum);
+          
+          // Create a unique key for this dimension to avoid duplicates
+          const dimensionKey = `${height}x${width}`;
+          
+          if (dimensionMap.has(dimensionKey)) {
+            // If we already have this dimension, update the quantity
+            const existingDimension = dimensionMap.get(dimensionKey)!;
+            existingDimension.quantity += quantity;
+            console.log(`✅ Updated existing dimension ${dimensionKey} to qty=${existingDimension.quantity}`);
+          } else {
+            // Add new dimension
+            dimensionMap.set(dimensionKey, {
+              width: width,
+              length: height,
+              quantity: quantity,
+              material: material,
+              description: `${height}x${width}`
+            });
+            console.log(`✅ Added new dimension from row ${rowNum}: ${dimensionKey} qty=${quantity}`);
+          }
+        } else {
+          console.log(`❌ Row ${rowNum} skipped - insufficient dimensions (height: ${height}, width: ${width})`);
+        }
+      }
+    }
+  }
+  
+  // Convert Map to Array
+  const dimensions = Array.from(dimensionMap.values());
+  
+  console.log(`Client-side HDS parsing complete. Found ${dimensions.length} unique dimensions.`);
+  console.log('Dimensions:', dimensions);
+  console.log('=== END CLIENT-SIDE HDS TABLE PARSING ===');
+  return dimensions;
+}
+
 export function parseOcrText(ocrText: string, materialCategories: string[]): { dimensions: any[], materials: string[] } {
   if (!ocrText) return { dimensions: [], materials: [] };
   
@@ -54,6 +263,39 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
       }
     }
   }
+  
+  // If we didn't find many dimensions with standard parsing, try HDS table format
+  // Check for HDS-specific conditions
+  const hasHDSIdentifier = ocrText.toUpperCase().includes('HDS');
+  const hasTableHeaders = ocrText.includes('Height/Length') && ocrText.includes('Width') && (ocrText.includes('Qoy') || ocrText.includes('Qty'));
+  const hasNumberedRows = /^\s*\d+\s*$/m.test(ocrText); // Look for standalone row numbers
+  const hasMultipleRows = (ocrText.match(/^\s*\d+\s*$/gm) || []).length >= 2; // At least 2 row numbers
+  
+  console.log('=== HDS PARSING CONDITIONS CHECK ===');
+  console.log('Standard parsing found dimensions:', dimensions.length);
+  console.log('HDS conditions:', {
+    fewDimensions: dimensions.length <= 1,
+    hasHDSIdentifier,
+    hasTableHeaders,
+    hasNumberedRows,
+    hasMultipleRows
+  });
+  
+  if (dimensions.length <= 1 && hasHDSIdentifier && hasTableHeaders && hasNumberedRows && hasMultipleRows) {
+    console.log('✅ All HDS conditions met. Attempting HDS table parsing...');
+    
+    const hdsDimensions = parseHDSTable(ocrText);
+    if (hdsDimensions.length > dimensions.length) {
+      console.log(`✅ HDS parsing successful: found ${hdsDimensions.length} dimensions vs ${dimensions.length} from standard parsing.`);
+      dimensions.length = 0; // Clear existing dimensions
+      dimensions.push(...hdsDimensions);
+    } else {
+      console.log(`❌ HDS parsing did not improve results: ${hdsDimensions.length} vs ${dimensions.length}`);
+    }
+  } else {
+    console.log('❌ HDS parsing conditions not met - using standard parsing results');
+  }
+  console.log('=== END HDS PARSING CONDITIONS CHECK ===');
   
   // Make sure we have at least one material
   if (materials.length === 0) {

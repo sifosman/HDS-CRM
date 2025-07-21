@@ -292,6 +292,8 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Calculate edging requirements
             let totalEdging = 0;
             const edgingBreakdown = [];
+            console.log(`\n=== EDGING CALCULATION DEBUG for ${material} ===`);
+            console.log(`Cut pieces count: ${cutPieces.length}`);
             for (const piece of cutPieces) {
                 // Check each edge (L1, L2, W1, W2) and calculate edging needed
                 let pieceEdging = 0;
@@ -299,30 +301,38 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 // Parse the edging field if it exists
                 // edging can be a string like "L1,W2" or a number (0 or 1)
                 const edging = piece.edging;
+                console.log(`Piece: ${piece.length}x${piece.width}mm, quantity: ${piece.amount || 1}, edging: ${JSON.stringify(edging)}`);
                 if (edging) {
                     if (typeof edging === 'string') {
-                        const sides = edging.split(',');
+                        const sides = edging.split(',').map(s => s.trim()).filter(s => s);
+                        console.log(`  Edging sides: ${sides.join(', ')}`);
                         // Calculate edging length for each specified side
                         for (const side of sides) {
                             if (side === 'L1' || side === 'L2') {
-                                pieceEdging += piece.length;
+                                pieceEdging += Number(piece.length) || 0;
                                 edgingSides.push(side);
+                                console.log(`    ${side}: +${piece.length}mm`);
                             }
                             else if (side === 'W1' || side === 'W2') {
-                                pieceEdging += piece.width;
+                                pieceEdging += Number(piece.width) || 0;
                                 edgingSides.push(side);
+                                console.log(`    ${side}: +${piece.width}mm`);
                             }
                         }
                     }
                     else if (edging === 1 || edging === true) {
                         // If edging is just set to 1 or true, assume all 4 sides
-                        pieceEdging = 2 * piece.length + 2 * piece.width;
+                        pieceEdging = 2 * (Number(piece.length) || 0) + 2 * (Number(piece.width) || 0);
                         edgingSides = ['L1', 'L2', 'W1', 'W2'];
+                        console.log(`  All sides: 2×${piece.length} + 2×${piece.width} = ${pieceEdging}mm`);
                     }
                 }
                 // Multiply by quantity
+                const pieceEdgingBeforeQty = pieceEdging;
                 pieceEdging *= (piece.amount || 1);
+                console.log(`  Before quantity: ${pieceEdgingBeforeQty}mm, after quantity (×${piece.amount || 1}): ${pieceEdging}mm`);
                 totalEdging += pieceEdging;
+                console.log(`  Running total edging: ${totalEdging}mm`);
                 // Add to edging breakdown if edging is required
                 if (pieceEdging > 0) {
                     edgingBreakdown.push({
@@ -334,14 +344,22 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     });
                 }
             }
-            console.log(`Edging calculation: Total edging required: ${totalEdging}mm`);
+            console.log(`\n=== EDGING COST CALCULATION ===`);
+            console.log(`Total edging required: ${totalEdging}mm`);
+            console.log(`Converting to meters: ${totalEdging}mm ÷ 1000 = ${totalEdging / 1000}m`);
             // Calculate edging cost (R14 per metre)
             const edgingCost = (totalEdging / 1000) * 14;
+            console.log(`Edging cost: ${totalEdging / 1000}m × R14/m = R${edgingCost.toFixed(2)}`);
             // Add to total edging length accumulator
             totalEdgingLength += totalEdging;
+            console.log(`Total edging length across all sections: ${totalEdgingLength}mm`);
             // Add edging cost to grand total
+            const grandTotalBefore = grandTotal;
             grandTotal += edgingCost;
             edgingCostTotal += edgingCost;
+            console.log(`Grand total before edging: R${grandTotalBefore.toFixed(2)}, after adding R${edgingCost.toFixed(2)}: R${grandTotal.toFixed(2)}`);
+            console.log(`Total edging cost across all sections: R${edgingCostTotal.toFixed(2)}`);
+            console.log(`=== END EDGING CALCULATION ===\n`);
             // 10. Format sizes for display (use adjusted dimensions)
             const boardSize = `${length}×${width}${sizeParts[2] ? '×' + sizeParts[2] : ''}`;
             // 11. Add to processed sections with wastage and edging info
