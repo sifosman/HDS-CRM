@@ -397,14 +397,18 @@ export function normalizeCutPieces(rawPieces: any[], DEFAULT_MATERIAL_CATEGORIES
       // First, check if quantity is already set in the piece data
       // If not, extract it from the description
       let quantity = piece.quantity;
-      if (quantity === undefined || quantity === null || quantity === 1) {
+      if (quantity === undefined || quantity === null) {
+        // Only extract from description if quantity is truly missing
         const extractedQty = extractQuantityFromDescription(description);
-        if (extractedQty !== null && extractedQty > 1) {
+        if (extractedQty !== null && extractedQty > 0) {
           quantity = extractedQty;
           console.log(`Extracted quantity ${quantity} from description: "${description}"`);
         } else {
           quantity = 1; // Default to 1 if no quantity found
         }
+      } else {
+        // Use the quantity that was already parsed from the backend
+        console.log(`Using existing quantity ${quantity} from backend parsing`);
       }
       
       // Create the normalized piece with the correct quantity

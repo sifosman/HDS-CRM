@@ -1120,31 +1120,26 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
     pdfBuffer = (buffers as any[]).length === 1 ? buffers[0] : buffers;
   });
   
-  // Add HDS branding header
-  doc.rect(50, 50, doc.page.width - 100, 60)
+  // Add compact HDS branding header
+  doc.rect(50, 50, doc.page.width - 100, 40)
      .fillAndStroke('#003366', '#000000');
      
-  doc.fontSize(24)
+  doc.fontSize(18)
      .fillColor('#FFFFFF')
-     .text('HDS Group Quotation', 50, 65, { align: 'center', width: doc.page.width - 100 });
+     .text('HDS Group Quotation', 50, 62, { align: 'center', width: doc.page.width - 100 });
   
   // Set default text color to solid black for all content
   doc.fillColor('#000000');
   
-  // Add quote details
-  doc.moveDown(1.5);
-  doc.fontSize(12).fillColor('#000000');
+  // Add quote details in a more compact layout
+  doc.fontSize(10).fillColor('#000000');
+  const headerY = 100; // Start right after the header
   
-  // Create a two-column layout for quote details
-  const detailsStartY = doc.y;
-  const detailsLeftWidth = 250;
-  const detailsRightX = 300;
-  
-  // Left column: Quote details
-  doc.text(`Quote Reference: ${pdfId}`, 50, detailsStartY);
-  doc.text(`Date: ${new Date(date).toLocaleDateString()}`, 50, detailsStartY + 20);
-  doc.text(`Customer: ${customerName}`, 50, detailsStartY + 40);
-  doc.text(`Project: ${projectName}`, 50, detailsStartY + 60);
+  // Create a compact single-row layout for quote details
+  doc.text(`Quote: ${pdfId}`, 50, headerY);
+  doc.text(`Date: ${new Date(date).toLocaleDateString()}`, 150, headerY);
+  doc.text(`Customer: ${customerName}`, 280, headerY);
+  doc.text(`Project: ${projectName}`, 450, headerY);
   
   // Calculate grand total and edging costs first so we can display on first page
   const EDGING_PRICE_PER_METER = 14; // R14 per meter
@@ -1183,28 +1178,15 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // Calculate final grand total with edging and cutting fee included
   const finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
   
-  // Right column: Project information only (grand total will be moved to the bottom)
-  const infoWidth = 200;
-  const infoHeight = 80;
-  
-  doc.rect(detailsRightX, detailsStartY, infoWidth, infoHeight)
-     .fillAndStroke('#e6e6e6', '#000000');
-  
-  doc.fontSize(14).fillColor('#000000');
-  doc.text('PROJECT DETAILS', detailsRightX + 10, detailsStartY + 10, { align: 'center', width: infoWidth - 20 });
-  doc.fontSize(12).fillColor('#000000');
-  doc.text(`Customer: ${customerName}`, detailsRightX + 10, detailsStartY + 30, { width: infoWidth - 20 });
-  doc.text(`Project: ${projectName}`, detailsRightX + 10, detailsStartY + 50, { width: infoWidth - 20 });
-  
-  // Continue with main content
-  doc.y = Math.max(doc.y, detailsStartY + infoHeight + 50); // Ensure we're past the details section
+  // Set starting position for material sections (compact layout)
+  doc.y = headerY + 30; // Start material sections right after header
   
   // For each material section
   sections.forEach((section: any, index: number) => {
     const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
     
-    // Check if we need a new page for this section (estimate 200px needed)
-    if (doc.y > doc.page.height - 250) {
+    // Check if we need a new page for this section (estimate 150px needed for material section)
+    if (doc.y > doc.page.height - 200) {
       doc.addPage();
     }
     
@@ -1217,23 +1199,26 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
     
     doc.moveDown(1.5);
     
-    // Create a table for this section's details
+    // Create a compact table for this section's details
     const startY = doc.y;
     const colWidths = [200, 100, 100, 100];
-    const rowHeight = 25;
+    const rowHeight = 20; // Reduced from 25 to 20 for more compact layout
+    
+    // Estimate table height more accurately (material info + edging + totals)
+    const estimatedRows = 4; // Header + data + board total + section total (edging if present)
+    const tableHeight = estimatedRows * rowHeight;
     
     // Check if table will fit on current page, if not start new page
-    const tableHeight = (cutPieces.length + 3) * rowHeight; // +3 for header and summary rows
-    if (doc.y + tableHeight > doc.page.height - 100) {
+    if (doc.y + tableHeight > doc.page.height - 80) {
       doc.addPage();
       // Re-add material header on new page
-      doc.rect(50, doc.y, doc.page.width - 100, 30)
+      doc.rect(50, doc.y, doc.page.width - 100, 25)
          .fillAndStroke('#e6e6e6', '#000000');
       
       doc.fontSize(12).fillColor('#000000')
-         .text(`Material ${index + 1}: ${material} - ${boardSize} (continued)`, 60, doc.y - 22, { align: 'left' });
+         .text(`Material ${index + 1}: ${material} - ${boardSize} (continued)`, 60, doc.y - 18, { align: 'left' });
       
-      doc.moveDown(1.5);
+      doc.moveDown(1);
     }
     
     const currentStartY = doc.y;
@@ -1304,26 +1289,25 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
       doc.text(`R ${combinedTotal}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
     }
     
-    // Optimization statistics section has been removed as requested
-    
-    // We've already included edging in the board section, so we don't need a separate edging summary
-    
-    doc.moveDown(2);
-    
-    // Cutting diagrams section has been removed as requested
-    
-    doc.moveDown(2);
+    // Minimal spacing between sections for compact layout
+    doc.moveDown(0.5);
   });
   
-  // Add quote summary (moved up with minimal spacing to maximize page use)
-  doc.moveDown(1); // Reduced from 2 to minimize space
+  // Check if we need a new page for the quote summary
+  const summaryHeight = 200; // Estimate height needed for summary
+  if (doc.y > doc.page.height - summaryHeight) {
+    doc.addPage();
+  }
+  
+  // Add quote summary with minimal spacing
+  doc.moveDown(0.5);
   
   // Center the Quote Summary headline properly
   const pageWidth = doc.page.width - 100; // Account for margins
-  doc.fontSize(16).fillColor('#000000').font('Helvetica-Bold');
+  doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
   doc.text('Quote Summary', 50, doc.y, { align: 'center', width: pageWidth });
   doc.font('Helvetica').fontSize(10).fillColor('#333333');
-  doc.moveDown(0.5); // Reduced from 1 to minimize space
+  doc.moveDown(0.3);
   
   // Create a summary table
   const summaryStartY = doc.y;
@@ -1373,25 +1357,24 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
   doc.font('Helvetica'); // Reset font
   
-  // Add space after the total summary
-  doc.moveDown(2);
+  // Add minimal space after the total summary
+  doc.moveDown(1);
   
   // ===== CONTACT & PAYMENT INFORMATION SECTION =====
   // Check if we need to add a page break based on remaining space
-  const contactInfoHeight = 300; // Approximate height needed for contact & banking info
+  const contactInfoHeight = 250; // Reduced estimate for contact & banking info
   const remainingSpace = doc.page.height - doc.y - 50; // Space left on current page minus footer
   
   // If there's not enough room for contact info, start a new page
   if (remainingSpace < contactInfoHeight) {
     doc.addPage();
-    doc.y = 50; // Reset y position at top of new page
   }
   
   // Add section header
-  doc.fontSize(16).fillColor('#000000').font('Helvetica-Bold');
+  doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
   doc.text('Contact & Payment Information', 50, doc.y, { align: 'center', width: doc.page.width - 100 });
   doc.font('Helvetica').fontSize(10);
-  doc.moveDown(1);
+  doc.moveDown(0.5);
   
   // Use fallback branch data if none is provided
   const effectiveBranchData = branchData || {

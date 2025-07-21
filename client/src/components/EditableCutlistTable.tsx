@@ -72,6 +72,16 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   // State to track when material validation should be enforced
   const [showMaterialValidation, setShowMaterialValidation] = useState<boolean>(false);
   
+  // State to track when quantity validation should be enforced
+  const [showQuantityValidation, setShowQuantityValidation] = useState<boolean>(false);
+  
+  // State to track which pieces have high quantities that need confirmation
+  const [highQuantityPieces, setHighQuantityPieces] = useState<string[]>([]);
+  
+  // State for high quantity confirmation dialog
+  const [highQuantityDialogOpen, setHighQuantityDialogOpen] = useState<boolean>(false);
+  const [pendingHighQuantityPieces, setPendingHighQuantityPieces] = useState<Array<{id: string, quantity: number}>>([]);
+  
   // Default material options as fallback
   const DEFAULT_MATERIAL_CATEGORIES = [
     "White Melamine",
@@ -272,6 +282,18 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
         piece.id === id ? { ...piece, [field]: value } : piece
       )
     );
+    
+    // If quantity is being changed, reset validation states for this piece
+    if (field === 'quantity') {
+      // Remove this piece from confirmed high quantities if it's being modified
+      setHighQuantityPieces(prev => prev.filter(pieceId => pieceId !== id));
+      
+      // Reset validation states if they're currently active
+      if (showQuantityValidation) {
+        setShowQuantityValidation(false);
+        setIsValidating(false);
+      }
+    }
   };
 
   const handleAddMaterialSection = () => {
@@ -476,6 +498,45 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     }
   };
 
+  // High quantity confirmation dialog handlers
+  const handleHighQuantityConfirm = () => {
+    // Add all pending high quantity piece IDs to the confirmed list
+    const newConfirmedIds = pendingHighQuantityPieces.map(piece => piece.id);
+    setHighQuantityPieces(prev => [...prev, ...newConfirmedIds]);
+    
+    // Reset validation states
+    setShowQuantityValidation(false);
+    setIsValidating(false);
+    
+    // Close dialog and clear pending pieces
+    setHighQuantityDialogOpen(false);
+    setPendingHighQuantityPieces([]);
+    
+    // Show success message
+    setSnackbarMessage('High quantities confirmed. Proceeding with calculation...');
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
+    
+    // Continue with the calculation after a short delay
+    setTimeout(() => {
+      setConfirmationDialogOpen(true);
+    }, 500);
+  };
+
+  const handleHighQuantityCancel = () => {
+    // Reset validation states
+    setShowQuantityValidation(false);
+    setIsValidating(false);
+    
+    // Close dialog and clear pending pieces
+    setHighQuantityDialogOpen(false);
+    setPendingHighQuantityPieces([]);
+    
+    setSnackbarMessage('Please review and correct the high quantities before proceeding.');
+    setSnackbarSeverity('info');
+    setSnackbarOpen(true);
+  };
+
   const handleCalculate = () => {
     console.log('handleCalculate called');
     // Validate data
@@ -586,6 +647,85 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
       return;
+    }
+    
+    // Enhanced validation for high quantities (>100)
+    const highQuantityPiecesFound = cutPieces.filter(piece => piece.quantity > 100);
+    
+    if (highQuantityPiecesFound.length > 0) {
+      // Check if these high quantities have already been confirmed
+      const unconfirmedHighQuantities = highQuantityPiecesFound.filter(piece => 
+        !highQuantityPieces.includes(piece.id)
+      );
+      
+      if (unconfirmedHighQuantities.length > 0) {
+        console.log('High quantity pieces found:', unconfirmedHighQuantities);
+        
+        // Find the first piece with high quantity
+        const firstHighQuantityPiece = unconfirmedHighQuantities[0];
+        
+        // Set validation state to true to show validation errors
+        console.log('Setting validation state to true for quantity validation');
+        setIsValidating(true);
+        setShowQuantityValidation(true);
+        
+        // Scroll to the first high quantity field
+        const quantityFieldId = `quantity-field-${firstHighQuantityPiece.id}`;
+        console.log('Looking for quantity field with ID:', quantityFieldId);
+        const quantityFieldElement = document.getElementById(quantityFieldId);
+        
+        if (quantityFieldElement) {
+          console.log('Found quantity field element, scrolling to it');
+          // Scroll to the element with smooth behavior
+          quantityFieldElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          
+          // Add a visual highlight to the field
+          quantityFieldElement.style.boxShadow = '0 0 8px 2px rgba(255, 152, 0, 0.6)';
+          
+          // Add a slight delay then focus the field
+          setTimeout(() => {
+            const inputElement = quantityFieldElement.querySelector('input') as HTMLInputElement;
+            if (inputElement) {
+              console.log('Focusing and animating input element');
+              inputElement.focus();
+              inputElement.select();
+              // Add a pulsing animation to draw attention
+              inputElement.animate(
+                [
+                  { boxShadow: '0 0 0 0 rgba(255, 152, 0, 0.7)' },
+                  { boxShadow: '0 0 0 10px rgba(255, 152, 0, 0)' },
+                ],
+                {
+                  duration: 1500,
+                  iterations: 3,
+                }
+              );
+            }
+            
+            // Remove the highlight after animation completes
+            setTimeout(() => {
+              if (quantityFieldElement) {
+                quantityFieldElement.style.boxShadow = '';
+              }
+            }, 4500); // 1500ms * 3 iterations
+          }, 500);
+        }
+        
+        // Store the pending high quantity pieces and show confirmation dialog
+        setPendingHighQuantityPieces(unconfirmedHighQuantities.map(piece => ({
+          id: piece.id,
+          quantity: piece.quantity
+        })));
+        setHighQuantityDialogOpen(true);
+        
+        setSnackbarMessage(`⚠️ High quantity detected (${firstHighQuantityPiece.quantity}). Please confirm this is correct.`);
+        setSnackbarSeverity('warning');
+        setSnackbarOpen(true);
+        return;
+      }
     }
     
     // All validations passed, open the confirmation dialog
@@ -1290,12 +1430,15 @@ Thank you for your business!
                               </TableCell>
                               <TableCell align="right">
                                 <TextField
+                                  id={`quantity-field-${piece.id}`}
                                   variant="standard"
                                   value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1}
                                   onChange={(e) => handleCutPieceChange(piece.id, 'quantity', Number(e.target.value))}
                                   type="number"
                                   InputProps={{ inputProps: { min: 1, step: 1 } }}
                                   disabled={isConfirmed}
+                                  error={showQuantityValidation && piece.quantity > 100 && !highQuantityPieces.includes(piece.id)}
+                                  helperText={showQuantityValidation && piece.quantity > 100 && !highQuantityPieces.includes(piece.id) ? 'High quantity - please confirm' : ''}
                                 />
                               </TableCell>
                               {!isConfirmed && (
@@ -1468,6 +1611,51 @@ Thank you for your business!
           </Button>
           <Button onClick={handleCloseQuoteSuccessDialog} color="primary">
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* High Quantity Confirmation Dialog */}
+      <Dialog
+        open={highQuantityDialogOpen}
+        onClose={handleHighQuantityCancel}
+        aria-labelledby="high-quantity-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="high-quantity-dialog-title" sx={{ bgcolor: 'warning.main', color: 'white' }}>
+          ⚠️ High Quantity Detected
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            The following pieces have quantities over 100:
+          </Typography>
+          {pendingHighQuantityPieces.map((piece, index) => {
+            const cutPiece = cutPieces.find(cp => cp.id === piece.id);
+            return (
+              <Box key={piece.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                  {cutPiece?.description || `${cutPiece?.length}mm x ${cutPiece?.width}mm`}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Material: {cutPiece?.material}
+                </Typography>
+                <Typography variant="body1" color="warning.main" sx={{ fontWeight: 'bold' }}>
+                  Quantity: {piece.quantity}
+                </Typography>
+              </Box>
+            );
+          })}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Please confirm these quantities are correct, or go back and adjust them.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleHighQuantityCancel} color="primary">
+            Go Back & Edit
+          </Button>
+          <Button onClick={handleHighQuantityConfirm} variant="contained" color="warning">
+            Confirm High Quantities
           </Button>
         </DialogActions>
       </Dialog>
