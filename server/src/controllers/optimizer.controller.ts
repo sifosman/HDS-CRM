@@ -346,6 +346,9 @@ export const generateQuote = async (req: Request, res: Response) => {
         let pieceEdging = 0;
         let edgingSides: string[] = [];
         
+        console.log(`\nPiece: ${piece.name || 'Unnamed'} (${piece.length}x${piece.width}mm, qty: ${piece.amount || 1})`);
+        console.log(`Edging data received: ${JSON.stringify(piece.edging)}`);
+        
         // Parse the edging field if it exists
         // edging can be a string like "L1,W2" or a number (0 or 1)
         const edging = piece.edging;
@@ -354,6 +357,7 @@ export const generateQuote = async (req: Request, res: Response) => {
         
         if (edging) {
           if (typeof edging === 'string') {
+<<<<<<< HEAD
             const sides = edging.split(',').map(s => s.trim()).filter(s => s);
             console.log(`  Edging sides: ${sides.join(', ')}`);
             
@@ -367,23 +371,54 @@ export const generateQuote = async (req: Request, res: Response) => {
                 pieceEdging += Number(piece.width) || 0;
                 edgingSides.push(side);
                 console.log(`    ${side}: +${piece.width}mm`);
+=======
+            const sides = edging.split(',').filter(s => s.trim()); // Filter empty strings
+            console.log(`Parsed edging sides: [${sides.join(', ')}]`);
+            
+            // Calculate edging length for each specified side
+            for (const side of sides) {
+              const trimmedSide = side.trim();
+              if (trimmedSide === 'L1' || trimmedSide === 'L2') {
+                pieceEdging += piece.length;
+                edgingSides.push(trimmedSide);
+                console.log(`  ${trimmedSide}: +${piece.length}mm (length side)`);
+              } else if (trimmedSide === 'W1' || trimmedSide === 'W2') {
+                pieceEdging += piece.width;
+                edgingSides.push(trimmedSide);
+                console.log(`  ${trimmedSide}: +${piece.width}mm (width side)`);
+>>>>>>> c8a3b0bf58b2cf1231a6cae946e1915428955cf6
               }
             }
           } else if (edging === 1 || edging === true) {
             // If edging is just set to 1 or true, assume all 4 sides
             pieceEdging = 2 * (Number(piece.length) || 0) + 2 * (Number(piece.width) || 0);
             edgingSides = ['L1', 'L2', 'W1', 'W2'];
+<<<<<<< HEAD
             console.log(`  All sides: 2×${piece.length} + 2×${piece.width} = ${pieceEdging}mm`);
+=======
+            console.log(`  All sides: ${pieceEdging}mm (2x${piece.length} + 2x${piece.width})`);
+>>>>>>> c8a3b0bf58b2cf1231a6cae946e1915428955cf6
           }
+        } else {
+          console.log(`  No edging required`);
         }
         
         // Multiply by quantity
+<<<<<<< HEAD
         const pieceEdgingBeforeQty = pieceEdging;
         pieceEdging *= (piece.amount || 1);
         console.log(`  Before quantity: ${pieceEdgingBeforeQty}mm, after quantity (×${piece.amount || 1}): ${pieceEdging}mm`);
         
         totalEdging += pieceEdging;
         console.log(`  Running total edging: ${totalEdging}mm`);
+=======
+        const beforeQuantity = pieceEdging;
+        pieceEdging *= (piece.amount || 1);
+        console.log(`  Before quantity: ${beforeQuantity}mm, After quantity (x${piece.amount || 1}): ${pieceEdging}mm`);
+        
+        totalEdging += pieceEdging;
+        console.log(`  Running total: ${totalEdging}mm`);
+>>>>>>> c8a3b0bf58b2cf1231a6cae946e1915428955cf6
         
         // Add to edging breakdown if edging is required
         if (pieceEdging > 0) {
@@ -397,9 +432,18 @@ export const generateQuote = async (req: Request, res: Response) => {
         }
       }
       
+<<<<<<< HEAD
       console.log(`\n=== EDGING COST CALCULATION ===`);
       console.log(`Total edging required: ${totalEdging}mm`);
       console.log(`Converting to meters: ${totalEdging}mm ÷ 1000 = ${totalEdging / 1000}m`);
+=======
+      console.log(`\n=== FINAL EDGING TOTALS for ${material} ===`);
+      console.log(`Total edging length: ${totalEdging}mm`);
+      console.log(`Total edging cost: R${((totalEdging / 1000) * 14).toFixed(2)}`);
+      console.log(`=== END EDGING DEBUG ===\n`);
+      
+      console.log(`Edging calculation: Total edging required: ${totalEdging}mm`);
+>>>>>>> c8a3b0bf58b2cf1231a6cae946e1915428955cf6
       
       // Calculate edging cost (R14 per metre)
       const edgingCost = (totalEdging / 1000) * 14;

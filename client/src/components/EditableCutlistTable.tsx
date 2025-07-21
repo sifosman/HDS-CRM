@@ -681,17 +681,33 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       const sections = getSections();
       
       // Prepare data for the backend
-      const sectionData = sections.map(section => ({
-        material: section.material,
-        cutPieces: section.pieces.map(piece => ({
-          id: piece.id,
-          width: piece.width || 0,
-          length: piece.length || 0,
-          amount: piece.quantity || 1,
-          edging: calculateEdging(piece), // This now returns a string like "L1,W2"
-          name: piece.name
-        }))
-      }));
+      const sectionData = sections.map(section => {
+        console.log(`\n=== FRONTEND SECTION DEBUG: ${section.material} ===`);
+        console.log(`Processing ${section.pieces.length} pieces:`);
+        
+        const cutPieces = section.pieces.map(piece => {
+          const edgingResult = calculateEdging(piece);
+          console.log(`\nPiece: ${piece.name || 'Unnamed'} (${piece.width}x${piece.length}mm, qty: ${piece.quantity || 1})`);
+          console.log(`Tick boxes: L1=${piece.lengthTick1}, L2=${piece.lengthTick2}, W1=${piece.widthTick1}, W2=${piece.widthTick2}`);
+          console.log(`Calculated edging: "${edgingResult}"`);
+          
+          return {
+            id: piece.id,
+            width: piece.width || 0,
+            length: piece.length || 0,
+            amount: piece.quantity || 1,
+            edging: edgingResult, // This now returns a string like "L1,W2"
+            name: piece.name
+          };
+        });
+        
+        console.log(`=== END FRONTEND SECTION DEBUG ===\n`);
+        
+        return {
+          material: section.material,
+          cutPieces
+        };
+      });
       
       // Prepare the request payload
       const quotePayload = {
