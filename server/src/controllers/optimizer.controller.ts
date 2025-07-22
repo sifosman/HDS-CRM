@@ -183,6 +183,14 @@ export const generateQuote = async (req: Request, res: Response) => {
         continue; // Skip invalid sections
       }
       
+      // Filter out separator pieces from calculations
+      const validCutPieces = cutPieces.filter((piece: any) => !piece.separator);
+      
+      if (validCutPieces.length === 0) {
+        console.log(`Skipping section ${material} - no valid cut pieces after filtering separators`);
+        continue; // Skip sections with only separator pieces
+      }
+      
       // 1. Get product pricing by description from Supabase
       console.log(`Getting pricing for material: ${material}`);
       
@@ -273,7 +281,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       // 5. Prepare all pieces for optimization
       const allPieces = [
         stockPiece,
-        ...cutPieces.map(piece => ({
+        ...validCutPieces.map(piece => ({
           ...piece,
           kind: 0 // Cut piece
         }))
@@ -312,7 +320,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       let usedArea = 0;
       
       // Calculate the total area of all cut pieces
-      for (const piece of cutPieces) {
+      for (const piece of validCutPieces) {
         usedArea += piece.length * piece.width * (piece.amount || 1);
       }
       
@@ -340,9 +348,9 @@ export const generateQuote = async (req: Request, res: Response) => {
       const edgingBreakdown = [];
       
       console.log(`\n=== EDGING CALCULATION DEBUG for ${material} ===`);
-      console.log(`Cut pieces count: ${cutPieces.length}`);
+      console.log(`Cut pieces count: ${validCutPieces.length}`);
       
-      for (const piece of cutPieces) {
+      for (const piece of validCutPieces) {
         // Check each edge (L1, L2, W1, W2) and calculate edging needed
         let pieceEdging = 0;
         let edgingSides: string[] = [];
@@ -442,7 +450,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       processedSections.push(processedSection);
       pdfSections.push({
         ...processedSection,
-        cutPieces: cutPieces.map((p: any) => ({ 
+        cutPieces: validCutPieces.map((p: any) => ({ 
           length: p.length, 
           width: p.width, 
           quantity: p.amount || 1,

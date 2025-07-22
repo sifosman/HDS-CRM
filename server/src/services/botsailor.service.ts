@@ -507,6 +507,17 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
         console.log(`Created new material section: ${materialName}`);
       }
       
+      // Create a separator piece to trigger frontend dropdown creation
+      result.cutPieces.push({
+        id: uuidv4(),
+        separator: true,
+        name: materialName,
+        material: materialName,
+        description: line, // Store original line for reference
+        lineIndex: i // Track original position in OCR text
+      });
+      console.log(`Created separator piece for material: ${materialName}`);
+      
       // Switch to this material
       currentMaterial = materialName;
       console.log(`Switched to material section: ${currentMaterial}`);
