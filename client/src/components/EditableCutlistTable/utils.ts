@@ -378,12 +378,69 @@ export function normalizeCutPieces(rawPieces: any[], DEFAULT_MATERIAL_CATEGORIES
   // If DEFAULT_MATERIAL_CATEGORIES is not provided or empty, use a default
   const materialCategories = DEFAULT_MATERIAL_CATEGORIES?.length > 0 ? DEFAULT_MATERIAL_CATEGORIES : ["Default Material"];
   
-  console.log('materialCategories:', materialCategories);
-  console.log('materialCategories[0]:', materialCategories[0]);
-  console.log('rawPieces:', rawPieces);
+  console.log('🔧 NORMALIZE: Starting normalization process');
+  console.log('📋 NORMALIZE: Raw pieces received:', rawPieces.length);
+  console.log('🔗 NORMALIZE: Existing separators in raw pieces:', rawPieces.filter(p => p.separator).length);
   
   if (!rawPieces || rawPieces.length === 0) return [];
 
+  // Check if separators already exist from backend parsing
+  const existingSeparators = rawPieces.filter(piece => piece.separator);
+  if (existingSeparators.length > 0) {
+    console.log('✅ NORMALIZE: Found existing separators from backend, preserving structure');
+    console.log('🎯 NORMALIZE: Existing separators:', existingSeparators.map(s => s.name || s.material));
+    
+    // If separators already exist, just normalize the quantities and return as-is
+    const normalizedPieces: CutPiece[] = [];
+    
+    for (const piece of rawPieces) {
+      if (piece.separator) {
+        // Keep separator pieces as-is
+        normalizedPieces.push({
+          ...piece,
+          id: piece.id || `separator-${Date.now()}-${normalizedPieces.length}`
+        });
+        console.log(`🔗 NORMALIZE: Preserved separator: ${piece.name || piece.material}`);
+      } else {
+        // Normalize regular pieces (mainly quantity handling)
+        const description = piece.description || piece.name || '';
+        
+        let quantity = piece.quantity;
+        if (quantity === undefined || quantity === null) {
+          const extractedQty = extractQuantityFromDescription(description);
+          if (extractedQty !== null && extractedQty > 0) {
+            quantity = extractedQty;
+            console.log(`📊 NORMALIZE: Extracted quantity ${quantity} from description: "${description}"`);
+          } else {
+            quantity = 1;
+          }
+        } else {
+          console.log(`📊 NORMALIZE: Using existing quantity ${quantity} from backend parsing`);
+        }
+        
+        const normalizedPiece: CutPiece = {
+          id: piece.id || `piece-${Date.now()}-${normalizedPieces.length}`,
+          width: piece.width,
+          length: piece.length,
+          quantity: quantity,
+          name: description,
+          description: description,
+          edging: piece.edging,
+          material: piece.material // Keep the material assigned by backend
+        };
+        
+        normalizedPieces.push(normalizedPiece);
+        console.log(`✅ NORMALIZE: Preserved piece: ${piece.width}x${piece.length} x${quantity} (${piece.material})`);
+      }
+    }
+    
+    console.log('🎉 NORMALIZE: Completed with preserved structure, total pieces:', normalizedPieces.length);
+    return normalizedPieces;
+  }
+  
+  // Legacy path: No existing separators, create them based on material detection
+  console.log('⚠️ NORMALIZE: No existing separators found, using legacy material detection');
+  
   const materialHeadings: { key: string; value: string }[] = [];
   for (const piece of rawPieces) {
     const text = piece.description || piece.name;
