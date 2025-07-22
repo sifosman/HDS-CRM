@@ -452,6 +452,10 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
 
   // Function to insert a material separator at a specific position (for mobile plus buttons)
   const handleInsertMaterialSeparator = (insertAfterIndex: number) => {
+    console.log('🔧 INSERTING SEPARATOR: Starting insertion process');
+    console.log('📍 Insert after index:', insertAfterIndex);
+    console.log('📋 Current cutPieces before insertion:', cutPieces.length, 'pieces');
+    
     setCutPieces(prevCutPieces => {
       const updatedPieces = [...prevCutPieces];
       
@@ -465,10 +469,15 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
         lineIndex: insertAfterIndex
       };
       
+      console.log('🆕 Created new separator:', newSeparator);
+      
       // Insert the separator after the specified index
       updatedPieces.splice(insertAfterIndex + 1, 0, newSeparator);
       
-      console.log(`Inserted new material separator at position ${insertAfterIndex + 1}`);
+      console.log(`✅ Inserted new material separator at position ${insertAfterIndex + 1}`);
+      console.log('📋 Updated cutPieces after insertion:', updatedPieces.length, 'pieces');
+      console.log('🔗 Separators in updated array:', updatedPieces.filter(p => p.separator).length);
+      
       return updatedPieces;
     });
   };
