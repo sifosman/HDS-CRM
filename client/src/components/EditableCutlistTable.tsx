@@ -450,6 +450,29 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     });
   };
 
+  // Function to insert a material separator at a specific position (for mobile plus buttons)
+  const handleInsertMaterialSeparator = (insertAfterIndex: number) => {
+    setCutPieces(prevCutPieces => {
+      const updatedPieces = [...prevCutPieces];
+      
+      // Create a new separator piece
+      const newSeparator = {
+        id: `separator-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        separator: true,
+        name: DEFAULT_MATERIAL_CATEGORIES[0], // Default to first material
+        material: DEFAULT_MATERIAL_CATEGORIES[0],
+        description: 'New Material Section',
+        lineIndex: insertAfterIndex
+      };
+      
+      // Insert the separator after the specified index
+      updatedPieces.splice(insertAfterIndex + 1, 0, newSeparator);
+      
+      console.log(`Inserted new material separator at position ${insertAfterIndex + 1}`);
+      return updatedPieces;
+    });
+  };
+
   const handleSave = () => {
     // Validate all piece fields
     if (cutPieces.some(p => !p.separator && (!p.length || !p.width || !p.quantity))) {
@@ -1253,25 +1276,57 @@ Thank you for your business!
                     </IconButton>
                   </Box>
 
-                  {section.pieces.map((piece: any, pieceIdx: number) => (
-                    <Paper key={piece.id} elevation={2} sx={{ p: 2, mb: 2 }}>
-                      <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
-                      <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
-                        <TextField label={`Length (${unit})`} type="number" value={piece.length ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'length', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
-                        <TextField label={`Width (${unit})`} type="number" value={piece.width ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'width', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
-                        <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
-                        <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
-                        <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
-                        <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
-                        <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
-                        <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
-                      </Box>
-                    </Paper>
-                  ))}
+                  {section.pieces.map((piece: any, pieceIdx: number) => {
+                    // Find the actual index of this piece in the cutPieces array
+                    const actualPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
+                    
+                    return (
+                      <React.Fragment key={piece.id}>
+                        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+                          <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
+                          <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
+                            <TextField label={`Length (${unit})`} type="number" value={piece.length ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'length', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
+                            <TextField label={`Width (${unit})`} type="number" value={piece.width ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'width', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
+                            <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
+                            <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
+                            <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
+                            <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
+                            <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
+                            <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
+                          </Box>
+                        </Paper>
+                        
+                        {/* Add plus button between pieces (except after the last piece) */}
+                        {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
+                            <Fab
+                              size="small"
+                              color="primary"
+                              aria-label="Insert material section"
+                              onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                minHeight: 32,
+                                boxShadow: 2,
+                                '&:hover': {
+                                  boxShadow: 4,
+                                  transform: 'scale(1.1)',
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                              }}
+                            >
+                              <AddIcon sx={{ fontSize: 18 }} />
+                            </Fab>
+                          </Box>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </Box>
               ));
             }
@@ -1406,25 +1461,57 @@ Thank you for your business!
                   </IconButton>
                 </Box>
 
-              {section.pieces.map((piece, pieceIdx) => (
-                <Paper key={piece.id} elevation={2} sx={{ p: 2, mb: 2 }}>
-                  <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
-                  <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
-                    <TextField label={`Length (${unit})`} type="number" value={piece.length ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'length', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
-                    <TextField label={`Width (${unit})`} type="number" value={piece.width ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'width', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
-                    <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
-                    <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
-                    <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
-                    <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
-                    <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
-                    <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
-                  </Box>
-                </Paper>
-              ))}
+              {section.pieces.map((piece, pieceIdx) => {
+                // Find the actual index of this piece in the cutPieces array
+                const actualPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
+                
+                return (
+                  <React.Fragment key={piece.id}>
+                    <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+                      <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
+                      <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
+                        <TextField label={`Length (${unit})`} type="number" value={piece.length ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'length', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
+                        <TextField label={`Width (${unit})`} type="number" value={piece.width ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'width', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
+                        <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
+                        <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
+                        <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
+                        <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
+                        <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
+                        <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
+                      </Box>
+                    </Paper>
+                    
+                    {/* Add plus button between pieces (except after the last piece) */}
+                    {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
+                        <Fab
+                          size="small"
+                          color="primary"
+                          aria-label="Insert material section"
+                          onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            minHeight: 32,
+                            boxShadow: 2,
+                            '&:hover': {
+                              boxShadow: 4,
+                              transform: 'scale(1.1)',
+                            },
+                            transition: 'all 0.2s ease-in-out',
+                          }}
+                        >
+                          <AddIcon sx={{ fontSize: 18 }} />
+                        </Fab>
+                      </Box>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </Box>
           ));
           })()}
