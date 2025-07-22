@@ -386,83 +386,71 @@ const parseHandwrittenFormat = (text, result) => {
     const lines = text.split('\n').filter(line => line.trim() !== '');
     // More robust regex patterns to find dimensions and quantities
     const dimensionPatterns = [
-        // Pattern 1: 1000x500=2, 1000 x 500 = 2, 1000*500=2, etc.
-        /(\d+)\s*[xX×*]\s*(\d+)\s*[=\-\s]\s*(\d+)/,
+        // Pattern 1: 1000x500=2, 1000 x 500 = 2, 1000*500=2, 1000x500-2, etc.
+        /(\d+)\s*[xX×*]\s*(\d+)\s*[=\-]\s*(\d+)/,
         // Pattern 2: 1000x500 (2), 1000 x 500 (2)
         /(\d+)\s*[xX×*]\s*(\d+)\s*\((\d+)\)/,
         // Pattern 3: 1000x500 2pcs, 1000x500 2 pc, etc.
         /(\d+)\s*[xX×*]\s*(\d+)\s+(\d+)\s*(?:pcs?|pieces?|pce|szt|x)/i,
-        // Pattern 4: 1000x500, quantity is on the same line but separated
+        // Pattern 4: 1000x500 2 (space separated)
+        /(\d+)\s*[xX×*]\s*(\d+)\s+(\d+)(?!\d)/,
+        // Pattern 5: 1000x500, quantity is on the same line but separated (fallback)
         /(\d+)\s*[xX×*]\s*(\d+)/, // fallback no qty
     ];
     // Material section detection keywords (non-numeric words)
-    const materialKeywords = ['white', 'door', 'doors', 'drawer', 'drawers', 'microwave', 'masonite', 'oak', 'wood', 'panel'];
+    const materialKeywords = ['white', 'door', 'doors', 'drawer', 'drawers', 'microwave', 'masonite', 'messonite', 'oak', 'wood', 'panel', 'melamine'];
     // Track current material section
     let currentMaterial = 'Default';
-    let materialCounter = 0;
-    // First pass: identify material sections
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim().toLowerCase();
-        // Skip lines with just dimensions
-        if (isDimensionLine(line, dimensionPatterns)) {
-            continue;
+    // Helper function to normalize material names
+    const normalizeMaterialName = (text) => {
+        const cleanText = text.trim();
+        // Handle common material name patterns
+        if (cleanText.toLowerCase().includes('white') && cleanText.toLowerCase().includes('melam')) {
+            return 'White Melamine';
         }
-        // Check if this line might be a material section header
-        // Material headers typically don't have dimension patterns but might contain material keywords
-        for (const keyword of materialKeywords) {
-            if (line.includes(keyword)) {
-                // This is likely a material section header
-                const materialName = line.charAt(0).toUpperCase() + line.slice(1);
+        if (cleanText.toLowerCase().includes('white') && cleanText.toLowerCase().includes('messo')) {
+            return 'White Messonite';
+        }
+        if (cleanText.toLowerCase() === 'doors') {
+            return 'Doors';
+        }
+        // Default: capitalize first letter of each word
+        return cleanText.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    };
+    // Helper function to check if a line is a material header
+    const isMaterialHeader = (line) => {
+        const lowerLine = line.toLowerCase();
+        // Skip if it contains dimensions
+        if (isDimensionLine(line, dimensionPatterns)) {
+            return false;
+        }
+        // Check if it contains material keywords
+        return materialKeywords.some(keyword => lowerLine.includes(keyword));
+    };
+    // Single pass: process lines sequentially, detecting materials and dimensions as we go
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        console.log(`Parsing line ${i + 1}: "${line}"`);
+        // Check if this line is a material header
+        if (isMaterialHeader(line)) {
+            const materialName = normalizeMaterialName(line);
+            // Check if this material already exists
+            const existingMaterial = result.materials.find((m) => m.name === materialName);
+            if (!existingMaterial) {
+                // Create new material
                 result.materials.push({
                     id: (0, uuid_1.v4)(),
                     name: materialName,
                     type: 'board',
-                    thickness: 16 // Default thickness
+                    thickness: 16
                 });
-                currentMaterial = materialName;
-                materialCounter++;
-                console.log(`Detected material section: ${materialName}`);
-                break;
+                console.log(`Created new material section: ${materialName}`);
             }
+            // Switch to this material
+            currentMaterial = materialName;
+            console.log(`Switched to material section: ${currentMaterial}`);
+            continue; // Skip to next line
         }
-    }
-    // If no materials were detected, add a default one
-    if (result.materials.length === 0) {
-        result.materials.push({
-            id: (0, uuid_1.v4)(),
-            name: 'Default',
-            type: 'board',
-            thickness: 16
-        });
-    }
-    // Reset for second pass
-    currentMaterial = result.materials[0].name;
-    // Second pass: process dimensions under each material section
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        console.log(`Parsing line ${i + 1}: "${line}"`);
-        // Check if this line might be a material section change
-        const lowerLine = line.toLowerCase();
-        let isMaterialHeader = false;
-        // Check if the line contains any material keywords
-        for (const keyword of materialKeywords) {
-            if (lowerLine.includes(keyword)) {
-                // Find the corresponding material
-                for (const material of result.materials) {
-                    if (material.name.toLowerCase().includes(keyword)) {
-                        currentMaterial = material.name;
-                        isMaterialHeader = true;
-                        console.log(`Switching to material section: ${currentMaterial}`);
-                        break;
-                    }
-                }
-                if (isMaterialHeader)
-                    break;
-            }
-        }
-        // Skip material headers for dimension processing
-        if (isMaterialHeader)
-            continue;
         // Process dimension lines
         let matched = false;
         let width = 0, length = 0, quantity = 0;
@@ -556,6 +544,22 @@ const parseHandwrittenFormat = (text, result) => {
         else {
             console.log(`No valid dimension found in line: "${line}"`);
         }
+    }
+    // If no materials were detected, add a default one and assign all pieces to it
+    if (result.materials.length === 0) {
+        result.materials.push({
+            id: (0, uuid_1.v4)(),
+            name: 'Default Material',
+            type: 'board',
+            thickness: 16
+        });
+        // Assign all pieces to the default material
+        result.cutPieces.forEach((piece) => {
+            if (!piece.material) {
+                piece.material = 'Default Material';
+            }
+        });
+        console.log('No materials detected, created default material and assigned all pieces to it.');
     }
     console.log('Handwritten format parsing complete.');
     console.log('Final extracted data:', JSON.stringify(result, null, 2));

@@ -134,15 +134,32 @@ exports.webhookDirectController = {
                         if (extractionResult && extractionResult.dimensions && extractionResult.dimensions.length > 0) {
                             console.log(`✅ WEBHOOK: Successfully extracted ${extractionResult.dimensions.length} dimensions using OCR service`);
                             // Convert dimensions to cut pieces format expected by Supabase
-                            cutPieces = extractionResult.dimensions.map((dim, index) => ({
-                                id: `${uniqueId}-${index}`,
-                                length: dim.length,
-                                width: dim.width,
-                                quantity: dim.quantity,
-                                material: dim.material || 'White Melamine',
-                                description: dim.description || `${dim.length}x${dim.width}`,
-                                name: dim.description || `${dim.length}x${dim.width}`
-                            }));
+                            cutPieces = extractionResult.dimensions.map((dim, index) => {
+                                // Handle separator pieces differently
+                                if (dim.separator) {
+                                    console.log(`🔗 WEBHOOK: Processing separator piece: ${dim.name}`);
+                                    return {
+                                        id: `${uniqueId}-${index}`,
+                                        separator: true,
+                                        name: dim.name,
+                                        material: dim.material,
+                                        description: dim.description || dim.name,
+                                        length: 0,
+                                        width: 0,
+                                        quantity: 0
+                                    };
+                                }
+                                // Handle regular dimension pieces
+                                return {
+                                    id: `${uniqueId}-${index}`,
+                                    length: dim.length,
+                                    width: dim.width,
+                                    quantity: dim.quantity,
+                                    material: dim.material || 'White Melamine',
+                                    description: dim.description || `${dim.length}x${dim.width}`,
+                                    name: dim.description || `${dim.length}x${dim.width}`
+                                };
+                            });
                             dimensionsCount = extractionResult.dimensions.length;
                             console.log('📊 WEBHOOK: Cut pieces prepared for Supabase:', cutPieces.map((cp) => `${cp.length}x${cp.width} (qty: ${cp.quantity})`).join(', '));
                         }

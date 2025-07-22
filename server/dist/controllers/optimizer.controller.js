@@ -306,20 +306,31 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 console.log(`Piece: ${piece.length}x${piece.width}mm, quantity: ${piece.amount || 1}, edging: ${JSON.stringify(edging)}`);
                 if (edging) {
                     if (typeof edging === 'string') {
-                        const sides = edging.split(',').filter(s => s.trim()); // Filter empty strings
-                        console.log(`Parsed edging sides: [${sides.join(', ')}]`);
-                        // Calculate edging length for each specified side
-                        for (const side of sides) {
-                            const trimmedSide = side.trim();
-                            if (trimmedSide === 'L1' || trimmedSide === 'L2') {
-                                pieceEdging += piece.length;
-                                edgingSides.push(trimmedSide);
-                                console.log(`  ${trimmedSide}: +${piece.length}mm (length side)`);
-                            }
-                            else if (trimmedSide === 'W1' || trimmedSide === 'W2') {
-                                pieceEdging += piece.width;
-                                edgingSides.push(trimmedSide);
-                                console.log(`  ${trimmedSide}: +${piece.width}mm (width side)`);
+                        // Handle special case: "1" means all 4 sides
+                        if (edging.trim() === '1') {
+                            pieceEdging = 2 * (Number(piece.length) || 0) + 2 * (Number(piece.width) || 0);
+                            edgingSides = ['L1', 'L2', 'W1', 'W2'];
+                            console.log(`  All sides (from "1"): ${pieceEdging}mm (2x${piece.length} + 2x${piece.width})`);
+                        }
+                        else {
+                            // Parse comma-separated sides like "L1,W2"
+                            const sides = edging.split(',').filter(s => s.trim()); // Filter empty strings
+                            console.log(`Parsed edging sides: [${sides.join(', ')}]`);
+                            // Calculate edging length for each specified side
+                            for (const side of sides) {
+                                const trimmedSide = side.trim();
+                                if (trimmedSide === 'L1' || trimmedSide === 'L2') {
+                                    const lengthValue = Number(piece.length) || 0;
+                                    pieceEdging += lengthValue;
+                                    edgingSides.push(trimmedSide);
+                                    console.log(`  ${trimmedSide}: +${lengthValue}mm (length side)`);
+                                }
+                                else if (trimmedSide === 'W1' || trimmedSide === 'W2') {
+                                    const widthValue = Number(piece.width) || 0;
+                                    pieceEdging += widthValue;
+                                    edgingSides.push(trimmedSide);
+                                    console.log(`  ${trimmedSide}: +${widthValue}mm (width side)`);
+                                }
                             }
                         }
                     }
@@ -371,7 +382,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 edging: {
                     length: totalEdging,
                     totalEdging: totalEdging, // Add this for PDF compatibility
-                    cost: ((totalEdging / 1000) * 14).toFixed(2)
+                    cost: parseFloat(((totalEdging / 1000) * 14).toFixed(2)) // Store as number, not string
                 }
             };
             processedSections.push(processedSection);

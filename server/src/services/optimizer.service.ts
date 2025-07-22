@@ -1131,15 +1131,45 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // Set default text color to solid black for all content
   doc.fillColor('#000000');
   
-  // Add quote details in a more compact layout
-  doc.fontSize(10).fillColor('#000000');
-  const headerY = 100; // Start right after the header
+  // Add quote details in a professional container layout
+  const containerY = 105;
+  const containerHeight = 60;
+  const containerPadding = 15;
   
-  // Create a compact single-row layout for quote details
-  doc.text(`Quote: ${pdfId}`, 50, headerY);
-  doc.text(`Date: ${new Date(date).toLocaleDateString()}`, 150, headerY);
-  doc.text(`Customer: ${customerName}`, 280, headerY);
-  doc.text(`Project: ${projectName}`, 450, headerY);
+  // Draw a light gray container background for quote details
+  doc.rect(50, containerY, doc.page.width - 100, containerHeight)
+     .fillAndStroke('#f8f9fa', '#e9ecef');
+  
+  // Set text styling for quote details
+  doc.fontSize(11).fillColor('#000000');
+  
+  // Create a structured two-row layout with proper spacing
+  const leftColumnX = 50 + containerPadding;
+  const rightColumnX = 320;
+  const firstRowY = containerY + containerPadding;
+  const secondRowY = firstRowY + 20;
+  
+  // First row: Quote ID and Date
+  doc.font('Helvetica-Bold')
+     .text('Quote:', leftColumnX, firstRowY)
+     .font('Helvetica')
+     .text(pdfId, leftColumnX + 40, firstRowY);
+  
+  doc.font('Helvetica-Bold')
+     .text('Date:', rightColumnX, firstRowY)
+     .font('Helvetica')
+     .text(new Date(date).toLocaleDateString(), rightColumnX + 35, firstRowY);
+  
+  // Second row: Customer and Project
+  doc.font('Helvetica-Bold')
+     .text('Customer:', leftColumnX, secondRowY)
+     .font('Helvetica')
+     .text(customerName || 'N/A', leftColumnX + 60, secondRowY);
+  
+  doc.font('Helvetica-Bold')
+     .text('Project:', rightColumnX, secondRowY)
+     .font('Helvetica')
+     .text(projectName || 'N/A', rightColumnX + 45, secondRowY);
   
   // Calculate grand total and edging costs first so we can display on first page
   const EDGING_PRICE_PER_METER = 14; // R14 per meter
@@ -1157,18 +1187,23 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
       const edgingMeters = section.edging.totalEdging / 1000;
       totalEdgingMeters += edgingMeters;
       
-      // Calculate edging cost
-      const edgingCost = section.edgingCost !== undefined 
-        ? section.edgingCost.toFixed(2) 
-        : (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
-      // Store edging cost in section for display
-      section.edgingCost = parseFloat(edgingCost);
+      // Use the already calculated cost from the controller if available
+      if (section.edging.cost !== undefined) {
+        section.edgingCost = parseFloat(section.edging.cost);
+        totalEdgingCost += section.edgingCost;
+      } else {
+        // Fallback calculation if cost not provided
+        const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
+        section.edgingCost = parseFloat(edgingCost);
+        totalEdgingCost += section.edgingCost;
+      }
     } else {
       section.edgingCost = 0;
     }
   });
   
-  totalEdgingCost = parseFloat((totalEdgingMeters * EDGING_PRICE_PER_METER).toFixed(2));
+  // Round the total edging cost to 2 decimal places
+  totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
   
   // Calculate cutting fee (R70 per board)
   const cuttingFeePerBoard = 70; // R70 per board
@@ -1178,8 +1213,8 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // Calculate final grand total with edging and cutting fee included
   const finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
   
-  // Set starting position for material sections (compact layout)
-  doc.y = headerY + 30; // Start material sections right after header
+  // Set starting position for material sections (account for new header container)
+  doc.y = containerY + containerHeight + 20; // Start material sections after header container with spacing
   
   // For each material section
   sections.forEach((section: any, index: number) => {

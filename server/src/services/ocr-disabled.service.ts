@@ -231,13 +231,31 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
   // Log the full OCR text for debugging
   console.log('Full OCR text:', ocrText);
   
-  // Define material keywords and their properties
+  // Define material keywords and their properties - matching frontend triggers
   const MATERIAL_KEYWORDS = [
     { 
-      keys: ['backing board', 'masonite', 'mdf', 'white mdf'],
+      keys: ['white melamine', 'white melamme', 'melamine'],
+      id: '201',
+      name: 'White Melamine',
+      displayName: 'White Melamine'
+    },
+    { 
+      keys: ['doors', 'door'],
+      id: '203',
+      name: 'Doors',
+      displayName: 'Doors'
+    },
+    { 
+      keys: ['white messonite', 'messonite', 'backing board', 'masonite', 'mdf', 'white mdf'],
       id: '202',
       name: 'MEL MDF Platinum White 9x6x3 SF',
       displayName: 'White Messonite'
+    },
+    { 
+      keys: ['color melamine', 'colour melamine', 'color', 'colour'],
+      id: '204',
+      name: 'Color Melamine',
+      displayName: 'Color Melamine'
     }
   ];
   
@@ -284,10 +302,35 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     
     if (!line) continue; // Skip empty lines
     
-    // Skip empty lines or header/category lines
-    if (line.toLowerCase() === 'doors' ||
-        line.toLowerCase().includes('white') && line.length < 15) {
-      continue;
+    // Check if this line is a material trigger that should create a separator
+    let materialTriggerFound = false;
+    let triggeredMaterial = null;
+    
+    for (const { keys, displayName } of MATERIAL_KEYWORDS) {
+      if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
+        materialTriggerFound = true;
+        triggeredMaterial = displayName;
+        currentMaterial = { displayName };
+        console.log(`🔗 BACKEND: Material trigger found: "${line}" → ${displayName}`);
+        
+        // Create a separator piece for this material
+        dimensions.push({
+          id: `separator-${dimensions.length}`,
+          width: 0,
+          length: 0,
+          quantity: 0,
+          material: displayName,
+          separator: true,
+          name: displayName,
+          description: line.trim()
+        } as any);
+        
+        break;
+      }
+    }
+    
+    if (materialTriggerFound) {
+      continue; // Skip further processing for material trigger lines
     }
     
     console.log(`Processing line ${i+1}:`, line);
@@ -382,7 +425,7 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
         width,
         length,
         quantity,
-        material: currentMaterial ? currentMaterial.name : undefined,
+        material: currentMaterial ? currentMaterial.displayName : 'White Melamine', // Use displayName for consistency
         materialId: currentMaterial ? currentMaterial.id : undefined,
         materialDisplayName: currentMaterial ? currentMaterial.displayName : undefined
       });

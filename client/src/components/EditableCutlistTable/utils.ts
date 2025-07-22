@@ -201,28 +201,64 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
   const materials: string[] = [];
   let currentMaterial = materialCategories[0];
   
+  // Define material trigger words that should create dropdowns
+  const materialTriggers = [
+    { key: "white melamine", value: "White Melamine" },
+    { key: "white melamme", value: "White Melamine" }, // Common spelling variation
+    { key: "doors", value: "Doors" },
+    { key: "door", value: "Doors" }, // Singular form
+    { key: "color", value: "Color" },
+    { key: "colour", value: "Color" }, // UK spelling
+    { key: "white messonite", value: "White Messonite" },
+    { key: "messonite", value: "White Messonite" }, // Just messonite
+  ];
+  
   // Split OCR text into lines
   const lines = ocrText.split('\n').filter(line => line.trim() !== '');
-  console.log(`Parsing ${lines.length} lines of OCR text`);
+  console.log(`🔍 OCR PARSING DEBUG: Parsing ${lines.length} lines of OCR text`);
+  console.log(`📋 Available material triggers:`, materialTriggers.map(t => t.key));
   
-  // Look for material headings and dimensions
+  let separatorCount = 0;
+  
+  // Process lines sequentially to maintain order
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    console.log(`Processing line: "${line}"`);
+    console.log(`📄 Processing line ${i}: "${line}"`);
     
-    // Check if this line is a material heading
-    let isMaterialHeading = false;
-    for (const material of materialCategories) {
-      if (line.toLowerCase().includes(material.toLowerCase())) {
-        currentMaterial = material;
-        materials.push(material);
-        isMaterialHeading = true;
-        console.log(`Found material heading: ${material}`);
+    // Check if this line is a material trigger word
+    let isMaterialTrigger = false;
+    let triggeredMaterial = null;
+    
+    for (const trigger of materialTriggers) {
+      if (line.toLowerCase().includes(trigger.key.toLowerCase())) {
+        triggeredMaterial = trigger.value;
+        currentMaterial = trigger.value;
+        isMaterialTrigger = true;
+        console.log(`✅ MATERIAL TRIGGER FOUND: "${trigger.key}" -> "${trigger.value}" on line ${i}`);
         break;
       }
     }
     
-    if (isMaterialHeading) {
+    // If we found a material trigger, add a separator dimension to create a dropdown
+    if (isMaterialTrigger && triggeredMaterial) {
+      separatorCount++;
+      const separatorId = `separator-${Date.now()}-${dimensions.length}`;
+      
+      dimensions.push({
+        id: separatorId,
+        separator: true,
+        name: triggeredMaterial,
+        material: triggeredMaterial,
+        lineIndex: i, // Track original position in OCR text
+        originalLine: line // Store original line for reference
+      });
+      
+      // Add to materials list if not already present
+      if (!materials.includes(triggeredMaterial)) {
+        materials.push(triggeredMaterial);
+      }
+      
+      console.log(`🎯 SEPARATOR ${separatorCount} CREATED: ${triggeredMaterial} (ID: ${separatorId})`);
       continue;
     }
     
@@ -240,7 +276,8 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           length,
           quantity,
           material: currentMaterial,
-          description: line // Store the original line for reference
+          description: line, // Store the original line for reference
+          lineIndex: i // Track original position in OCR text
         });
         
         console.log(`Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
@@ -443,8 +480,24 @@ export function calculateEdging(piece: CutPiece): string {
   if (piece.widthTick1) edgingSides.push('W1');
   if (piece.widthTick2) edgingSides.push('W2');
   
-  // Return comma-separated string of sides that need edging
-  return edgingSides.join(',');
+  // If we have tick boxes selected, return them
+  if (edgingSides.length > 0) {
+    return edgingSides.join(',');
+  }
+  
+  // Fallback: Check if piece has a legacy edging property
+  // If edging is 1 or true, return "1" to indicate all sides
+  if (piece.edging === 1 || piece.edging === true) {
+    return '1'; // Backend will interpret this as all 4 sides
+  }
+  
+  // If edging is already a string, return it as-is
+  if (typeof piece.edging === 'string' && piece.edging.trim() !== '') {
+    return piece.edging;
+  }
+  
+  // No edging required
+  return '';
 }
 
 export function calculateEdgingLength(piece: CutPiece): number {
