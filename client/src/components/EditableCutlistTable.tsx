@@ -587,8 +587,6 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   };
 
   const handleCalculate = () => {
-    console.log('📈 HANDLE CALCULATE: Starting validation process');
-    console.log('handleCalculate called');
     // Validate data
     if (cutPieces.length === 0) {
       setSnackbarMessage('Please add cut pieces first');
@@ -1090,32 +1088,18 @@ Thank you for your business!
   const getSections = () => {
     const sections: { material: string, pieces: CutPiece[], headingIdx: number }[] = [];
     if (!cutPieces) {
-      console.log('EditableCutlistTable: No cut pieces available');
       return sections;
     }
-    
-    console.log('EditableCutlistTable: Processing', cutPieces.length, 'cut pieces for sections');
-    console.log('EditableCutlistTable: Separator pieces:', cutPieces.filter(p => p.separator).map(p => p.name || 'Unnamed'));
 
     let currentPieces: CutPiece[] = [];
     let currentMaterial: string | undefined;
     let currentHeadingIdx: number = -1;
 
     cutPieces.forEach((piece, idx) => {
-      // Debug the current piece
-      console.log(`EditableCutlistTable: Processing piece ${idx}:`, { 
-        id: piece.id, 
-        name: piece.name, 
-        separator: piece.separator,
-        material: piece.material,
-        dimensions: `${piece.length}x${piece.width}`
-      });
       
       if (piece.separator) {
-        console.log(`EditableCutlistTable: Found separator at index ${idx} for material: ${piece.name}`);
         if (currentMaterial !== undefined && currentHeadingIdx !== -1) {
           sections.push({ material: currentMaterial, pieces: currentPieces, headingIdx: currentHeadingIdx });
-          console.log(`EditableCutlistTable: Created section for ${currentMaterial} with ${currentPieces.length} pieces`);
         }
         currentMaterial = piece.name || '';
         currentHeadingIdx = idx;
@@ -1127,11 +1111,7 @@ Thank you for your business!
 
     if (currentMaterial !== undefined && currentHeadingIdx !== -1) {
       sections.push({ material: currentMaterial, pieces: currentPieces, headingIdx: currentHeadingIdx });
-      console.log(`EditableCutlistTable: Created final section for ${currentMaterial} with ${currentPieces.length} pieces`);
     }
-    
-    console.log('EditableCutlistTable: Created', sections.length, 'material sections');
-    console.log('EditableCutlistTable: Section materials:', sections.map(s => s.material));
     
     return sections;
   };
@@ -1159,22 +1139,14 @@ Thank you for your business!
             </Button>
           </Box>
           
-          {console.log('Rendering mobile sections, validation state:', { isValidating, requireMaterialValidation })}
-          {console.log('📱 MOBILE DEBUG: All cut pieces received:', cutPieces.map(p => ({ id: p.id, name: p.name, separator: p.separator, material: p.material })))}
+
           {(() => {
             // Check if we have OCR-parsed data with separator pieces in sequence (mobile view)
             const hasSequentialSeparators = cutPieces.some(piece => piece.separator);
-            console.log('📱 MOBILE DEBUG: hasSequentialSeparators =', hasSequentialSeparators);
+
             
             if (hasSequentialSeparators) {
-              console.log('📱 MOBILE SEQUENTIAL RENDERING DEBUG:');
-              console.log('📊 Total cut pieces:', cutPieces.length);
-              const separatorPieces = cutPieces.filter(piece => piece.separator);
-              console.log('🔗 Separator pieces found:', separatorPieces.length);
-              separatorPieces.forEach((sep, idx) => {
-                console.log(`  Mobile Separator ${idx + 1}: ${sep.name || sep.material} (ID: ${sep.id})`);
-              });
-              
+
               // Process pieces in their original sequence for mobile
               let currentSectionIndex = 0;
               let currentSectionMaterial = '';
@@ -1182,12 +1154,9 @@ Thank you for your business!
               const sectionsToRender: any[] = [];
               
               cutPieces.forEach((piece, index) => {
-                console.log(`📋 Mobile processing piece ${index}: ${piece.separator ? 'SEPARATOR' : 'REGULAR'} - ${piece.name || piece.material || 'Unknown'}`);
-                
                 if (piece.separator) {
                   // If we have accumulated pieces, save the current section
                   if (currentSectionPieces.length > 0) {
-                    console.log(`💾 Mobile saving section with ${currentSectionPieces.length} pieces for material: ${currentSectionMaterial}`);
                     sectionsToRender.push({
                       material: currentSectionMaterial,
                       pieces: currentSectionPieces,
@@ -1200,17 +1169,14 @@ Thank you for your business!
                   currentSectionMaterial = piece.name || piece.material || 'Unknown Material';
                   currentSectionPieces = [];
                   currentSectionIndex = index;
-                  console.log(`🆕 Mobile starting new section: ${currentSectionMaterial} at index ${index}`);
                 } else {
                   // Add regular piece to current section
                   currentSectionPieces.push(piece);
-                  console.log(`➕ Mobile added piece to current section: ${piece.name || 'Unnamed'} (${piece.length}x${piece.width})`);
                 }
               });
               
               // Add the final section if it has pieces
               if (currentSectionPieces.length > 0) {
-                console.log(`💾 Mobile saving final section with ${currentSectionPieces.length} pieces for material: ${currentSectionMaterial}`);
                 sectionsToRender.push({
                   material: currentSectionMaterial,
                   pieces: currentSectionPieces,
@@ -1219,16 +1185,10 @@ Thank you for your business!
                 });
               }
               
-              console.log(`📱 MOBILE FINAL SECTIONS TO RENDER: ${sectionsToRender.length}`);
-              sectionsToRender.forEach((section, idx) => {
-                console.log(`  Mobile Section ${idx + 1}: ${section.material} with ${section.pieces.length} pieces`);
-              });
-              
               // Render mobile sections in their original sequence
               return sectionsToRender.map((section, sectionIdx) => (
                 <Box key={`section-mobile-sequential-${section.separatorIndex}`} sx={{ mb: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    {console.log(`Rendering mobile section ${sectionIdx}, material: ${section.material}, validation: ${(requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}`)}
                     
                     <FormControl 
                       fullWidth 
@@ -1286,7 +1246,6 @@ Thank you for your business!
                       <Select
                         value={section.material || ''}
                         onChange={(e) => {
-                          console.log('📝 DROPDOWN CHANGE: Selected material:', e.target.value, 'for section:', section.material);
                           const newMaterial = e.target.value;
                           const updatedPieces = [...cutPieces];
                           // Update the separator piece name and remove requiresSelection flag
