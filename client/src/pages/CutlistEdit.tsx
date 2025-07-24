@@ -404,7 +404,7 @@ const CutlistEdit: React.FC = () => {
       {/* Branch Dropdown - Required Validation */}
       {!loading && !error && (
         <Box sx={{ p: 3, pb: 0 }}>
-          <FormControl fullWidth required error={!selectedBranch} sx={{ mb: 2 }}>
+          <FormControl fullWidth required error={!selectedBranch} sx={{ mb: 2 }} data-testid="branch-dropdown">
             <InputLabel>Select your branch</InputLabel>
             <Select
               value={selectedBranch}
@@ -452,6 +452,7 @@ const CutlistEdit: React.FC = () => {
             isMobile={isMobile}
             isConfirmed={isDataConfirmed}
             branchData={selectedBranchData}
+            selectedBranch={selectedBranch}
             requireMaterialValidation={true}
           />
         </Paper>

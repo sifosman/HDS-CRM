@@ -1225,14 +1225,8 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
       doc.addPage();
     }
     
-    // Material header with clearer styling
-    doc.rect(50, doc.y, doc.page.width - 100, 30)
-       .fillAndStroke('#e6e6e6', '#000000');
-    
-    doc.fontSize(12).fillColor('#000000')
-       .text(`Material ${index + 1}: ${material} - ${boardSize}`, 60, doc.y - 22, { align: 'left' });
-    
-    doc.moveDown(1.5);
+    // Removed material header - start directly with table
+    doc.moveDown(0.5);
     
     // Create a compact table for this section's details
     const startY = doc.y;
@@ -1246,14 +1240,8 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
     // Check if table will fit on current page, if not start new page
     if (doc.y + tableHeight > doc.page.height - 80) {
       doc.addPage();
-      // Re-add material header on new page
-      doc.rect(50, doc.y, doc.page.width - 100, 25)
-         .fillAndStroke('#e6e6e6', '#000000');
-      
-      doc.fontSize(12).fillColor('#000000')
-         .text(`Material ${index + 1}: ${material} - ${boardSize} (continued)`, 60, doc.y - 18, { align: 'left' });
-      
-      doc.moveDown(1);
+      // Removed material header on new page - start directly with table
+      doc.moveDown(0.5);
     }
     
     const currentStartY = doc.y;
@@ -1550,19 +1538,7 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
           // Switch to the page and add numbering
           doc.switchToPage(pageIdx);
           
-          // Add page number at the bottom
-          doc.fontSize(8).fillColor('#000000');
-          doc.text(`Page ${i + 1} of ${totalPages}`, 50, doc.page.height - 50, {
-            align: 'center',
-            width: doc.page.width - 100
-          });
-          
-          // Add disclaimer
-          doc.text('This is a computer-generated quote and does not require a signature. Valid for 30 days.',
-            50, doc.page.height - 30, {
-              align: 'center',
-              width: doc.page.width - 100
-          });
+          // Removed page numbering and disclaimer text per user request
           
           console.log(`Successfully added numbering to page ${pageIdx}`);
         } catch (pageError) {

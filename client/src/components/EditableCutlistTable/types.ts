@@ -46,5 +46,6 @@ export interface EditableCutlistTableProps {
   isMobile?: boolean;
   isConfirmed?: boolean;
   branchData?: any | null;
+  selectedBranch?: string;
   requireMaterialValidation?: boolean;
 }

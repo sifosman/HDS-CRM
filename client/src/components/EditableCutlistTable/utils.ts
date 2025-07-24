@@ -262,7 +262,33 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
       continue;
     }
     
-    // Try to extract dimensions: format like '460x2000'
+    // Try to extract dimensions: First check for quantity-first format like '10/ 1700 x 450'
+    const quantityFirstMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*[xX×*]\s*(\d+)/);
+    if (quantityFirstMatch) {
+      const quantity = parseInt(quantityFirstMatch[1], 10);
+      const width = parseInt(quantityFirstMatch[2], 10);
+      const length = parseInt(quantityFirstMatch[3], 10);
+      
+      // Validate that this looks like reasonable dimensions and quantity
+      if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) && 
+          width > 0 && length > 0 && quantity > 0 && quantity <= 100 &&
+          width >= 10 && width <= 5000 && length >= 10 && length <= 5000) {
+        dimensions.push({
+          id: `dim-${Date.now()}-${dimensions.length}`,
+          width,
+          length,
+          quantity,
+          material: currentMaterial,
+          description: line, // Store the original line for reference
+          lineIndex: i // Track original position in OCR text
+        });
+        
+        console.log(`✅ QUANTITY-FIRST FORMAT: Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
+        continue; // Skip to next line since we found a match
+      }
+    }
+    
+    // Try to extract dimensions: standard format like '460x2000' or '460x2000x2'
     const dimensionMatch = line.match(/(\d+)\s*[xX×*]\s*(\d+)(?:\s*[xX×*]\s*(\d+))?/);
     if (dimensionMatch) {
       const width = parseInt(dimensionMatch[1], 10);
@@ -280,7 +306,7 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           lineIndex: i // Track original position in OCR text
         });
         
-        console.log(`Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
+        console.log(`✅ STANDARD FORMAT: Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
       }
     }
   }
@@ -514,11 +540,11 @@ export function normalizeCutPieces(rawPieces: any[], DEFAULT_MATERIAL_CATEGORIES
         name: description,
         description: description, // Keep the original description
         edging: piece.edging,
-        material: currentMaterial
+        material: piece.material || currentMaterial // Preserve existing material from backend
       };
       
       normalizedPieces.push(normalizedPiece);
-      console.log(`Normalized piece: ${piece.width}x${piece.length} x${quantity} (${currentMaterial}) - "${description}"`);
+      console.log(`Normalized piece: ${piece.width}x${piece.length} x${quantity} (${piece.material || currentMaterial}) - "${description}"`);
     }
   }
 
@@ -544,13 +570,13 @@ export function calculateEdging(piece: CutPiece): string {
   
   // Fallback: Check if piece has a legacy edging property
   // If edging is 1 or true, return "1" to indicate all sides
-  if (piece.edging === 1 || piece.edging === true) {
+  if (piece.edging === 1) {
     return '1'; // Backend will interpret this as all 4 sides
   }
   
-  // If edging is already a string, return it as-is
-  if (typeof piece.edging === 'string' && piece.edging.trim() !== '') {
-    return piece.edging;
+  // If edging is a number greater than 1, convert to string
+  if (typeof piece.edging === 'number' && piece.edging > 1) {
+    return piece.edging.toString();
   }
   
   // No edging required

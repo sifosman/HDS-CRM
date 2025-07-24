@@ -225,6 +225,8 @@ const extractDimensionsFromText = (ocrText) => {
     let currentMaterial = null;
     // Enhanced regex patterns focused on real-world OCR text formats
     const dimensionPatterns = [
+        // Format: "10/ 1700 x 450" (quantity-first format with slash)
+        /(\d+)\s*\/\s*(\d+)\s*[xX×*]\s*(\d+)/,
         // Format: "2000x 460=2" or "918x460=4" (with equals sign, allows for noise)
         /(\d+)\s*[xX×*]\s*(\d+)[^\d\r\n]*?=\s*(\d+)/,
         // Format: "360x140-8" (with dash)
@@ -287,15 +289,27 @@ const extractDimensionsFromText = (ocrText) => {
         let width = 0, length = 0, quantity = 0; // Initialize quantity to 0
         console.log(`Line format analysis for "${line}"`);
         // First, try the specific patterns
-        for (const pattern of dimensionPatterns) {
+        for (let patternIndex = 0; patternIndex < dimensionPatterns.length; patternIndex++) {
+            const pattern = dimensionPatterns[patternIndex];
             const match = line.match(pattern);
             if (match) {
-                width = parseInt(match[1]);
-                length = parseInt(match[2]);
-                quantity = match[3] ? parseInt(match[3]) : 0;
-                // Ensure width, length, and quantity are valid numbers
-                if (!isNaN(width) && !isNaN(length) && width > 0 && length > 0) {
-                    console.log(`PATTERN MATCH FOUND: ${width}x${length}, qty=${quantity} using pattern ${pattern}`);
+                // Handle quantity-first format (pattern index 0: "10/ 1700 x 450")
+                if (patternIndex === 0) {
+                    quantity = parseInt(match[1]);
+                    width = parseInt(match[2]);
+                    length = parseInt(match[3]);
+                }
+                else {
+                    // All other patterns follow (width, length, quantity) order
+                    width = parseInt(match[1]);
+                    length = parseInt(match[2]);
+                    quantity = match[3] ? parseInt(match[3]) : 0;
+                }
+                // Validate that this looks like reasonable dimensions and quantity
+                if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) &&
+                    width > 0 && length > 0 && quantity > 0 && quantity <= 100 &&
+                    width >= 10 && width <= 5000 && length >= 10 && length <= 5000) {
+                    console.log(`✅ SERVER PATTERN MATCH: ${width}x${length}, qty=${quantity} using pattern ${patternIndex} (${pattern})`);
                     matched = true;
                     break;
                 }

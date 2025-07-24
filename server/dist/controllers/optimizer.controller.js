@@ -164,6 +164,12 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             if (!material || !cutPieces || !Array.isArray(cutPieces) || cutPieces.length === 0) {
                 continue; // Skip invalid sections
             }
+            // Filter out separator pieces from calculations
+            const validCutPieces = cutPieces.filter((piece) => !piece.separator);
+            if (validCutPieces.length === 0) {
+                console.log(`Skipping section ${material} - no valid cut pieces after filtering separators`);
+                continue; // Skip sections with only separator pieces
+            }
             // 1. Get product pricing by description from Supabase
             console.log(`Getting pricing for material: ${material}`);
             // 1. Look up pricing for this material from Supabase
@@ -240,7 +246,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // 5. Prepare all pieces for optimization
             const allPieces = [
                 stockPiece,
-                ...cutPieces.map(piece => (Object.assign(Object.assign({}, piece), { kind: 0 // Cut piece
+                ...validCutPieces.map(piece => (Object.assign(Object.assign({}, piece), { kind: 0 // Cut piece
                  })))
             ];
             // 6. Prepare data for optimization (convert to mm internally)
@@ -272,7 +278,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             const boardArea = length * width * boardsNeeded;
             let usedArea = 0;
             // Calculate the total area of all cut pieces
-            for (const piece of cutPieces) {
+            for (const piece of validCutPieces) {
                 usedArea += piece.length * piece.width * (piece.amount || 1);
             }
             // Calculate wastage - the area of the boards that wasn't used
@@ -293,8 +299,8 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             let totalEdging = 0;
             const edgingBreakdown = [];
             console.log(`\n=== EDGING CALCULATION DEBUG for ${material} ===`);
-            console.log(`Cut pieces count: ${cutPieces.length}`);
-            for (const piece of cutPieces) {
+            console.log(`Cut pieces count: ${validCutPieces.length}`);
+            for (const piece of validCutPieces) {
                 // Check each edge (L1, L2, W1, W2) and calculate edging needed
                 let pieceEdging = 0;
                 let edgingSides = [];
@@ -386,7 +392,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             };
             processedSections.push(processedSection);
-            pdfSections.push(Object.assign(Object.assign({}, processedSection), { cutPieces: cutPieces.map((p) => ({
+            pdfSections.push(Object.assign(Object.assign({}, processedSection), { cutPieces: validCutPieces.map((p) => ({
                     length: p.length,
                     width: p.width,
                     quantity: p.amount || 1,

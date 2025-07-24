@@ -62,6 +62,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   isMobile,
   isConfirmed,
   branchData,
+  selectedBranch,
   requireMaterialValidation = false
 }) => {
   const theme = useTheme();
@@ -362,7 +363,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     setSnackbarOpen(true);
   };
 
-  const handleAddCutPiece = (materialName?: string) => {
+  const handleAddCutPiece = (materialName?: string, insertAfterIndex?: number) => {
     const newId = `cp-${Date.now()}`;
     let targetMaterial = materialName;
 
@@ -374,10 +375,10 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     
     const newPiece: CutPiece = {
       id: newId,
-      width: 500,
-      length: 500,
+      width: undefined, // Changed from 500 to undefined for blank field
+      length: undefined, // Changed from 500 to undefined for blank field
       quantity: 1,
-      name: 'New Piece',
+      name: '',
       edging: 1,
       material: targetMaterial,
       lengthTick1: false,
@@ -389,7 +390,11 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
 
     // Find the correct index to insert the new piece
     let insertAtIndex = cutPieces.length;
-    if (targetMaterial) {
+    
+    // If insertAfterIndex is provided, use it (for positioned insertion)
+    if (insertAfterIndex !== undefined) {
+      insertAtIndex = insertAfterIndex + 1;
+    } else if (targetMaterial) {
         // Find the last piece of the same material
         const lastPieceInMaterialSectionIndex = cutPieces.map(p => p.material).lastIndexOf(targetMaterial);
         if (lastPieceInMaterialSectionIndex !== -1) {
@@ -593,6 +598,53 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       return;
     }
 
+    // Branch validation - check if a branch is selected
+    if (!selectedBranch || selectedBranch.trim() === '') {
+      console.log('Branch validation failed - no branch selected');
+      setSnackbarMessage('⚠️ Please select a branch before confirming the cutlist');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      
+      // Scroll to the branch dropdown at the top of the page
+      const branchDropdownElement = document.querySelector('[data-testid="branch-dropdown"], .branch-dropdown, input[name="branch"], select[name="branch"]') as HTMLElement;
+      if (branchDropdownElement) {
+        console.log('Found branch dropdown element, scrolling to it');
+        branchDropdownElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Add visual highlight
+        branchDropdownElement.style.boxShadow = '0 0 8px 2px rgba(244, 67, 54, 0.6)';
+        
+        setTimeout(() => {
+          branchDropdownElement.focus();
+          // Add pulsing animation
+          branchDropdownElement.animate(
+            [
+              { boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.7)' },
+              { boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)' },
+            ],
+            {
+              duration: 1500,
+              iterations: 3,
+            }
+          );
+          
+          // Remove highlight after animation
+          setTimeout(() => {
+            branchDropdownElement.style.boxShadow = '';
+          }, 4500);
+        }, 500);
+      } else {
+        console.log('Could not find branch dropdown element, trying to scroll to top of page');
+        // If we can't find the specific element, scroll to top of page where branch dropdown should be
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      
+      return;
+    }
+
     // Group the cutlist pieces by material section
     const sections = getSections();
     console.log('Material sections:', sections);
@@ -613,7 +665,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     const missingMaterialSections = sections.filter(section => 
       !section.material || 
       section.material.trim() === '' || 
-      !productDescriptions.includes(section.material)
+      (productDescriptions.length > 0 && !productDescriptions.includes(section.material))
     );
     
     console.log('Missing/invalid material sections:', missingMaterialSections.length);
@@ -1247,7 +1299,7 @@ Thank you for your business!
                           <MenuItem key={description} value={description}>{description}</MenuItem>
                         ))}
                       </Select>
-                      {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material)) && (
+                      {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || (productDescriptions.length > 0 && !productDescriptions.includes(section.material))) && (
                         <Box sx={{ 
                           mt: 1, 
                           mb: 2,
@@ -1309,28 +1361,57 @@ Thank you for your business!
                           </Box>
                         </Paper>
                         
-                        {/* Add plus button between pieces (except after the last piece) */}
+                        {/* Add material button between pieces (except after the last piece) */}
                         {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
-                            <Fab
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, my: 1 }}>
+                            <Button
+                              variant="text"
                               size="small"
-                              color="primary"
                               aria-label="Insert material section"
                               onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
                               sx={{
-                                width: 32,
-                                height: 32,
-                                minHeight: 32,
-                                boxShadow: 2,
+                                color: '#9e9e9e',
+                                fontSize: '0.75rem',
+                                fontWeight: 'normal',
+                                minWidth: 'auto',
+                                padding: '2px 6px',
+                                textTransform: 'none',
+                                textDecoration: 'underline',
+                                textDecorationColor: 'transparent',
                                 '&:hover': {
-                                  boxShadow: 4,
-                                  transform: 'scale(1.1)',
+                                  color: '#757575',
+                                  textDecorationColor: '#757575',
+                                  backgroundColor: 'transparent',
                                 },
                                 transition: 'all 0.2s ease-in-out',
                               }}
                             >
-                              <AddIcon sx={{ fontSize: 18 }} />
-                            </Fab>
+                              add material
+                            </Button>
+                            <Button
+                              variant="text"
+                              size="small"
+                              aria-label="Add cut piece"
+                              onClick={() => handleAddCutPiece(undefined, actualPieceIndex)}
+                              sx={{
+                                color: '#9e9e9e',
+                                fontSize: '0.75rem',
+                                fontWeight: 'normal',
+                                minWidth: 'auto',
+                                padding: '2px 6px',
+                                textTransform: 'none',
+                                textDecoration: 'underline',
+                                textDecorationColor: 'transparent',
+                                '&:hover': {
+                                  color: '#757575',
+                                  textDecorationColor: '#757575',
+                                  backgroundColor: 'transparent',
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                              }}
+                            >
+                              add piece
+                            </Button>
                           </Box>
                         )}
                       </React.Fragment>
@@ -1431,7 +1512,7 @@ Thank you for your business!
                             <MenuItem key={description} value={description}>{description}</MenuItem>
                         ))}
                     </Select>
-                    {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material)) && (
+                    {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || (productDescriptions.length > 0 && !productDescriptions.includes(section.material))) && (
                       <Box sx={{ 
                         mt: 1, 
                         mb: 2,
@@ -1494,28 +1575,57 @@ Thank you for your business!
                       </Box>
                     </Paper>
                     
-                    {/* Add plus button between pieces (except after the last piece) */}
+                    {/* Add material button between pieces (except after the last piece) */}
                     {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
-                        <Fab
+                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, my: 1 }}>
+                        <Button
+                          variant="text"
                           size="small"
-                          color="primary"
                           aria-label="Insert material section"
                           onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
                           sx={{
-                            width: 32,
-                            height: 32,
-                            minHeight: 32,
-                            boxShadow: 2,
+                            color: '#9e9e9e',
+                            fontSize: '0.75rem',
+                            fontWeight: 'normal',
+                            minWidth: 'auto',
+                            padding: '2px 6px',
+                            textTransform: 'none',
+                            textDecoration: 'underline',
+                            textDecorationColor: 'transparent',
                             '&:hover': {
-                              boxShadow: 4,
-                              transform: 'scale(1.1)',
+                              color: '#757575',
+                              textDecorationColor: '#757575',
+                              backgroundColor: 'transparent',
                             },
                             transition: 'all 0.2s ease-in-out',
                           }}
                         >
-                          <AddIcon sx={{ fontSize: 18 }} />
-                        </Fab>
+                          add material
+                        </Button>
+                        <Button
+                          variant="text"
+                          size="small"
+                          aria-label="Add cut piece"
+                          onClick={() => handleAddCutPiece(undefined, actualPieceIndex)}
+                          sx={{
+                            color: '#9e9e9e',
+                            fontSize: '0.75rem',
+                            fontWeight: 'normal',
+                            minWidth: 'auto',
+                            padding: '2px 6px',
+                            textTransform: 'none',
+                            textDecoration: 'underline',
+                            textDecorationColor: 'transparent',
+                            '&:hover': {
+                              color: '#757575',
+                              textDecorationColor: '#757575',
+                              backgroundColor: 'transparent',
+                            },
+                            transition: 'all 0.2s ease-in-out',
+                          }}
+                        >
+                          add piece
+                        </Button>
                       </Box>
                     )}
                   </React.Fragment>
@@ -1524,7 +1634,6 @@ Thank you for your business!
             </Box>
           ));
           })()}
-          <Fab color="primary" aria-label="add cut piece" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => handleAddCutPiece()} disabled={isConfirmed}><AddIcon /></Fab>
         </Box>
       ) : (
         // Desktop Table View
@@ -1868,16 +1977,57 @@ Thank you for your business!
                       </Table>
                     </TableContainer>
                     
-                    {/* Add piece button for this section */}
-                    <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50' }}>
+                    {/* Add material and add piece buttons for this section */}
+                    <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50', display: 'flex', justifyContent: 'center', gap: 2 }}>
                       <Button
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        onClick={() => handleAddCutPiece(section.material)}
-                        disabled={isConfirmed}
+                        variant="text"
                         size="small"
+                        aria-label="Insert material section"
+                        onClick={() => handleInsertMaterialSeparator(section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : 0)}
+                        disabled={isConfirmed}
+                        sx={{
+                          color: '#9e9e9e',
+                          fontSize: '0.75rem',
+                          fontWeight: 'normal',
+                          minWidth: 'auto',
+                          padding: '2px 6px',
+                          textTransform: 'none',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'transparent',
+                          '&:hover': {
+                            color: '#757575',
+                            textDecorationColor: '#757575',
+                            backgroundColor: 'transparent',
+                          },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
                       >
-                        Add Piece to {section.material}
+                        add material
+                      </Button>
+                      <Button
+                        variant="text"
+                        size="small"
+                        aria-label="Add cut piece"
+                        onClick={() => handleAddCutPiece(section.material, section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : 0)}
+                        disabled={isConfirmed}
+                        sx={{
+                          color: '#9e9e9e',
+                          fontSize: '0.75rem',
+                          fontWeight: 'normal',
+                          minWidth: 'auto',
+                          padding: '2px 6px',
+                          textTransform: 'none',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'transparent',
+                          '&:hover': {
+                            color: '#757575',
+                            textDecorationColor: '#757575',
+                            backgroundColor: 'transparent',
+                          },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      >
+                        add piece
                       </Button>
                     </Box>
                   </Paper>
@@ -2132,6 +2282,60 @@ Thank you for your business!
                       </TableBody>
                     </Table>
                   </TableContainer>
+                  
+                  {/* Add material and add piece buttons for this section */}
+                  <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50', display: 'flex', justifyContent: 'center', gap: 2 }}>
+                    <Button
+                      variant="text"
+                      size="small"
+                      aria-label="Insert material section"
+                      onClick={() => handleInsertMaterialSeparator(section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : section.headingIdx)}
+                      disabled={isConfirmed}
+                      sx={{
+                        color: '#9e9e9e',
+                        fontSize: '0.75rem',
+                        fontWeight: 'normal',
+                        minWidth: 'auto',
+                        padding: '2px 6px',
+                        textTransform: 'none',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'transparent',
+                        '&:hover': {
+                          color: '#757575',
+                          textDecorationColor: '#757575',
+                          backgroundColor: 'transparent',
+                        },
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                    >
+                      add material
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="small"
+                      aria-label="Add cut piece"
+                      onClick={() => handleAddCutPiece(section.material, section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : section.headingIdx)}
+                      disabled={isConfirmed}
+                      sx={{
+                        color: '#9e9e9e',
+                        fontSize: '0.75rem',
+                        fontWeight: 'normal',
+                        minWidth: 'auto',
+                        padding: '2px 6px',
+                        textTransform: 'none',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'transparent',
+                        '&:hover': {
+                          color: '#757575',
+                          textDecorationColor: '#757575',
+                          backgroundColor: 'transparent',
+                        },
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                    >
+                      add piece
+                    </Button>
+                  </Box>
                 </Paper>
               </Box>
             ));
@@ -2148,14 +2352,56 @@ Thank you for your business!
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
         
         {!isConfirmed && (
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<AddIcon />}
-            onClick={handleAddMaterialSection}
-          >
-            Add New Material Section
-          </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
+            <Button
+              variant="text"
+              size="small"
+              aria-label="Add material section"
+              onClick={handleAddMaterialSection}
+              sx={{
+                color: '#9e9e9e',
+                fontSize: '0.75rem',
+                fontWeight: 'normal',
+                minWidth: 'auto',
+                padding: '2px 6px',
+                textTransform: 'none',
+                textDecoration: 'underline',
+                textDecorationColor: 'transparent',
+                '&:hover': {
+                  color: '#757575',
+                  textDecorationColor: '#757575',
+                  backgroundColor: 'transparent',
+                },
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              add material
+            </Button>
+            <Button
+              variant="text"
+              size="small"
+              aria-label="Add cut piece"
+              onClick={() => handleAddCutPiece()}
+              sx={{
+                color: '#9e9e9e',
+                fontSize: '0.75rem',
+                fontWeight: 'normal',
+                minWidth: 'auto',
+                padding: '2px 6px',
+                textTransform: 'none',
+                textDecoration: 'underline',
+                textDecorationColor: 'transparent',
+                '&:hover': {
+                  color: '#757575',
+                  textDecorationColor: '#757575',
+                  backgroundColor: 'transparent',
+                },
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              add piece
+            </Button>
+          </Box>
         )}
         <Button 
           variant="contained" 
