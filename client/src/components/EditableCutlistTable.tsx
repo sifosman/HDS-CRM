@@ -659,22 +659,18 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     
     // Enhanced validation for material dropdowns
     // Check for missing or invalid material selections
-    console.log('Validation check - Available product descriptions:', productDescriptions);
-    console.log('Validation check - Section materials:', sections.map(s => ({ material: s.material, valid: productDescriptions.includes(s.material) })));
     
     const missingMaterialSections = sections.filter(section => 
       !section.material || 
-      section.material.trim() === '' || 
-      (productDescriptions.length > 0 && !productDescriptions.includes(section.material))
+      section.material.trim() === ''
     );
     
-    console.log('Missing/invalid material sections:', missingMaterialSections.length);
+
     if (missingMaterialSections.length > 0) {
       // Find the first section with missing or invalid material
       const firstMissingSectionIndex = sections.findIndex(section => 
         !section.material || 
-        section.material.trim() === '' || 
-        !productDescriptions.includes(section.material)
+        section.material.trim() === ''
       );
       
       // Set validation state to true to show validation errors
@@ -1226,7 +1222,7 @@ Thank you for your business!
                       fullWidth 
                       size="medium" 
                       required={showMaterialValidation || requireMaterialValidation || isValidating} 
-                      error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material))}
+                      error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}
                       id={`material-dropdown-mobile-${sectionIdx}`}
                       sx={{
                         animation: isValidating && (!section.material || section.material.trim() === '') ? 
@@ -1242,7 +1238,7 @@ Thank you for your business!
                             boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
                           },
                         },
-                        mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material)) ? 0 : 2,
+                        mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') ? 0 : 2,
                         '& .MuiOutlinedInput-root': {
                           fontSize: '1.1rem',
                           fontWeight: 'bold',
@@ -1299,7 +1295,7 @@ Thank you for your business!
                           <MenuItem key={description} value={description}>{description}</MenuItem>
                         ))}
                       </Select>
-                      {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || (productDescriptions.length > 0 && !productDescriptions.includes(section.material))) && (
+                      {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') && (
                         <Box sx={{ 
                           mt: 1, 
                           mb: 2,
@@ -1444,7 +1440,7 @@ Thank you for your business!
                     fullWidth 
                     size="medium" 
                     required={showMaterialValidation || requireMaterialValidation || isValidating} 
-                    error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material))}
+                    error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}
                     id={`material-dropdown-${sectionIdx}`}
                     sx={{
                       animation: isValidating && (!section.material || section.material.trim() === '') ? 
@@ -1460,7 +1456,7 @@ Thank you for your business!
                           boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
                         },
                       },
-                      mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material)) ? 0 : 2,
+                      mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') ? 0 : 2,
                       '& .MuiOutlinedInput-root': {
                         fontSize: '1.1rem',
                         fontWeight: 'bold',
@@ -1512,7 +1508,7 @@ Thank you for your business!
                             <MenuItem key={description} value={description}>{description}</MenuItem>
                         ))}
                     </Select>
-                    {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '' || (productDescriptions.length > 0 && !productDescriptions.includes(section.material))) && (
+                    {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') && (
                       <Box sx={{ 
                         mt: 1, 
                         mb: 2,
