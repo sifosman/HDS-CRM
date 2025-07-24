@@ -189,8 +189,8 @@ const extractFromHDSTable = (ocrText: string): { dimensions: Dimension[], unit: 
             // Add new dimension
             const newDimension: Dimension = {
               id: `hds-${Date.now()}-${dimensions.length}`,
-              length: height, // Use height as length
-              width: width,
+              length: width, // Fix: Use width as length (Length x Width format)
+              width: height, // Fix: Use height as width (Length x Width format)
               quantity: quantity
             };
             dimensionMap.set(dimensionKey, newDimension);
@@ -352,12 +352,12 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
         // Handle quantity-first format (pattern index 0: "10/ 1700 x 450")
         if (patternIndex === 0) {
           quantity = parseInt(match[1]);
-          width = parseInt(match[2]);
-          length = parseInt(match[3]);
+          length = parseInt(match[2]); // Fix: First dimension is length
+          width = parseInt(match[3]);  // Fix: Second dimension is width
         } else {
-          // All other patterns follow (width, length, quantity) order
-          width = parseInt(match[1]);
-          length = parseInt(match[2]);
+          // All other patterns follow (length, width, quantity) order - Length x Width format
+          length = parseInt(match[1]); // Fix: First captured group is length
+          width = parseInt(match[2]);  // Fix: Second captured group is width
           quantity = match[3] ? parseInt(match[3]) : 0;
         }
         
@@ -365,7 +365,7 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
         if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) && 
             width > 0 && length > 0 && quantity > 0 && quantity <= 100 &&
             width >= 10 && width <= 5000 && length >= 10 && length <= 5000) {
-          console.log(`✅ SERVER PATTERN MATCH: ${width}x${length}, qty=${quantity} using pattern ${patternIndex} (${pattern})`);
+          console.log(`✅ SERVER PATTERN MATCH: ${length}x${width} (Length x Width), qty=${quantity} using pattern ${patternIndex} (${pattern})`);
           matched = true;
           break;
         }
@@ -378,10 +378,10 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       const dimensionMatch = line.match(/(\d+)\s*[xX×*-]\s*(\d+)/);
       
       if (dimensionMatch) {
-        width = parseInt(dimensionMatch[1]);
-        length = parseInt(dimensionMatch[2]);
+        length = parseInt(dimensionMatch[1]); // Fix: First dimension is length
+        width = parseInt(dimensionMatch[2]);  // Fix: Second dimension is width
         
-        console.log(`  Basic dimension found: ${width}x${length}`);
+        console.log(`  Basic dimension found: ${length}x${width} (Length x Width)`);
         
         // Get the remainder of the string after the dimension match
         const remainder = line.substring(dimensionMatch[0].length).trim();
@@ -432,12 +432,12 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       }
       
       // Extra logging to confirm what's being added
-      console.log(`ADDING DIMENSION: ${width}x${length}, qty=${quantity}`);
+      console.log(`ADDING DIMENSION: ${length}x${width} (Length x Width), qty=${quantity}`);
       
       dimensions.push({
         id: `dim-${Date.now()}-${dimensions.length}`,
-        width,
-        length,
+        length, // Length field gets the length value
+        width,  // Width field gets the width value
         quantity,
         material: currentMaterial ? currentMaterial.displayName : 'White Melamine', // Use displayName for consistency
         materialId: currentMaterial ? currentMaterial.id : undefined,
