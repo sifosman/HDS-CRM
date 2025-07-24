@@ -316,8 +316,9 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     const separatorId = `separator-${Date.now()}`;
     const newPieceId = `piece-${Date.now()}`;
     
-    // Default material to use
-    const defaultMaterial = materialCategories.length > 0 ? materialCategories[0] : 'New Material';
+    // For new sections, we want to require explicit material selection
+    // So we'll set the material to empty string to force user selection
+    const defaultMaterial = ''; // Empty string forces user to select
     
     // Add both the separator and a blank piece at once
     setCutPieces(prevCutPieces => [
@@ -328,6 +329,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
         separator: true,
         name: defaultMaterial,
         material: defaultMaterial,
+        requiresSelection: true, // Flag to indicate this needs user selection
       },
       // Add an empty piece with the same material
       {
@@ -336,7 +338,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
         width: undefined,
         length: undefined,
         quantity: 1,
-        material: defaultMaterial,
+        material: defaultMaterial, // Will be empty, updated when user selects material
         edging: 0,
         lengthTick1: false,
         lengthTick2: false,
@@ -457,34 +459,30 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
 
   // Function to insert a material separator at a specific position (for mobile plus buttons)
   const handleInsertMaterialSeparator = (insertAfterIndex: number) => {
-    console.log('🔧 INSERTING SEPARATOR: Starting insertion process');
-    console.log('📍 Insert after index:', insertAfterIndex);
-    console.log('📋 Current cutPieces before insertion:', cutPieces.length, 'pieces');
-    
     setCutPieces(prevCutPieces => {
       const updatedPieces = [...prevCutPieces];
       
-      // Create a new separator piece
+      // Create a new separator piece with empty material to force user selection
       const newSeparator = {
         id: `separator-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         separator: true,
-        name: DEFAULT_MATERIAL_CATEGORIES[0], // Default to first material
-        material: DEFAULT_MATERIAL_CATEGORIES[0],
+        name: '', // Empty to force selection
+        material: '', // Empty to force selection
         description: 'New Material Section',
-        lineIndex: insertAfterIndex
+        lineIndex: insertAfterIndex,
+        requiresSelection: true // Flag to indicate this needs user selection
       };
-      
-      console.log('🆕 Created new separator:', newSeparator);
       
       // Insert the separator after the specified index
       updatedPieces.splice(insertAfterIndex + 1, 0, newSeparator);
       
-      console.log(`✅ Inserted new material separator at position ${insertAfterIndex + 1}`);
-      console.log('📋 Updated cutPieces after insertion:', updatedPieces.length, 'pieces');
-      console.log('🔗 Separators in updated array:', updatedPieces.filter(p => p.separator).length);
-      
       return updatedPieces;
     });
+    
+    // Show success message
+    setSnackbarMessage('New material section added - please select a material');
+    setSnackbarSeverity('info');
+    setSnackbarOpen(true);
   };
 
   const handleSave = () => {
@@ -659,11 +657,16 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     
     // Enhanced validation for material dropdowns
     // Check for missing or invalid material selections
+    // We validate that materials aren't empty, which covers both:
+    // 1. User-created sections (start with empty material)
+    // 2. OCR-detected sections that somehow lost their material
     
     const missingMaterialSections = sections.filter(section => 
       !section.material || 
       section.material.trim() === ''
     );
+    
+
     
 
     if (missingMaterialSections.length > 0) {
@@ -737,7 +740,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
         }, 10000); // Reset validation state after 10 seconds
       }
       
-      setSnackbarMessage('⚠️ Materials dropdown needs a selection');
+      setSnackbarMessage('⚠️ Please select a material from the dropdown');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
       return;
@@ -1276,9 +1279,12 @@ Thank you for your business!
                         onChange={(e) => {
                           const newMaterial = e.target.value;
                           const updatedPieces = [...cutPieces];
-                          // Update the separator piece name
+                          // Update the separator piece name and remove requiresSelection flag
                           if (updatedPieces[section.separatorIndex] && updatedPieces[section.separatorIndex].separator) {
                             updatedPieces[section.separatorIndex].name = newMaterial;
+                            updatedPieces[section.separatorIndex].material = newMaterial;
+                            // Remove the requiresSelection flag since user has now selected
+                            delete updatedPieces[section.separatorIndex].requiresSelection;
                           }
                           // Update material for all pieces in this section
                           section.pieces.forEach((piece: any) => {
@@ -1314,7 +1320,7 @@ Thank you for your business!
                           },
                         }}>
                           <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                            ⚠️ Materials dropdown needs a selection
+                            ⚠️ Please select a material from the dropdown
                           </Typography>
                         </Box>
                       )}
@@ -1495,6 +1501,9 @@ Thank you for your business!
                             const newMaterial = e.target.value;
                             const updatedPieces = [...cutPieces];
                             updatedPieces[section.headingIdx].name = newMaterial;
+                            updatedPieces[section.headingIdx].material = newMaterial;
+                            // Remove the requiresSelection flag since user has now selected
+                            delete updatedPieces[section.headingIdx].requiresSelection;
                             // Update material for all pieces in this section
                             for (let i = section.headingIdx + 1; i < updatedPieces.length; i++) {
                                 if (updatedPieces[i].separator) break;
