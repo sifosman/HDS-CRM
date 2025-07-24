@@ -587,6 +587,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   };
 
   const handleCalculate = () => {
+    console.log('📈 HANDLE CALCULATE: Starting validation process');
     console.log('handleCalculate called');
     // Validate data
     if (cutPieces.length === 0) {
@@ -661,10 +662,18 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     // 1. User-created sections (start with empty material)
     // 2. OCR-detected sections that somehow lost their material
     
+    console.log('🔍 VALIDATION DEBUG: All sections:', sections.map(s => ({ 
+      material: s.material, 
+      isEmpty: !s.material || s.material.trim() === '',
+      materialLength: s.material?.length || 0
+    })));
+    
     const missingMaterialSections = sections.filter(section => 
       !section.material || 
       section.material.trim() === ''
     );
+    
+    console.log('🚨 VALIDATION DEBUG: Missing sections:', missingMaterialSections.length, 'out of', sections.length);
     
 
     
@@ -1108,7 +1117,7 @@ Thank you for your business!
           sections.push({ material: currentMaterial, pieces: currentPieces, headingIdx: currentHeadingIdx });
           console.log(`EditableCutlistTable: Created section for ${currentMaterial} with ${currentPieces.length} pieces`);
         }
-        currentMaterial = piece.name || 'Unknown Material';
+        currentMaterial = piece.name || '';
         currentHeadingIdx = idx;
         currentPieces = [];
       } else {
@@ -1277,6 +1286,7 @@ Thank you for your business!
                       <Select
                         value={section.material || ''}
                         onChange={(e) => {
+                          console.log('📝 DROPDOWN CHANGE: Selected material:', e.target.value, 'for section:', section.material);
                           const newMaterial = e.target.value;
                           const updatedPieces = [...cutPieces];
                           // Update the separator piece name and remove requiresSelection flag
