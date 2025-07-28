@@ -455,7 +455,7 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
   ];
   
   // Track current material section
-  let currentMaterial = 'Default Material';
+
   let piecesFound = 0;
   
   // Helper function to validate dimensions
