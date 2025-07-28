@@ -489,18 +489,34 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
   
   // Helper function to check if a line is a material header
   const isMaterialHeader = (line: string): boolean => {
-    const lowerLine = line.toLowerCase();
+    const lowerLine = line.toLowerCase().trim();
     
-    // Skip if it contains dimension patterns
-    for (const pattern of standardPatterns) {
-      if (pattern.test(line)) {
-        return false;
-      }
+    // STRICT RULES: Must be a clean material header, not a dimension line
+    
+    // 1. Skip if it contains any digits (dimension lines have numbers)
+    if (/\d/.test(line)) {
+      return false;
     }
     
-    // Check if it contains material keywords and is not just numbers
-    return materialKeywords.some(keyword => lowerLine.includes(keyword)) && 
-           !/^\d+\s*[xX×*]\s*\d+/.test(line);
+    // 2. Skip if it contains dimension indicators (x, ×, *, =, -, :)
+    if (/[xX×*=\-:]/.test(line)) {
+      return false;
+    }
+    
+    // 3. Skip if it's too short (less than 3 characters)
+    if (line.trim().length < 3) {
+      return false;
+    }
+    
+    // 4. Must contain a material keyword
+    const hasKeyword = materialKeywords.some(keyword => lowerLine.includes(keyword));
+    
+    // 5. Additional check: if it's just "doors" or similar single words, it's likely a header
+    const isSingleMaterialWord = materialKeywords.some(keyword => 
+      lowerLine === keyword || lowerLine === keyword + 's' || lowerLine === keyword.slice(0, -1)
+    );
+    
+    return hasKeyword || isSingleMaterialWord;
   };
 
   let currentMaterial = 'White Melamine';
@@ -665,8 +681,12 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
     console.log('No materials detected, created default material');
   }
 
+  // ADD EXTRACTED PIECES TO RESULT
+  result.cutPieces = extractedPieces;
+
   console.log('\n=== PARSING SUMMARY ===');
-  console.log(`Total pieces found: ${piecesFound}`);
+  const actualPiecesCount = extractedPieces.filter((p: any) => !p.separator).length;
+  console.log(`Total pieces found: ${actualPiecesCount}`);
   console.log(`Total materials: ${result.materials.length}`);
   console.log(`Total cut pieces (including separators): ${extractedPieces.length}`);
   
