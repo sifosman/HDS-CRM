@@ -98,8 +98,9 @@ function parseHDSTable(text: string, material: string = 'White Melamine'): Array
           console.log(`    Position 2 (Width): ${potentialWidth}`);
           console.log(`    Position 3 (Qty): ${potentialQuantity}`);
           
-          // Validate that first two numbers are reasonable dimensions
-          if (potentialHeight >= 50 && potentialHeight <= 3000 && 
+          // Validate that first two numbers are reasonable dimensions (consistent with backend)
+          if (!isNaN(potentialHeight) && !isNaN(potentialWidth) && 
+              potentialHeight >= 50 && potentialHeight <= 3000 && 
               potentialWidth >= 50 && potentialWidth <= 3000) {
             
             height = potentialHeight;
@@ -269,10 +270,10 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
       const width = parseInt(quantityFirstMatch[2], 10);
       const length = parseInt(quantityFirstMatch[3], 10);
       
-      // Validate that this looks like reasonable dimensions and quantity
+      // Validate that this looks like reasonable dimensions and quantity (consistent with backend)
       if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) && 
           width > 0 && length > 0 && quantity > 0 && quantity <= 100 &&
-          width >= 10 && width <= 5000 && length >= 10 && length <= 5000) {
+          width >= 50 && width <= 3000 && length >= 50 && length <= 3000) {
         dimensions.push({
           id: `dim-${Date.now()}-${dimensions.length}`,
           width,
@@ -433,24 +434,27 @@ export function normalizeCutPieces(rawPieces: any[], DEFAULT_MATERIAL_CATEGORIES
         
         let quantity = piece.quantity;
         if (quantity === undefined || quantity === null) {
+          // Only extract from description if quantity is truly missing
           const extractedQty = extractQuantityFromDescription(description);
           if (extractedQty !== null && extractedQty > 0) {
             quantity = extractedQty;
             console.log(`📊 NORMALIZE: Extracted quantity ${quantity} from description: "${description}"`);
           } else {
-            quantity = 1;
+            quantity = 1; // Default to 1 if no quantity found
           }
         } else {
+          // Use the quantity that was already parsed from the backend
           console.log(`📊 NORMALIZE: Using existing quantity ${quantity} from backend parsing`);
         }
         
+        // Create the normalized piece with the correct quantity
         const normalizedPiece: CutPiece = {
           id: piece.id || `piece-${Date.now()}-${normalizedPieces.length}`,
           width: piece.width,
           length: piece.length,
           quantity: quantity,
           name: description,
-          description: description,
+          description: description, // Keep the original description
           edging: piece.edging,
           material: piece.material // Keep the material assigned by backend
         };
