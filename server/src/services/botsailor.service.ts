@@ -503,139 +503,149 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
            !/^\d+\s*[xX×*]\s*\d+/.test(line);
   };
 
-  // MAIN PARSING LOOP - Process each line
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  let currentMaterial = 'White Melamine';
+  let extractedPieces: any[] = [];
+  let lineIndex = 0;
+
+  // MULTI-LINE PARSING - Handle dimensions split across lines
+  const processMultiLinePatterns = (lines: string[], startIndex: number): { piece: any | null, nextIndex: number } => {
+    if (startIndex >= lines.length - 1) return { piece: null, nextIndex: startIndex + 1 };
     
-    if (!line) continue; // Skip empty lines
+    const currentLine = lines[startIndex].trim();
+    const nextLine = lines[startIndex + 1]?.trim() || '';
     
-    console.log(`\n--- Processing Line ${i + 1}: "${line}" ---`);
+    // Pattern 1: "1800 x" + "248=2" → 1800x248=2
+    const splitXPattern = /^(\d+)\s*[xX×*]\s*$/;
+    const followupPattern = /^(\d+)\s*[=\-:]\s*(\d+)/;
     
-    // Check if this line is a material header
+    const xMatch = currentLine.match(splitXPattern);
+    const followMatch = nextLine.match(followupPattern);
+    
+    if (xMatch && followMatch) {
+      const length = parseInt(xMatch[1]);
+      const width = parseInt(followMatch[1]);
+      const quantity = parseInt(followMatch[2]);
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `${result.id}-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial,
+            description: `${length}x${width}`,
+            name: `${length}x${width}`,
+            lineIndex: startIndex
+          },
+          nextIndex: startIndex + 2 // Skip both lines
+        };
+      }
+    }
+    
+    // Pattern 2: "1100 *" + "420=2" → 1100x420=2  
+    const splitStarPattern = /^(\d+)\s*[*]\s*$/;
+    if (currentLine.match(splitStarPattern) && followMatch) {
+      const length = parseInt(currentLine.match(splitStarPattern)![1]);
+      const width = parseInt(followMatch[1]);
+      const quantity = parseInt(followMatch[2]);
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `${result.id}-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial,
+            description: `${length}x${width}`,
+            name: `${length}x${width}`,
+            lineIndex: startIndex
+          },
+          nextIndex: startIndex + 2
+        };
+      }
+    }
+    
+    return { piece: null, nextIndex: startIndex + 1 };
+  };
+
+  // Process lines with multi-line support
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex].trim();
+    console.log(`Processing line ${lineIndex + 1}: ${line}`);
+    
+    // Check for material headers first
     if (isMaterialHeader(line)) {
       const materialName = normalizeMaterialName(line);
-      console.log(`✓ Material header detected: "${materialName}"`);
-      
-      // Create material if it doesn't exist
-      const existingMaterial = result.materials.find((m: any) => m.name === materialName);
-      if (!existingMaterial) {
-        result.materials.push({
-          id: uuidv4(),
-          name: materialName,
-          type: 'board',
-          thickness: 16
-        });
-        console.log(`  → Created new material: ${materialName}`);
-      }
+      console.log(`Found material header: ${line}, setting current material to ${materialName}`);
+      currentMaterial = materialName;
       
       // Create separator piece for frontend
-      result.cutPieces.push({
-        id: uuidv4(),
+      extractedPieces.push({
+        id: `${result.id}-separator-${extractedPieces.length}`,
         separator: true,
         name: materialName,
         material: materialName,
-        description: line,
-        lineIndex: i
+        description: materialName,
+        lineIndex: lineIndex
       });
       
-      currentMaterial = materialName;
-      console.log(`  → Switched to material section: ${currentMaterial}`);
+      lineIndex++;
       continue;
     }
     
-    // TRY TO EXTRACT DIMENSIONS using standard patterns
+    // Try multi-line patterns first
+    const multiLineResult = processMultiLinePatterns(lines, lineIndex);
+    if (multiLineResult.piece) {
+      console.log(`ADDING MULTI-LINE DIMENSION: ${multiLineResult.piece.description}, qty=${multiLineResult.piece.quantity}`);
+      extractedPieces.push(multiLineResult.piece);
+      lineIndex = multiLineResult.nextIndex;
+      continue;
+    }
+    
+    // Fall back to single-line patterns (your existing code)
+    console.log(`Line format analysis for "${line}"`);
     let dimensionFound = false;
-    let length = 0, width = 0, quantity = 1;
-    
-    for (let patternIndex = 0; patternIndex < standardPatterns.length; patternIndex++) {
-      const pattern = standardPatterns[patternIndex];
-      const match = line.match(pattern);
-      
-      if (match) {
-        console.log(`  ✓ Pattern ${patternIndex + 1} matched: ${pattern}`);
-        console.log(`    Raw match: [${match[1]}, ${match[2]}, ${match[3] || 'undefined'}]`);
-        
-        // Extract dimensions
-        const rawLength = parseInt(match[1]);
-        const rawWidth = parseInt(match[2]);
-        const rawQuantity = match[3] ? parseInt(match[3]) : 1;
-        
-        // VALIDATE EXTRACTED VALUES
-        if (isValidDimension(rawLength) && isValidDimension(rawWidth)) {
-          length = rawLength;
-          width = rawWidth;
-          
-          // Validate quantity
-          if (match[3] && isValidQuantity(rawQuantity)) {
-            quantity = rawQuantity;
-          } else if (match[3]) {
-            console.log(`    ⚠️ Invalid quantity ${rawQuantity}, defaulting to 1`);
-            quantity = 1;
-          }
-          
-          dimensionFound = true;
-          console.log(`    ✅ Valid dimensions extracted: ${length} x ${width} = ${quantity}`);
-          break;
-        } else {
-          console.log(`    ❌ Invalid dimensions: Length=${rawLength} (valid: ${isValidDimension(rawLength)}), Width=${rawWidth} (valid: ${isValidDimension(rawWidth)})`);
-        }
-      }
-    }
-    
-    // If standard patterns didn't work, try fallback extraction
-    if (!dimensionFound) {
-      console.log(`  → Trying fallback numeric extraction...`);
-      
-      // Extract all numbers from the line
-      const numbers = line.match(/\d+/g)?.map(n => parseInt(n)) || [];
-      console.log(`    Found numbers: [${numbers.join(', ')}]`);
-      
-      if (numbers.length >= 2) {
-        // Filter numbers to reasonable dimension ranges
-        const validDimensions = numbers.filter(n => isValidDimension(n));
-        const validQuantities = numbers.filter(n => isValidQuantity(n));
-        
-        console.log(`    Valid dimensions: [${validDimensions.join(', ')}]`);
-        console.log(`    Valid quantities: [${validQuantities.join(', ')}]`);
-        
-        if (validDimensions.length >= 2) {
-          length = validDimensions[0];
-          width = validDimensions[1];
-          
-          // Try to find a reasonable quantity
-          if (validQuantities.length > 0) {
-            // Use the smallest valid quantity (most likely to be correct)
-            quantity = Math.min(...validQuantities);
-          } else {
-            quantity = 1;
-          }
-          
-          dimensionFound = true;
-          console.log(`    ✅ Fallback extraction: ${length} x ${width} = ${quantity}`);
-        }
-      }
-    }
-    
-    // ADD THE PIECE if valid dimensions were found
-    if (dimensionFound && length > 0 && width > 0) {
-      piecesFound++;
-      
-      result.cutPieces.push({
-        id: uuidv4(),
-        length,
-        width,
-        quantity,
-        material: currentMaterial,
-        name: `${currentMaterial} Piece ${piecesFound}`,
-        description: line
-      });
-      
-      console.log(`    🎯 PIECE ADDED: ${length}x${width} qty=${quantity} material="${currentMaterial}"`);
-    } else {
-      console.log(`    ❌ No valid dimensions found in line`);
-    }
-  }
 
+    // Try each pattern
+    for (let i = 0; i < standardPatterns.length; i++) {
+      const match = line.match(standardPatterns[i]);
+      if (match) {
+        const length = parseInt(match[1]);
+        const width = parseInt(match[2]);
+        const quantity = parseInt(match[3]) || 1;
+
+        if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+          console.log(`✅ SERVER PATTERN MATCH: ${length}x${width} (Length x Width), qty=${quantity} using pattern ${i + 1} (${standardPatterns[i]})`);
+          console.log(`ADDING DIMENSION: ${length}x${width} (Length x Width), qty=${quantity}`);
+          
+          extractedPieces.push({
+            id: `${result.id}-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial,
+            description: `${length}x${width}`,
+            name: `${length}x${width}`,
+            lineIndex: lineIndex
+          });
+          
+          dimensionFound = true;
+          break;
+        }
+      }
+    }
+
+    if (!dimensionFound) {
+      console.log(`No dimension found in line: ${line}`);
+    }
+    
+    lineIndex++;
+  }
+  
   // Ensure we have at least one material
   if (result.materials.length === 0) {
     result.materials.push({
@@ -646,7 +656,7 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
     });
     
     // Update all pieces to use default material
-    result.cutPieces.forEach((piece: any) => {
+    extractedPieces.forEach((piece: any) => {
       if (!piece.separator && !piece.material) {
         piece.material = 'Default Material';
       }
@@ -658,10 +668,10 @@ const parseHandwrittenFormat = (text: string, result: any): any => {
   console.log('\n=== PARSING SUMMARY ===');
   console.log(`Total pieces found: ${piecesFound}`);
   console.log(`Total materials: ${result.materials.length}`);
-  console.log(`Total cut pieces (including separators): ${result.cutPieces.length}`);
+  console.log(`Total cut pieces (including separators): ${extractedPieces.length}`);
   
   // Log all found pieces for debugging
-  const actualPieces = result.cutPieces.filter((p: any) => !p.separator);
+  const actualPieces = extractedPieces.filter((p: any) => !p.separator);
   console.log('\n=== EXTRACTED PIECES ===');
   actualPieces.forEach((piece: any, index: number) => {
     console.log(`${index + 1}. ${piece.length}x${piece.width} qty=${piece.quantity} [${piece.material}]`);
