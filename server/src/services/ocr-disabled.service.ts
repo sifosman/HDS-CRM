@@ -259,7 +259,14 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     }
   ];
   
-  let currentMaterial = null;
+  // Define material type
+  interface MaterialInfo {
+    id: string;
+    name: string;
+    displayName: string;
+  }
+  
+  let currentMaterial: MaterialInfo | null = null;
   let extractedPieces: any[] = [];
   let lineIndex = 0;
   
