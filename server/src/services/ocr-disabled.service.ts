@@ -260,6 +260,53 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
   ];
   
   let currentMaterial = null;
+  let extractedPieces: any[] = [];
+  let lineIndex = 0;
+  
+  // Helper function to validate dimensions
+  const isValidDimension = (value: number): boolean => {
+    return value >= 50 && value <= 3000; // Reasonable range for cutting dimensions in mm
+  };
+  
+  // Helper function to validate quantity
+  const isValidQuantity = (value: number): boolean => {
+    return value >= 1 && value <= 50; // Reasonable range for quantities
+  };
+  
+  // Helper function to check if a line is a material header
+  const isMaterialHeader = (line: string): boolean => {
+    const lowerLine = line.toLowerCase().trim();
+    
+    // STRICT RULES: Must be a clean material header, not a dimension line
+    
+    // 1. Skip if it contains any digits (dimension lines have numbers)
+    if (/\d/.test(line)) {
+      return false;
+    }
+    
+    // 2. Skip if it contains dimension indicators (x, ×, *, =, -, :)
+    if (/[xX×*=\-:]/.test(line)) {
+      return false;
+    }
+    
+    // 3. Skip if it's too short (less than 3 characters)
+    if (line.trim().length < 3) {
+      return false;
+    }
+    
+    // 4. Must contain a material keyword
+    const materialKeywords = ['white', 'door', 'doors', 'drawer', 'drawers', 'microwave', 
+                             'masonite', 'messonite', 'melamine', 'oak', 'wood', 'panel', 
+                             'chipboard', 'mdf', 'plywood', 'pine', 'birch'];
+    const hasKeyword = materialKeywords.some(keyword => lowerLine.includes(keyword));
+    
+    // 5. Additional check: if it's just "doors" or similar single words, it's likely a header
+    const isSingleMaterialWord = materialKeywords.some(keyword => 
+      lowerLine === keyword || lowerLine === keyword + 's' || lowerLine === keyword.slice(0, -1)
+    );
+    
+    return hasKeyword || isSingleMaterialWord;
+  };
   
   // Enhanced regex patterns focused on real-world OCR text formats
   const dimensionPatterns = [
@@ -284,65 +331,120 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
   
   console.log('Using enhanced dimension patterns for extraction');
   
-  // Process each line
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  // MULTI-LINE PARSING - Handle dimensions split across lines
+  const processMultiLinePatterns = (lines: string[], startIndex: number): { piece: any | null, nextIndex: number } => {
+    if (startIndex >= lines.length - 1) return { piece: null, nextIndex: startIndex + 1 };
     
-    // Check for material keywords first
-    let isMaterialHeader = false;
-    for (const { keys, id, name, displayName } of MATERIAL_KEYWORDS) {
-      if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
-        currentMaterial = { id, name, displayName };
-        console.log(`Found material header: ${line}, setting current material to ${displayName}`);
-        isMaterialHeader = true;
-        break;
+    const currentLine = lines[startIndex].trim();
+    const nextLine = lines[startIndex + 1]?.trim() || '';
+    
+    // Pattern 1: "1800 x" + "248=2" → 1800x248=2
+    const splitXPattern = /^(\d+)\s*[xX×*]\s*$/;
+    const followupPattern = /^(\d+)\s*[=\-:]\s*(\d+)/;
+    
+    const xMatch = currentLine.match(splitXPattern);
+    const followMatch = nextLine.match(followupPattern);
+    
+    if (xMatch && followMatch) {
+      const length = parseInt(xMatch[1]);
+      const width = parseInt(followMatch[1]);
+      const quantity = parseInt(followMatch[2]);
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `piece-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial?.displayName || 'Default Material',
+            materialId: currentMaterial?.id || '201',
+            materialDisplayName: currentMaterial?.displayName || 'Default Material'
+          },
+          nextIndex: startIndex + 2 // Skip both lines
+        };
       }
     }
     
-    if (isMaterialHeader) {
-      continue; // Skip further processing for this line
-    }
-    
-    if (!line) continue; // Skip empty lines
-    
-    // Check if this line is a material trigger that should create a separator
-    let materialTriggerFound = false;
-    let triggeredMaterial = null;
-    
-    for (const { keys, displayName } of MATERIAL_KEYWORDS) {
-      if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
-        materialTriggerFound = true;
-        triggeredMaterial = displayName;
-        currentMaterial = { displayName };
-        console.log(`🔗 BACKEND: Material trigger found: "${line}" → ${displayName}`);
-        
-        // Create a separator piece for this material
-        dimensions.push({
-          id: `separator-${dimensions.length}`,
-          width: 0,
-          length: 0,
-          quantity: 0,
-          material: displayName,
-          separator: true,
-          name: displayName,
-          description: line.trim()
-        } as any);
-        
-        break;
+    // Pattern 2: "1100 *" + "420=2" → 1100x420=2  
+    const splitStarPattern = /^(\d+)\s*[*]\s*$/;
+    if (currentLine.match(splitStarPattern) && followMatch) {
+      const length = parseInt(currentLine.match(splitStarPattern)![1]);
+      const width = parseInt(followMatch[1]);
+      const quantity = parseInt(followMatch[2]);
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `piece-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial?.displayName || 'Default Material',
+            materialId: currentMaterial?.id || '201',
+            materialDisplayName: currentMaterial?.displayName || 'Default Material'
+          },
+          nextIndex: startIndex + 2
+        };
       }
     }
     
-    if (materialTriggerFound) {
-      continue; // Skip further processing for material trigger lines
+    return { piece: null, nextIndex: startIndex + 1 };
+  };
+  
+  // Process lines with multi-line support
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex].trim();
+    console.log(`Processing line ${lineIndex + 1}: ${line}`);
+    
+    // Check for material headers first
+    if (isMaterialHeader(line)) {
+      for (const { keys, id, name, displayName } of MATERIAL_KEYWORDS) {
+        if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
+          currentMaterial = { id, name, displayName };
+          console.log(`Found material header: ${line}, setting current material to ${displayName}`);
+          
+          // Create a separator piece for this material
+          extractedPieces.push({
+            id: `separator-${extractedPieces.length}`,
+            width: 0,
+            length: 0,
+            quantity: 0,
+            material: displayName,
+            separator: true,
+            name: displayName,
+            description: line.trim()
+          });
+          
+          break;
+        }
+      }
+      
+      lineIndex++;
+      continue;
     }
     
-    console.log(`Processing line ${i+1}:`, line);
+    // Try multi-line patterns first
+    const multiLineResult = processMultiLinePatterns(lines, lineIndex);
+    if (multiLineResult.piece) {
+      console.log(`ADDING MULTI-LINE DIMENSION: ${multiLineResult.piece.length}x${multiLineResult.piece.width}, qty=${multiLineResult.piece.quantity}`);
+      extractedPieces.push(multiLineResult.piece);
+      lineIndex = multiLineResult.nextIndex;
+      continue;
+    }
+    
+    if (!line) {
+      lineIndex++;
+      continue; // Skip empty lines
+    }
+    
+    console.log(`Line format analysis for "${line}"`);
     
     // Try to extract dimensions using our patterns
     let matched = false;
     let width = 0, length = 0, quantity = 0; // Initialize quantity to 0
-    
-    console.log(`Line format analysis for "${line}"`);
     
     // First, try the specific patterns
     for (let patternIndex = 0; patternIndex < dimensionPatterns.length; patternIndex++) {
@@ -361,97 +463,55 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
           quantity = match[3] ? parseInt(match[3]) : 0;
         }
         
-        // Validate that this looks like reasonable dimensions and quantity
-        if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) && 
-            width > 0 && length > 0 && quantity > 0 && quantity <= 100 &&
-            width >= 10 && width <= 5000 && length >= 10 && length <= 5000) {
+        // Validate using our helper functions
+        if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
           console.log(`✅ SERVER PATTERN MATCH: ${length}x${width} (Length x Width), qty=${quantity} using pattern ${patternIndex} (${pattern})`);
+          console.log(`ADDING DIMENSION: ${length}x${width} (Length x Width), qty=${quantity}`);
+          
+          extractedPieces.push({
+            id: `piece-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial?.displayName || 'Default Material',
+            materialId: currentMaterial?.id || '201',
+            materialDisplayName: currentMaterial?.displayName || 'Default Material'
+          });
+          
           matched = true;
           break;
         }
       }
     }
     
-    // If not matched with specific patterns, try more targeted approaches
     if (!matched) {
-      // 1. Extract dimensions first
-      const dimensionMatch = line.match(/(\d+)\s*[xX×*-]\s*(\d+)/);
-      
-      if (dimensionMatch) {
-        length = parseInt(dimensionMatch[1]); // Fix: First dimension is length
-        width = parseInt(dimensionMatch[2]);  // Fix: Second dimension is width
-        
-        console.log(`  Basic dimension found: ${length}x${width} (Length x Width)`);
-        
-        // Get the remainder of the string after the dimension match
-        const remainder = line.substring(dimensionMatch[0].length).trim();
-        console.log(`  Remainder for quantity search: "${remainder}"`);
-
-        // 2. Now try to extract quantity from the remainder
-        const quantityPatterns = [
-          // Format: "=2" or "= 2" at any position
-          /=\s*(\d+)/,
-          
-          // Format: "-2" or "- 2" at any position
-          /-\s*(\d+)/,
-          
-          // Format: a number at the end of line
-          /^(\d+)\s*$/,
-          
-          // Format: "(2)" or "[2]" (quantity in brackets)
-          /[\(\[]\s*(\d+)\s*[\)\]]/,
-          
-          // Format: "2pcs" or "2 pcs" or similar
-          /\b(\d+)\s*(?:pc|pcs|x|ea|each|unit|units|pieces|piece)/i,
-        ];
-        
-        for (const qPattern of quantityPatterns) {
-          const qMatch = remainder.match(qPattern);
-          if (qMatch && qMatch[1]) {
-            quantity = parseInt(qMatch[1]);
-            console.log(`  Quantity found: ${quantity} using pattern ${qPattern}`);
-            matched = true;
-            break;
-          }
-        }
-        
-        // If no quantity pattern matched but we have dimensions, still consider it matched
-        if (!matched && width > 0 && length > 0) {
-          console.log(`  No quantity pattern matched, skipping dimension`);
-          continue;
-        }
-      }
+      console.log(`No dimension found in line: ${line}`);
     }
     
-    // If we have valid dimensions and a valid quantity, add them to our collection
-    if (matched && width > 0 && length > 0 && quantity > 0) {
-      // Ensure quantity is a valid number
-      if (isNaN(quantity)) {
-        console.log(`  Invalid quantity detected (${quantity}), skipping dimension`);
-        continue; // Skip if quantity is not a number
-      }
-      
-      // Extra logging to confirm what's being added
-      console.log(`ADDING DIMENSION: ${length}x${width} (Length x Width), qty=${quantity}`);
-      
-      dimensions.push({
-        id: `dim-${Date.now()}-${dimensions.length}`,
-        length, // Length field gets the length value
-        width,  // Width field gets the width value
-        quantity,
-        material: currentMaterial ? currentMaterial.displayName : 'White Melamine', // Use displayName for consistency
-        materialId: currentMaterial ? currentMaterial.id : undefined,
-        materialDisplayName: currentMaterial ? currentMaterial.displayName : undefined
-      });
-    }
-    
-    if (!matched) {
-      console.log(`  No dimension found in line: ${line}`);
-    }
+    lineIndex++;
   }
   
+  // Convert extractedPieces to dimensions format
+  const finalDimensions = extractedPieces.filter((piece: any) => !piece.separator).map((piece: any) => ({
+    id: piece.id,
+    length: piece.length,
+    width: piece.width,
+    quantity: piece.quantity,
+    material: piece.material,
+    materialId: piece.materialId,
+    materialDisplayName: piece.materialDisplayName
+  }));
+  
+  // Add any separators as well
+  const separators = extractedPieces.filter((piece: any) => piece.separator);
+  const allDimensions = [...separators, ...finalDimensions];
+  
   // Log the total number of dimensions found
-  console.log(`Total dimensions extracted: ${dimensions.length}`);
+  console.log(`Total dimensions extracted: ${finalDimensions.length}`);
+  console.log('\n=== EXTRACTED PIECES ===');
+  finalDimensions.forEach((piece: any, index: number) => {
+    console.log(`${index + 1}. ${piece.length}x${piece.width} qty=${piece.quantity} [${piece.material}]`);
+  });
   
   // Only try HDS table format if ALL these conditions are met:
   // 1. Standard parsing found very few results (≤1)
@@ -462,27 +522,27 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
   const hasTableHeaders = ocrText.includes('Height/Length') && ocrText.includes('Width') && (ocrText.includes('Qoy') || ocrText.includes('Qty'));
   const hasNumberedRows = /^\d+\s+\d+\s+\d+\s+\d+/m.test(ocrText); // Look for numbered table rows
   
-  if (dimensions.length <= 1 && hasHDSIdentifier && hasTableHeaders && hasNumberedRows) {
+  if (finalDimensions.length <= 1 && hasHDSIdentifier && hasTableHeaders && hasNumberedRows) {
     console.log('Standard parsing found few results and this appears to be an HDS table format. Trying HDS table parsing...');
     console.log('HDS conditions met:', { hasHDSIdentifier, hasTableHeaders, hasNumberedRows });
     
     const hdsResult = extractFromHDSTable(ocrText);
-    if (hdsResult.dimensions.length > dimensions.length) {
-      console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions vs ${dimensions.length} from standard parsing. Using HDS results.`);
+    if (hdsResult.dimensions.length > finalDimensions.length) {
+      console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions vs ${finalDimensions.length} from standard parsing. Using HDS results.`);
       return hdsResult;
     } else {
-      console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions, not better than standard parsing (${dimensions.length}). Using standard results.`);
+      console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions, not better than standard parsing (${finalDimensions.length}). Using standard results.`);
     }
   } else {
     console.log('HDS table parsing conditions not met:', { 
-      fewDimensions: dimensions.length <= 1,
+      fewDimensions: finalDimensions.length <= 1,
       hasHDSIdentifier, 
       hasTableHeaders, 
       hasNumberedRows 
     });
   }
   
-  return { dimensions, unit };
+  return { dimensions: allDimensions, unit };
 };
 
 /**
