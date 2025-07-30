@@ -372,6 +372,12 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     
     // Format: "2 = 1000 x 500" (quantity first format - needs reordering)
     /(\d+)\s*[=\-:]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+    
+    // Format: "X 468 x 15" (leading X with dimension and quantity)
+    /[xX]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+    
+    // Format: "2218 X 468x-" (dimension with trailing x-)
+    /(\d+)\s*[xX×*]\s*(\d+)[xX×*]\s*[\-_]*\s*$/,
   ];
   
   console.log('Using enhanced dimension patterns for extraction');
@@ -685,6 +691,32 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
           length = parseInt(match[2]);
           width = parseInt(match[3]);
           console.log(`🔄 QUANTITY-FIRST FORMAT DETECTED: ${quantity} = ${length}x${width}, reordered to ${length}x${width}=${quantity}`);
+        } else if (patternIndex === 13) {
+          // Pattern 13: "X 468 x 15" (leading X with dimension and quantity)
+          // Check if this might be "X width x quantity" format
+          const possibleWidth = parseInt(match[1]);
+          const possibleQty = parseInt(match[2]);
+          
+          // If second number is small (likely quantity), treat as width x quantity
+          if (possibleQty <= 50 && possibleWidth >= 50) {
+            // Need to find length from previous context or set default
+            length = 500; // Default length when missing
+            width = possibleWidth;
+            quantity = possibleQty;
+            console.log(`🟠 LEADING-X FORMAT: X ${width}x${quantity}, assuming length=${length}`);
+          } else {
+            // Treat as length x width with no quantity
+            length = possibleWidth;
+            width = possibleQty;
+            quantity = 0;
+            console.log(`🟠 LEADING-X FORMAT: X ${length}x${width}, setting qty=0`);
+          }
+        } else if (patternIndex === 14) {
+          // Pattern 14: "2218 X 468x-" (dimension with trailing x-)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = 0; // No quantity after trailing x-
+          console.log(`🟠 TRAILING-X FORMAT: ${length}x${width}x-, setting qty=0`);
         } else {
           // All other patterns follow (length, width, quantity) order
           length = parseInt(match[1]);
