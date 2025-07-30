@@ -277,7 +277,7 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
   
   // Helper function to validate quantity
   const isValidQuantity = (value: number): boolean => {
-    return value >= 1 && value <= 50; // Reasonable range for quantities
+    return value >= 0 && value <= 50; // Allow 0 for missing quantities, reasonable range for quantities
   };
   
   // Helper function to check if a line should be ignored (like "glass doors")
@@ -363,6 +363,15 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     
     // Format: "7684" followed by "273=2" (4-digit number that could be dimensions)
     /(\d{4})/, // Will be handled specially
+    
+    // Format: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
+    /(\d+)\s*[xX×*]\s*(\d+)\s*[=\-:]\s*[^\d\r\n]*$/,
+    
+    // Format: "1000 x 500" (dimension without any quantity indicator)
+    /(\d+)\s*[xX×*]\s*(\d+)\s*$/,
+    
+    // Format: "2 = 1000 x 500" (quantity first format - needs reordering)
+    /(\d+)\s*[=\-:]\s*(\d+)\s*[xX×*]\s*(\d+)/,
   ];
   
   console.log('Using enhanced dimension patterns for extraction');
@@ -602,6 +611,14 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       continue;
     }
     
+    // Also skip if the NEXT line contains "glass doors" (look-ahead check)
+    const nextLineForCheck = lines[lineIndex + 1]?.trim() || '';
+    if (shouldIgnoreLine(nextLineForCheck)) {
+      console.log(`🚫 SKIPPING DIMENSION EXTRACTION: "${line}" (next line contains excluded pattern: "${nextLineForCheck}")`);
+      lineIndex++;
+      continue;
+    }
+    
     // Try to extract dimensions using our patterns
     let matched = false;
     let width = 0, length = 0, quantity = 0; // Initialize quantity to 0
@@ -650,6 +667,24 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
           } else {
             continue;
           }
+        } else if (patternIndex === 10) {
+          // Pattern 10: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = 0; // Set quantity to 0 for missing quantities
+          console.log(`🟡 DIMENSION WITH MISSING QUANTITY: ${length}x${width}, setting qty=0`);
+        } else if (patternIndex === 11) {
+          // Pattern 11: "1000 x 500" (dimension without any quantity indicator)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = 0; // Set quantity to 0 for missing quantities
+          console.log(`🟡 DIMENSION WITHOUT QUANTITY: ${length}x${width}, setting qty=0`);
+        } else if (patternIndex === 12) {
+          // Pattern 12: "2 = 1000 x 500" (quantity first format - reorder to standard format)
+          quantity = parseInt(match[1]);
+          length = parseInt(match[2]);
+          width = parseInt(match[3]);
+          console.log(`🔄 QUANTITY-FIRST FORMAT DETECTED: ${quantity} = ${length}x${width}, reordered to ${length}x${width}=${quantity}`);
         } else {
           // All other patterns follow (length, width, quantity) order
           length = parseInt(match[1]);
