@@ -280,9 +280,29 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     return value >= 1 && value <= 50; // Reasonable range for quantities
   };
   
+  // Helper function to check if a line should be ignored (like "glass doors")
+  const shouldIgnoreLine = (line: string): boolean => {
+    const lowerLine = line.toLowerCase().trim();
+    
+    // Ignore lines containing "glass doors" or similar exclusions
+    const ignorePatterns = [
+      'glass doors',
+      'glass door',
+      'glass',
+      'doors.', // "glass doors." specifically
+    ];
+    
+    return ignorePatterns.some(pattern => lowerLine.includes(pattern));
+  };
+  
   // Helper function to check if a line is a material header
   const isMaterialHeader = (line: string): boolean => {
     const lowerLine = line.toLowerCase().trim();
+    
+    // First check if this line should be ignored
+    if (shouldIgnoreLine(line)) {
+      return false;
+    }
     
     // STRICT RULES: Must be a clean material header, not a dimension line
     
@@ -301,7 +321,7 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       return false;
     }
     
-    // 4. Must contain a material keyword
+    // 4. Must contain a material keyword (but not glass doors)
     const materialKeywords = ['white', 'door', 'doors', 'drawer', 'drawers', 'microwave', 
                              'masonite', 'messonite', 'melamine', 'oak', 'wood', 'panel', 
                              'chipboard', 'mdf', 'plywood', 'pine', 'birch'];
@@ -334,6 +354,15 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
 
     // Format: "500x200x4" (quantity after second x)
     /(\d+)\s*[xX×*]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+    
+    // Format: "1100 x Hoo= 2" (dimension with text in middle)
+    /(\d+)\s*[xX×*]\s*[a-zA-Z]*\s*(\d+)[^\d\r\n]*?=\s*(\d+)/,
+    
+    // Format: "768% 2.00 =1" (dimension with % and decimal)
+    /(\d+)[%\s]*\s*(\d+)(?:\.\d+)?\s*=\s*(\d+)/,
+    
+    // Format: "7684" followed by "273=2" (4-digit number that could be dimensions)
+    /(\d{4})/, // Will be handled specially
   ];
   
   console.log('Using enhanced dimension patterns for extraction');
@@ -398,6 +427,56 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       }
     }
     
+    // Pattern 3: "1100" + "270=2" → 1100x270=2 (number + dimension=quantity)
+    const singleNumberPattern = /^(\d+)\s*$/;
+    const numberMatch = currentLine.match(singleNumberPattern);
+    if (numberMatch && followMatch) {
+      const length = parseInt(numberMatch[1]);
+      const width = parseInt(followMatch[1]);
+      const quantity = parseInt(followMatch[2]);
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `piece-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial?.displayName || 'Default Material',
+            materialId: currentMaterial?.id || '201',
+            materialDisplayName: currentMaterial?.displayName || 'Default Material'
+          },
+          nextIndex: startIndex + 2
+        };
+      }
+    }
+    
+    // Pattern 4: "1100 f" + "398=2" → 1100x398=2 (number + letter + dimension=quantity)
+    const numberLetterPattern = /^(\d+)\s*[a-zA-Z%]\s*$/;
+    const letterMatch = currentLine.match(numberLetterPattern);
+    if (letterMatch && followMatch) {
+      const length = parseInt(letterMatch[1]);
+      const width = parseInt(followMatch[1]);
+      const quantity = parseInt(followMatch[2]);
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `piece-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial?.displayName || 'Default Material',
+            materialId: currentMaterial?.id || '201',
+            materialDisplayName: currentMaterial?.displayName || 'Default Material'
+          },
+          nextIndex: startIndex + 2
+        };
+      }
+    }
+    
     return { piece: null, nextIndex: startIndex + 1 };
   };
   
@@ -405,6 +484,13 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
   while (lineIndex < lines.length) {
     const line = lines[lineIndex].trim();
     console.log(`Processing line ${lineIndex + 1}: ${line}`);
+    
+    // Check if this line should be ignored (like "glass doors")
+    if (shouldIgnoreLine(line)) {
+      console.log(`🚫 IGNORING LINE: "${line}" (contains excluded pattern)`);
+      lineIndex++;
+      continue;
+    }
     
     // Check for material headers first
     if (isMaterialHeader(line)) {
@@ -449,6 +535,13 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     
     console.log(`Line format analysis for "${line}"`);
     
+    // Skip dimension extraction if line should be ignored
+    if (shouldIgnoreLine(line)) {
+      console.log(`🚫 SKIPPING DIMENSION EXTRACTION: "${line}" (contains excluded pattern)`);
+      lineIndex++;
+      continue;
+    }
+    
     // Try to extract dimensions using our patterns
     let matched = false;
     let width = 0, length = 0, quantity = 0; // Initialize quantity to 0
@@ -458,16 +551,50 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       const pattern = dimensionPatterns[patternIndex];
       const match = line.match(pattern);
       if (match) {
-        // Handle quantity-first format (pattern index 0: "10/ 1700 x 450")
+        // Handle different pattern types
         if (patternIndex === 0) {
+          // Pattern 0: "10/ 1700 x 450" (quantity-first format)
           quantity = parseInt(match[1]);
-          length = parseInt(match[2]); // Fix: First dimension is length
-          width = parseInt(match[3]);  // Fix: Second dimension is width
+          length = parseInt(match[2]);
+          width = parseInt(match[3]);
+        } else if (patternIndex === 7) {
+          // Pattern 7: "1100 x Hoo= 2" (dimension with text in middle)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = parseInt(match[3]);
+        } else if (patternIndex === 8) {
+          // Pattern 8: "768% 2.00 =1" (dimension with % and decimal)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = parseInt(match[3]);
+        } else if (patternIndex === 9) {
+          // Pattern 9: "7684" (4-digit number - try to split into dimensions)
+          const fourDigit = match[1];
+          if (fourDigit.length === 4) {
+            // Try different splits: 76|84, 768|4
+            const split1 = [parseInt(fourDigit.substring(0, 2)), parseInt(fourDigit.substring(2))];
+            const split2 = [parseInt(fourDigit.substring(0, 3)), parseInt(fourDigit.substring(3))];
+            
+            // Use the split that gives more reasonable dimensions
+            if (isValidDimension(split2[0]) && split2[1] >= 1 && split2[1] <= 9) {
+              length = split2[0];
+              width = split2[1] * 100; // Assume missing zeros
+              quantity = 1; // Default quantity
+            } else if (isValidDimension(split1[0]) && isValidDimension(split1[1])) {
+              length = split1[0] * 10; // Scale up
+              width = split1[1] * 10;
+              quantity = 1;
+            } else {
+              continue; // Skip if no valid split found
+            }
+          } else {
+            continue;
+          }
         } else {
-          // All other patterns follow (length, width, quantity) order - Length x Width format
-          length = parseInt(match[1]); // Fix: First captured group is length
-          width = parseInt(match[2]);  // Fix: Second captured group is width
-          quantity = match[3] ? parseInt(match[3]) : 0;
+          // All other patterns follow (length, width, quantity) order
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = match[3] ? parseInt(match[3]) : 1;
         }
         
         // Validate using our helper functions
