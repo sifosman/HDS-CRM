@@ -364,17 +364,17 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     // Format: "7684" followed by "273=2" (4-digit number that could be dimensions)
     /(\d{4})/, // Will be handled specially
     
+    // Format: "X 468 x 15" (leading X with dimension and quantity) - CHECK FIRST
+    /^[xX]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+    
     // Format: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
-    /(\d+)\s*[xX×*]\s*(\d+)\s*[=\-:]\s*[^\d\r\n]*$/,
+    /^(\d+)\s*[xX×*]\s*(\d+)\s*[=\-:]\s*[^\d\r\n]*$/,
     
     // Format: "1000 x 500" (dimension without any quantity indicator)
-    /(\d+)\s*[xX×*]\s*(\d+)\s*$/,
+    /^(\d+)\s*[xX×*]\s*(\d+)\s*$/,
     
     // Format: "2 = 1000 x 500" (quantity first format - needs reordering)
-    /(\d+)\s*[=\-:]\s*(\d+)\s*[xX×*]\s*(\d+)/,
-    
-    // Format: "X 468 x 15" (leading X with dimension and quantity)
-    /[xX]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+    /^(\d+)\s*[=\-:]\s*(\d+)\s*[xX×*]\s*(\d+)/,
     
     // Format: "2218 X 468x-" (dimension with trailing x-)
     /(\d+)\s*[xX×*]\s*(\d+)[xX×*]\s*[\-_]*\s*$/,
@@ -674,25 +674,7 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
             continue;
           }
         } else if (patternIndex === 10) {
-          // Pattern 10: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
-          length = parseInt(match[1]);
-          width = parseInt(match[2]);
-          quantity = 0; // Set quantity to 0 for missing quantities
-          console.log(`🟡 DIMENSION WITH MISSING QUANTITY: ${length}x${width}, setting qty=0`);
-        } else if (patternIndex === 11) {
-          // Pattern 11: "1000 x 500" (dimension without any quantity indicator)
-          length = parseInt(match[1]);
-          width = parseInt(match[2]);
-          quantity = 0; // Set quantity to 0 for missing quantities
-          console.log(`🟡 DIMENSION WITHOUT QUANTITY: ${length}x${width}, setting qty=0`);
-        } else if (patternIndex === 12) {
-          // Pattern 12: "2 = 1000 x 500" (quantity first format - reorder to standard format)
-          quantity = parseInt(match[1]);
-          length = parseInt(match[2]);
-          width = parseInt(match[3]);
-          console.log(`🔄 QUANTITY-FIRST FORMAT DETECTED: ${quantity} = ${length}x${width}, reordered to ${length}x${width}=${quantity}`);
-        } else if (patternIndex === 13) {
-          // Pattern 13: "X 468 x 15" (leading X with dimension and quantity)
+          // Pattern 10: "X 468 x 15" (leading X with dimension and quantity) - NOW FIRST
           // Check if this might be "X width x quantity" format
           const possibleWidth = parseInt(match[1]);
           const possibleQty = parseInt(match[2]);
@@ -711,6 +693,24 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
             quantity = 0;
             console.log(`🟠 LEADING-X FORMAT: X ${length}x${width}, setting qty=0`);
           }
+        } else if (patternIndex === 11) {
+          // Pattern 11: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = 0; // Set quantity to 0 for missing quantities
+          console.log(`🟡 DIMENSION WITH MISSING QUANTITY: ${length}x${width}, setting qty=0`);
+        } else if (patternIndex === 12) {
+          // Pattern 12: "1000 x 500" (dimension without any quantity indicator)
+          length = parseInt(match[1]);
+          width = parseInt(match[2]);
+          quantity = 0; // Set quantity to 0 for missing quantities
+          console.log(`🟡 DIMENSION WITHOUT QUANTITY: ${length}x${width}, setting qty=0`);
+        } else if (patternIndex === 13) {
+          // Pattern 13: "2 = 1000 x 500" (quantity first format - reorder to standard format)
+          quantity = parseInt(match[1]);
+          length = parseInt(match[2]);
+          width = parseInt(match[3]);
+          console.log(`🔄 QUANTITY-FIRST FORMAT DETECTED: ${quantity} = ${length}x${width}, reordered to ${length}x${width}=${quantity}`);
         } else if (patternIndex === 14) {
           // Pattern 14: "2218 X 468x-" (dimension with trailing x-)
           length = parseInt(match[1]);
