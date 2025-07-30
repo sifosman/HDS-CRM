@@ -373,6 +373,7 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
     
     const currentLine = lines[startIndex].trim();
     const nextLine = lines[startIndex + 1]?.trim() || '';
+    const thirdLine = lines[startIndex + 2]?.trim() || '';
     
     // Pattern 1: "1800 x" + "248=2" → 1800x248=2
     const splitXPattern = /^(\d+)\s*[xX×*]\s*$/;
@@ -400,6 +401,38 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
           },
           nextIndex: startIndex + 2 // Skip both lines
         };
+      }
+    }
+    
+    // Pattern 1b: "1100" + "%" + "270=2" → 1100x270=2 (3-line pattern)
+    if (startIndex < lines.length - 2) {
+      const numberPattern = /^(\d+)\s*$/;
+      const symbolPattern = /^[%\s]*$/;
+      
+      const numberMatch = currentLine.match(numberPattern);
+      const symbolMatch = nextLine.match(symbolPattern);
+      const dimensionMatch = thirdLine.match(followupPattern);
+      
+      if (numberMatch && symbolMatch && dimensionMatch) {
+        const length = parseInt(numberMatch[1]);
+        const width = parseInt(dimensionMatch[1]);
+        const quantity = parseInt(dimensionMatch[2]);
+        
+        if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+          console.log(`🔗 3-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+3})`);
+          return {
+            piece: {
+              id: `piece-${extractedPieces.length}`,
+              length,
+              width,
+              quantity,
+              material: currentMaterial?.displayName || 'Default Material',
+              materialId: currentMaterial?.id || '201',
+              materialDisplayName: currentMaterial?.displayName || 'Default Material'
+            },
+            nextIndex: startIndex + 3 // Skip all three lines
+          };
+        }
       }
     }
     
@@ -462,6 +495,33 @@ export const extractDimensionsFromText = (ocrText: string): { dimensions: Dimens
       
       if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
         console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
+        return {
+          piece: {
+            id: `piece-${extractedPieces.length}`,
+            length,
+            width,
+            quantity,
+            material: currentMaterial?.displayName || 'Default Material',
+            materialId: currentMaterial?.id || '201',
+            materialDisplayName: currentMaterial?.displayName || 'Default Material'
+          },
+          nextIndex: startIndex + 2
+        };
+      }
+    }
+    
+    // Pattern 5: "7684" + "273=2" → 768x273=2 (4-digit + dimension=quantity)
+    const fourDigitPattern = /^(\d{4})\s*$/;
+    const fourDigitMatch = currentLine.match(fourDigitPattern);
+    if (fourDigitMatch && followMatch) {
+      const fourDigit = fourDigitMatch[1];
+      // Try to split 7684 as 768|4 → 768x273=2
+      const length = parseInt(fourDigit.substring(0, 3)); // 768
+      const width = parseInt(followMatch[1]); // 273
+      const quantity = parseInt(followMatch[2]); // 2
+      
+      if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+        console.log(`🔗 4-DIGIT MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex+1}-${startIndex+2})`);
         return {
           piece: {
             id: `piece-${extractedPieces.length}`,
