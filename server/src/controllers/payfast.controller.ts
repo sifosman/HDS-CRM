@@ -56,17 +56,21 @@ const generateSignature = (data: Record<string, string>, passphrase: string): st
   // Create parameter string in the correct order
   const paramPairs: string[] = [];
   
-  // Add fields in the specified order
+  // Add fields in the specified order - no URL encoding as per PayFast docs
   fieldOrder.forEach(key => {
     if (dataForSignature[key] && dataForSignature[key] !== '' && dataForSignature[key] !== undefined) {
-      paramPairs.push(`${key}=${dataForSignature[key].toString().trim()}`);
+      const value = dataForSignature[key].toString().trim();
+      paramPairs.push(`${key}=${value}`);
+      console.log(`Adding field: ${key}=${value}`);
     }
   });
   
   // Add any remaining fields not in the standard order (shouldn't happen but just in case)
   Object.keys(dataForSignature).forEach(key => {
     if (!fieldOrder.includes(key) && dataForSignature[key] && dataForSignature[key] !== '' && dataForSignature[key] !== undefined) {
-      paramPairs.push(`${key}=${dataForSignature[key].toString().trim()}`);
+      const value = dataForSignature[key].toString().trim();
+      paramPairs.push(`${key}=${value}`);
+      console.log(`Adding extra field: ${key}=${value}`);
     }
   });
   
@@ -99,18 +103,20 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     const config = getPayFastConfig();
     const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
     
-    // Prepare payment data
+    // Prepare payment data - ensure all values are strings and properly formatted
     const paymentData: Record<string, string> = {
-      merchant_id: config.merchantId,
-      merchant_key: config.merchantKey,
+      merchant_id: config.merchantId.toString(),
+      merchant_key: config.merchantKey.toString(),
       return_url: `${config.baseUrl}/api/payfast/success?quote_id=${quoteId}`,
       cancel_url: `${config.baseUrl}/api/payfast/cancel?quote_id=${quoteId}`,
       notify_url: `${config.baseUrl}/api/payfast/notify`,
-      amount: amount.toString(),
+      amount: parseFloat(amount.toString()).toFixed(2), // Ensure proper decimal format
       item_name: `HDS Quote ${quoteId}`,
       item_description: projectName ? `Quote for project: ${projectName}` : `HDS Group Quotation ${quoteId}`,
-      m_payment_id: paymentId
+      m_payment_id: paymentId.toString()
     };
+    
+    console.log('PayFast payment data before signature:', JSON.stringify(paymentData, null, 2));
 
     // Add customer details if provided
     if (customerName) {

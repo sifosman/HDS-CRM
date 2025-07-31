@@ -39,12 +39,32 @@ const getPayFastConfig = () => {
 const generateSignature = (data, passphrase) => {
     // Remove signature field if it exists
     const { signature: existingSignature } = data, dataForSignature = __rest(data, ["signature"]);
-    // Create parameter string - PayFast requires specific ordering and no URL encoding
-    const paramString = Object.keys(dataForSignature)
-        .filter(key => dataForSignature[key] !== '' && dataForSignature[key] !== undefined && dataForSignature[key] !== null)
-        .sort() // PayFast requires alphabetical ordering
-        .map(key => `${key}=${dataForSignature[key].toString().trim()}`)
-        .join('&');
+    // PayFast requires fields in the order they appear in the form, NOT alphabetical
+    // Order: merchant_id, merchant_key, return_url, cancel_url, notify_url, 
+    //        name_first, name_last, email_address, m_payment_id, amount, item_name, item_description
+    const fieldOrder = [
+        'merchant_id', 'merchant_key', 'return_url', 'cancel_url', 'notify_url',
+        'name_first', 'name_last', 'email_address', 'cell_number',
+        'm_payment_id', 'amount', 'item_name', 'item_description',
+        'custom_int1', 'custom_int2', 'custom_int3', 'custom_int4', 'custom_int5',
+        'custom_str1', 'custom_str2', 'custom_str3', 'custom_str4', 'custom_str5',
+        'email_confirmation', 'confirmation_address', 'payment_method'
+    ];
+    // Create parameter string in the correct order
+    const paramPairs = [];
+    // Add fields in the specified order
+    fieldOrder.forEach(key => {
+        if (dataForSignature[key] && dataForSignature[key] !== '' && dataForSignature[key] !== undefined) {
+            paramPairs.push(`${key}=${dataForSignature[key].toString().trim()}`);
+        }
+    });
+    // Add any remaining fields not in the standard order (shouldn't happen but just in case)
+    Object.keys(dataForSignature).forEach(key => {
+        if (!fieldOrder.includes(key) && dataForSignature[key] && dataForSignature[key] !== '' && dataForSignature[key] !== undefined) {
+            paramPairs.push(`${key}=${dataForSignature[key].toString().trim()}`);
+        }
+    });
+    const paramString = paramPairs.join('&');
     // Add passphrase if provided
     const stringToHash = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;
     console.log('PayFast signature string:', stringToHash);
