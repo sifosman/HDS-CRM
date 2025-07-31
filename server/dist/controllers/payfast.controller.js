@@ -37,15 +37,21 @@ const getPayFastConfig = () => {
 };
 // Generate PayFast signature
 const generateSignature = (data, passphrase) => {
-    // Create parameter string
-    const paramString = Object.keys(data)
-        .filter(key => data[key] !== '' && data[key] !== undefined)
-        .map(key => `${key}=${encodeURIComponent(data[key].toString().trim())}`)
+    // Remove signature field if it exists
+    const { signature: existingSignature } = data, dataForSignature = __rest(data, ["signature"]);
+    // Create parameter string - PayFast requires specific ordering and no URL encoding
+    const paramString = Object.keys(dataForSignature)
+        .filter(key => dataForSignature[key] !== '' && dataForSignature[key] !== undefined && dataForSignature[key] !== null)
+        .sort() // PayFast requires alphabetical ordering
+        .map(key => `${key}=${dataForSignature[key].toString().trim()}`)
         .join('&');
     // Add passphrase if provided
-    const stringToHash = passphrase ? `${paramString}&passphrase=${encodeURIComponent(passphrase)}` : paramString;
+    const stringToHash = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;
+    console.log('PayFast signature string:', stringToHash);
     // Generate MD5 hash
-    return crypto_1.default.createHash('md5').update(stringToHash).digest('hex');
+    const generatedSignature = crypto_1.default.createHash('md5').update(stringToHash).digest('hex');
+    console.log('Generated signature:', generatedSignature);
+    return generatedSignature;
 };
 // Generate payment form for a quote
 const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -399,12 +405,17 @@ const handlePaymentNotification = (req, res) => __awaiter(void 0, void 0, void 0
         // Validate the ITN
         const config = getPayFastConfig();
         const pfData = req.body;
-        // Remove signature from data for validation
-        const { signature } = pfData, dataToValidate = __rest(pfData, ["signature"]);
-        // Generate signature for validation
-        const calculatedSignature = generateSignature(dataToValidate, config.passphrase);
-        if (signature !== calculatedSignature) {
+        console.log('PayFast ITN data received:', pfData);
+        // Extract signature and prepare data for validation
+        const receivedSignature = pfData.signature;
+        // Generate signature for validation using the same method
+        const calculatedSignature = generateSignature(pfData, config.passphrase);
+        console.log('Received signature:', receivedSignature);
+        console.log('Calculated signature:', calculatedSignature);
+        if (receivedSignature !== calculatedSignature) {
             console.error('PayFast ITN signature validation failed');
+            console.error('Expected:', calculatedSignature);
+            console.error('Received:', receivedSignature);
             res.status(400).send('Invalid signature');
             return;
         }

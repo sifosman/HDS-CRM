@@ -1512,9 +1512,9 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   doc.font('Helvetica').fontSize(10).fillColor('#333333');
   doc.moveDown(0.5);
 
-  // Create payment link box
+  // Create payment button box - larger and more prominent
   const paymentBoxStartY = doc.y;
-  const paymentBoxHeight = 80;
+  const paymentBoxHeight = 120; // Increased height for better visibility
   
   // Check if we need a new page for the payment section
   if (doc.y + paymentBoxHeight > doc.page.height - 50) {
@@ -1527,36 +1527,70 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
 
   const currentPaymentBoxY = doc.y;
   
-  // Draw payment box with green background
+  // Draw main payment box with green gradient-like effect
   doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
      .fillAndStroke('#e8f5e8', '#28a745');
   
-  // Payment box content
-  doc.fontSize(11).fillColor('#28a745').font('Helvetica-Bold');
-  doc.text('💳 Pay Online with PayFast', 60, currentPaymentBoxY + 15, { width: doc.page.width - 120 });
+  // Add inner highlight for button effect
+  doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
+     .stroke('#ffffff');
   
-  doc.fontSize(9).fillColor('#333333').font('Helvetica');
-  doc.text('Secure online payment processing • Credit Cards • EFT • Debit Cards', 60, currentPaymentBoxY + 35, { width: doc.page.width - 120 });
+  // Payment box header
+  doc.fontSize(14).fillColor('#28a745').font('Helvetica-Bold');
+  doc.text('💳 SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 20, { 
+    width: doc.page.width - 120,
+    align: 'center'
+  });
+  
+  doc.fontSize(11).fillColor('#333333').font('Helvetica');
+  doc.text('Pay instantly with PayFast • Credit Cards • EFT • Debit Cards', 60, currentPaymentBoxY + 45, { 
+    width: doc.page.width - 120,
+    align: 'center'
+  });
   
   // Generate payment URL
   const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
   const paymentUrl = `${baseUrl}/api/payfast/pay?quoteId=${pdfId}&amount=${finalTotal.toFixed(2)}&customerName=${encodeURIComponent(customerName || 'Customer')}&projectName=${encodeURIComponent(projectName || 'Project')}`;
   
-  // Add clickable payment link
-  doc.fontSize(10).fillColor('#007bff').font('Helvetica-Bold');
-  doc.text('Click here to pay online:', 60, currentPaymentBoxY + 50, { 
-    width: doc.page.width - 120,
-    link: paymentUrl,
-    underline: true
+  // Create a prominent clickable button area
+  const buttonY = currentPaymentBoxY + 65;
+  const buttonHeight = 35;
+  const buttonWidth = 300;
+  const buttonX = (doc.page.width - buttonWidth) / 2; // Center the button
+  
+  // Draw button background
+  doc.rect(buttonX, buttonY, buttonWidth, buttonHeight)
+     .fillAndStroke('#007bff', '#0056b3');
+  
+  // Add button shadow effect
+  doc.rect(buttonX + 2, buttonY + 2, buttonWidth, buttonHeight)
+     .stroke('#cccccc');
+  
+  // Button text - large and prominent
+  doc.fontSize(14).fillColor('#ffffff').font('Helvetica-Bold');
+  doc.text('CLICK HERE TO PAY NOW', buttonX, buttonY + 10, { 
+    width: buttonWidth,
+    align: 'center',
+    link: paymentUrl
   });
   
-  // Add the actual URL text for reference
-  doc.fontSize(8).fillColor('#666666').font('Helvetica');
-  const displayUrl = paymentUrl.length > 60 ? paymentUrl.substring(0, 60) + '...' : paymentUrl;
-  doc.text(displayUrl, 60, currentPaymentBoxY + 65, { width: doc.page.width - 120 });
+  // Add amount display on button
+  doc.fontSize(12).fillColor('#ffffff').font('Helvetica-Bold');
+  doc.text(`R ${finalTotal.toFixed(2)}`, buttonX, buttonY + 25, { 
+    width: buttonWidth,
+    align: 'center',
+    link: paymentUrl
+  });
+  
+  // Add instruction text below button
+  doc.fontSize(9).fillColor('#666666').font('Helvetica');
+  doc.text('Click the blue button above to proceed to secure payment', 60, currentPaymentBoxY + 110, { 
+    width: doc.page.width - 120,
+    align: 'center'
+  });
   
   // Move past the payment box
-  doc.y = currentPaymentBoxY + paymentBoxHeight + 10;
+  doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
   doc.moveDown(1);
 
   // Add a generic footer to the last page
