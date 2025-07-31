@@ -38,28 +38,38 @@ const getPayFastConfig = (): PayFastConfig => {
 
 // Generate PayFast signature
 const generateSignature = (data: Record<string, string>, passphrase: string): string => {
-  // Create parameter string
-  const paramString = Object.keys(data)
-    .filter(key => data[key] !== '' && data[key] !== undefined)
-    .map(key => `${key}=${encodeURIComponent(data[key].toString().trim())}`)
+  // Remove signature field if it exists
+  const { signature: existingSignature, ...dataForSignature } = data;
+  
+  // Create parameter string - PayFast requires specific ordering and no URL encoding
+  const paramString = Object.keys(dataForSignature)
+    .filter(key => dataForSignature[key] !== '' && dataForSignature[key] !== undefined && dataForSignature[key] !== null)
+    .sort() // PayFast requires alphabetical ordering
+    .map(key => `${key}=${dataForSignature[key].toString().trim()}`)
     .join('&');
   
   // Add passphrase if provided
-  const stringToHash = passphrase ? `${paramString}&passphrase=${encodeURIComponent(passphrase)}` : paramString;
+  const stringToHash = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;
+  
+  console.log('PayFast signature string:', stringToHash);
   
   // Generate MD5 hash
-  return crypto.createHash('md5').update(stringToHash).digest('hex');
+  const generatedSignature = crypto.createHash('md5').update(stringToHash).digest('hex');
+  console.log('Generated signature:', generatedSignature);
+  
+  return generatedSignature;
 };
 
 // Generate payment form for a quote
-export const generatePaymentForm = async (req: Request, res: Response) => {
+export const generatePaymentForm = async (req: Request, res: Response): Promise<void> => {
   try {
     const { quoteId, amount, customerName, projectName, customerEmail } = req.query;
     
     if (!quoteId || !amount) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: 'Missing required parameters: quoteId and amount are required' 
       });
+      return;
     }
 
     const config = getPayFastConfig();
@@ -234,11 +244,12 @@ export const generatePaymentForm = async (req: Request, res: Response) => {
       error: 'Failed to generate payment form',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
+    return;
   }
 };
 
 // Handle successful payment return
-export const handlePaymentSuccess = async (req: Request, res: Response) => {
+export const handlePaymentSuccess = async (req: Request, res: Response): Promise<void> => {
   try {
     const { quote_id } = req.query;
     
@@ -314,11 +325,12 @@ export const handlePaymentSuccess = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Payment success handler error:', error);
     res.status(500).json({ error: 'Failed to process payment success' });
+    return;
   }
 };
 
 // Handle cancelled payment return
-export const handlePaymentCancel = async (req: Request, res: Response) => {
+export const handlePaymentCancel = async (req: Request, res: Response): Promise<void> => {
   try {
     const { quote_id } = req.query;
     
@@ -404,11 +416,12 @@ export const handlePaymentCancel = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Payment cancel handler error:', error);
     res.status(500).json({ error: 'Failed to process payment cancellation' });
+    return;
   }
 };
 
 // Handle PayFast ITN (Instant Transaction Notification)
-export const handlePaymentNotification = async (req: Request, res: Response) => {
+export const handlePaymentNotification = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log('PayFast ITN received:', req.body);
     
@@ -416,15 +429,23 @@ export const handlePaymentNotification = async (req: Request, res: Response) => 
     const config = getPayFastConfig();
     const pfData = req.body;
     
-    // Remove signature from data for validation
-    const { signature, ...dataToValidate } = pfData;
+    console.log('PayFast ITN data received:', pfData);
     
-    // Generate signature for validation
-    const calculatedSignature = generateSignature(dataToValidate, config.passphrase);
+    // Extract signature and prepare data for validation
+    const receivedSignature = pfData.signature;
     
-    if (signature !== calculatedSignature) {
+    // Generate signature for validation using the same method
+    const calculatedSignature = generateSignature(pfData, config.passphrase);
+    
+    console.log('Received signature:', receivedSignature);
+    console.log('Calculated signature:', calculatedSignature);
+    
+    if (receivedSignature !== calculatedSignature) {
       console.error('PayFast ITN signature validation failed');
-      return res.status(400).send('Invalid signature');
+      console.error('Expected:', calculatedSignature);
+      console.error('Received:', receivedSignature);
+      res.status(400).send('Invalid signature');
+      return;
     }
     
     // Process the payment notification
@@ -446,5 +467,6 @@ export const handlePaymentNotification = async (req: Request, res: Response) => 
   } catch (error) {
     console.error('PayFast ITN handler error:', error);
     res.status(500).send('Error processing notification');
+    return;
   }
 };

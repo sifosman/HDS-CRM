@@ -7,11 +7,11 @@ const express_1 = __importDefault(require("express"));
 const payfast_controller_1 = require("../controllers/payfast.controller");
 const router = express_1.default.Router();
 // Generate payment form for a quote
-router.get('/pay', payfast_controller_1.generatePaymentForm);
+router.get('/pay', (req, res) => (0, payfast_controller_1.generatePaymentForm)(req, res));
 // Handle payment success return
-router.get('/success', payfast_controller_1.handlePaymentSuccess);
+router.get('/success', (req, res) => (0, payfast_controller_1.handlePaymentSuccess)(req, res));
 // Handle payment cancellation return
-router.get('/cancel', payfast_controller_1.handlePaymentCancel);
+router.get('/cancel', (req, res) => (0, payfast_controller_1.handlePaymentCancel)(req, res));
 // Handle PayFast ITN (Instant Transaction Notification)
-router.post('/notify', payfast_controller_1.handlePaymentNotification);
+router.post('/notify', (req, res) => (0, payfast_controller_1.handlePaymentNotification)(req, res));
 exports.default = router;

@@ -52,9 +52,10 @@ const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, func
     try {
         const { quoteId, amount, customerName, projectName, customerEmail } = req.query;
         if (!quoteId || !amount) {
-            return res.status(400).json({
+            res.status(400).json({
                 error: 'Missing required parameters: quoteId and amount are required'
             });
+            return;
         }
         const config = getPayFastConfig();
         const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
@@ -219,6 +220,7 @@ const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, func
             error: 'Failed to generate payment form',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
+        return;
     }
 });
 exports.generatePaymentForm = generatePaymentForm;
@@ -297,6 +299,7 @@ const handlePaymentSuccess = (req, res) => __awaiter(void 0, void 0, void 0, fun
     catch (error) {
         console.error('Payment success handler error:', error);
         res.status(500).json({ error: 'Failed to process payment success' });
+        return;
     }
 });
 exports.handlePaymentSuccess = handlePaymentSuccess;
@@ -385,6 +388,7 @@ const handlePaymentCancel = (req, res) => __awaiter(void 0, void 0, void 0, func
     catch (error) {
         console.error('Payment cancel handler error:', error);
         res.status(500).json({ error: 'Failed to process payment cancellation' });
+        return;
     }
 });
 exports.handlePaymentCancel = handlePaymentCancel;
@@ -401,7 +405,8 @@ const handlePaymentNotification = (req, res) => __awaiter(void 0, void 0, void 0
         const calculatedSignature = generateSignature(dataToValidate, config.passphrase);
         if (signature !== calculatedSignature) {
             console.error('PayFast ITN signature validation failed');
-            return res.status(400).send('Invalid signature');
+            res.status(400).send('Invalid signature');
+            return;
         }
         // Process the payment notification
         console.log('PayFast ITN validated successfully:', {
@@ -420,6 +425,7 @@ const handlePaymentNotification = (req, res) => __awaiter(void 0, void 0, void 0
     catch (error) {
         console.error('PayFast ITN handler error:', error);
         res.status(500).send('Error processing notification');
+        return;
     }
 });
 exports.handlePaymentNotification = handlePaymentNotification;
