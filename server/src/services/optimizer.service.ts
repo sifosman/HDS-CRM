@@ -1505,6 +1505,60 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // Move down a bit
   doc.moveDown(2);
 
+  // ===== ONLINE PAYMENT SECTION =====
+  // Add online payment option with PayFast
+  doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+  doc.text('Online Payment Option', 50, doc.y);
+  doc.font('Helvetica').fontSize(10).fillColor('#333333');
+  doc.moveDown(0.5);
+
+  // Create payment link box
+  const paymentBoxStartY = doc.y;
+  const paymentBoxHeight = 80;
+  
+  // Check if we need a new page for the payment section
+  if (doc.y + paymentBoxHeight > doc.page.height - 50) {
+    doc.addPage();
+    doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+    doc.text('Online Payment Option', 50, doc.y);
+    doc.font('Helvetica').fontSize(10).fillColor('#333333');
+    doc.moveDown(0.5);
+  }
+
+  const currentPaymentBoxY = doc.y;
+  
+  // Draw payment box with green background
+  doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
+     .fillAndStroke('#e8f5e8', '#28a745');
+  
+  // Payment box content
+  doc.fontSize(11).fillColor('#28a745').font('Helvetica-Bold');
+  doc.text('💳 Pay Online with PayFast', 60, currentPaymentBoxY + 15, { width: doc.page.width - 120 });
+  
+  doc.fontSize(9).fillColor('#333333').font('Helvetica');
+  doc.text('Secure online payment processing • Credit Cards • EFT • Debit Cards', 60, currentPaymentBoxY + 35, { width: doc.page.width - 120 });
+  
+  // Generate payment URL
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  const paymentUrl = `${baseUrl}/api/payfast/pay?quoteId=${pdfId}&amount=${finalTotal.toFixed(2)}&customerName=${encodeURIComponent(customerName || 'Customer')}&projectName=${encodeURIComponent(projectName || 'Project')}`;
+  
+  // Add clickable payment link
+  doc.fontSize(10).fillColor('#007bff').font('Helvetica-Bold');
+  doc.text('Click here to pay online:', 60, currentPaymentBoxY + 50, { 
+    width: doc.page.width - 120,
+    link: paymentUrl,
+    underline: true
+  });
+  
+  // Add the actual URL text for reference
+  doc.fontSize(8).fillColor('#666666').font('Helvetica');
+  const displayUrl = paymentUrl.length > 60 ? paymentUrl.substring(0, 60) + '...' : paymentUrl;
+  doc.text(displayUrl, 60, currentPaymentBoxY + 65, { width: doc.page.width - 120 });
+  
+  // Move past the payment box
+  doc.y = currentPaymentBoxY + paymentBoxHeight + 10;
+  doc.moveDown(1);
+
   // Add a generic footer to the last page
   // First make sure we're near the bottom of the page
   if (doc.y < doc.page.height - 100) {

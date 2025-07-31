@@ -29,6 +29,7 @@ const webhook_direct_routes_1 = __importDefault(require("./routes/webhook-direct
 const debug_routes_1 = __importDefault(require("./routes/debug.routes"));
 const supabase_routes_1 = __importDefault(require("./routes/supabase.routes"));
 const diagnostic_routes_1 = require("./routes/diagnostic.routes");
+const payfast_routes_1 = __importDefault(require("./routes/payfast.routes"));
 // Load environment variables
 dotenv_1.default.config();
 // Create Express app
@@ -57,6 +58,7 @@ app.use('/api/debug', debug_routes_1.default);
 app.use('/api/iqretail', iqretail_routes_1.default);
 app.use('/api/supabase', supabase_routes_1.default);
 app.use('/api/diagnostic', diagnostic_routes_1.diagnosticRoutes);
+app.use('/api/payfast', payfast_routes_1.default);
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {
     res.status(200).json({
@@ -95,7 +97,8 @@ app.get('/', (req, res) => {
             '/api/cutlist',
             '/api/n8n/process',
             '/api/direct-test',
-            '/api/direct-n8n'
+            '/api/direct-n8n',
+            '/api/payfast'
         ]
     });
 });

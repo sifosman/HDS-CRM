@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendWhatsAppConfirmation = exports.parseOCRText = exports.processImageWithOCR = exports.getAvailableStockPieces = exports.getAvailableMaterials = exports.syncProjectWithBotsailor = exports.sendDataToBotsailor = exports.processIncomingData = exports.checkConnectionStatus = void 0;
+exports.sendWhatsAppConfirmation = exports.runSampleTests = exports.testOCRParsing = exports.parseOCRText = exports.processImageWithOCR = exports.getAvailableStockPieces = exports.getAvailableMaterials = exports.syncProjectWithBotsailor = exports.sendDataToBotsailor = exports.processIncomingData = exports.checkConnectionStatus = void 0;
 const axios_1 = __importDefault(require("axios"));
 const uuid_1 = require("uuid");
 const fs_1 = __importDefault(require("fs"));
@@ -369,42 +369,51 @@ const parseHDSTableFormat = (text, result) => {
     return result;
 };
 /**
- * Parse simple format (existing logic)
- * @param text The OCR extracted text
- * @param result The result structure to populate
- * @returns Structured cutting list data
- */
-/**
- * Parse handwritten format with support for material sections
+ * Parse handwritten format with improved standardization on Length x Width = Quantity
  * @param text The OCR extracted text
  * @param result The result structure to populate
  * @returns Structured cutting list data
  */
 const parseHandwrittenFormat = (text, result) => {
-    var _a;
-    console.log('Parsing handwritten format with material section support...');
+    console.log('=== IMPROVED OCR PARSING - STANDARD FORMAT ===');
+    console.log('Parsing handwritten format with Length x Width = Quantity standardization...');
     const lines = text.split('\n').filter(line => line.trim() !== '');
-    // More robust regex patterns to find dimensions and quantities
-    const dimensionPatterns = [
-        // Pattern 1: 1000x500=2, 1000 x 500 = 2, 1000*500=2, 1000x500-2, etc.
-        /(\d+)\s*[xX×*]\s*(\d+)\s*[=\-]\s*(\d+)/,
-        // Pattern 2: 1000x500 (2), 1000 x 500 (2)
-        /(\d+)\s*[xX×*]\s*(\d+)\s*\((\d+)\)/,
-        // Pattern 3: 1000x500 2pcs, 1000x500 2 pc, etc.
-        /(\d+)\s*[xX×*]\s*(\d+)\s+(\d+)\s*(?:pcs?|pieces?|pce|szt|x)/i,
-        // Pattern 4: 1000x500 2 (space separated)
-        /(\d+)\s*[xX×*]\s*(\d+)\s+(\d+)(?!\d)/,
-        // Pattern 5: 1000x500, quantity is on the same line but separated (fallback)
-        /(\d+)\s*[xX×*]\s*(\d+)/, // fallback no qty
+    console.log(`Total lines to process: ${lines.length}`);
+    // STANDARDIZED DIMENSION PATTERNS - Focus on Length x Width = Quantity
+    const standardPatterns = [
+        // Primary patterns - Length x Width = Quantity (most common)
+        /(\d+)\s*[xX×*]\s*(\d+)\s*=\s*(\d+)/, // 1000x500=2, 1000 x 500 = 2
+        /(\d+)\s*[xX×*]\s*(\d+)\s*-\s*(\d+)/, // 1000x500-2, 1000 x 500 - 2
+        /(\d+)\s*[xX×*]\s*(\d+)\s*:\s*(\d+)/, // 1000x500:2 (colon separator)
+        // Secondary patterns - with parentheses or text separators
+        /(\d+)\s*[xX×*]\s*(\d+)\s*\(\s*(\d+)\s*\)/, // 1000x500(2), 1000 x 500 (2)
+        /(\d+)\s*[xX×*]\s*(\d+)\s*\[\s*(\d+)\s*\]/, // 1000x500[2] (square brackets)
+        // Tertiary patterns - with quantity keywords
+        /(\d+)\s*[xX×*]\s*(\d+)\s+(\d+)\s*(?:pcs?|pieces?|pc|ea|qty|x)\b/i, // 1000x500 2pcs, 1000x500 2 pc
+        // Quaternary patterns - space separated (more permissive)
+        /(\d+)\s*[xX×*]\s*(\d+)\s+(\d+)(?!\d)/, // 1000x500 2 (space separated, no following digit)
+        // Fallback pattern - just dimensions (quantity defaults to 1)
+        /(\d+)\s*[xX×*]\s*(\d+)(?!\s*[=\-:\(\[\d])/ // 1000x500 (no quantity indicator following)
     ];
-    // Material section detection keywords (non-numeric words)
-    const materialKeywords = ['white', 'door', 'doors', 'drawer', 'drawers', 'microwave', 'masonite', 'messonite', 'oak', 'wood', 'panel', 'melamine'];
+    // Material section detection keywords
+    const materialKeywords = [
+        'white', 'door', 'doors', 'drawer', 'drawers', 'microwave',
+        'masonite', 'messonite', 'melamine', 'oak', 'wood', 'panel',
+        'chipboard', 'mdf', 'plywood', 'pine', 'birch'
+    ];
     // Track current material section
-    let currentMaterial = 'Default';
+    let piecesFound = 0;
+    // Helper function to validate dimensions
+    const isValidDimension = (value) => {
+        return value >= 50 && value <= 3000; // Reasonable range for cutting dimensions in mm
+    };
+    // Helper function to validate quantity
+    const isValidQuantity = (value) => {
+        return value >= 1 && value <= 50; // Reasonable range for quantities
+    };
     // Helper function to normalize material names
     const normalizeMaterialName = (text) => {
         const cleanText = text.trim();
-        // Handle common material name patterns
         if (cleanText.toLowerCase().includes('white') && cleanText.toLowerCase().includes('melam')) {
             return 'White Melamine';
         }
@@ -414,148 +423,154 @@ const parseHandwrittenFormat = (text, result) => {
         if (cleanText.toLowerCase() === 'doors') {
             return 'Doors';
         }
-        // Default: capitalize first letter of each word
         return cleanText.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
     };
     // Helper function to check if a line is a material header
     const isMaterialHeader = (line) => {
-        const lowerLine = line.toLowerCase();
-        // Skip if it contains dimensions
-        if (isDimensionLine(line, dimensionPatterns)) {
+        const lowerLine = line.toLowerCase().trim();
+        // STRICT RULES: Must be a clean material header, not a dimension line
+        // 1. Skip if it contains any digits (dimension lines have numbers)
+        if (/\d/.test(line)) {
             return false;
         }
-        // Check if it contains material keywords
-        return materialKeywords.some(keyword => lowerLine.includes(keyword));
+        // 2. Skip if it contains dimension indicators (x, ×, *, =, -, :)
+        if (/[xX×*=\-:]/.test(line)) {
+            return false;
+        }
+        // 3. Skip if it's too short (less than 3 characters)
+        if (line.trim().length < 3) {
+            return false;
+        }
+        // 4. Must contain a material keyword
+        const hasKeyword = materialKeywords.some(keyword => lowerLine.includes(keyword));
+        // 5. Additional check: if it's just "doors" or similar single words, it's likely a header
+        const isSingleMaterialWord = materialKeywords.some(keyword => lowerLine === keyword || lowerLine === keyword + 's' || lowerLine === keyword.slice(0, -1));
+        return hasKeyword || isSingleMaterialWord;
     };
-    // Single pass: process lines sequentially, detecting materials and dimensions as we go
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        console.log(`Parsing line ${i + 1}: "${line}"`);
-        // Check if this line is a material header
+    let currentMaterial = 'White Melamine';
+    let extractedPieces = [];
+    let lineIndex = 0;
+    // MULTI-LINE PARSING - Handle dimensions split across lines
+    const processMultiLinePatterns = (lines, startIndex) => {
+        var _a;
+        if (startIndex >= lines.length - 1)
+            return { piece: null, nextIndex: startIndex + 1 };
+        const currentLine = lines[startIndex].trim();
+        const nextLine = ((_a = lines[startIndex + 1]) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+        // Pattern 1: "1800 x" + "248=2" → 1800x248=2
+        const splitXPattern = /^(\d+)\s*[xX×*]\s*$/;
+        const followupPattern = /^(\d+)\s*[=\-:]\s*(\d+)/;
+        const xMatch = currentLine.match(splitXPattern);
+        const followMatch = nextLine.match(followupPattern);
+        if (xMatch && followMatch) {
+            const length = parseInt(xMatch[1]);
+            const width = parseInt(followMatch[1]);
+            const quantity = parseInt(followMatch[2]);
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `${result.id}-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: currentMaterial,
+                        description: `${length}x${width}`,
+                        name: `${length}x${width}`,
+                        lineIndex: startIndex
+                    },
+                    nextIndex: startIndex + 2 // Skip both lines
+                };
+            }
+        }
+        // Pattern 2: "1100 *" + "420=2" → 1100x420=2  
+        const splitStarPattern = /^(\d+)\s*[*]\s*$/;
+        if (currentLine.match(splitStarPattern) && followMatch) {
+            const length = parseInt(currentLine.match(splitStarPattern)[1]);
+            const width = parseInt(followMatch[1]);
+            const quantity = parseInt(followMatch[2]);
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `${result.id}-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: currentMaterial,
+                        description: `${length}x${width}`,
+                        name: `${length}x${width}`,
+                        lineIndex: startIndex
+                    },
+                    nextIndex: startIndex + 2
+                };
+            }
+        }
+        return { piece: null, nextIndex: startIndex + 1 };
+    };
+    // Process lines with multi-line support
+    while (lineIndex < lines.length) {
+        const line = lines[lineIndex].trim();
+        console.log(`Processing line ${lineIndex + 1}: ${line}`);
+        // Check for material headers first
         if (isMaterialHeader(line)) {
             const materialName = normalizeMaterialName(line);
-            // Check if this material already exists
-            const existingMaterial = result.materials.find((m) => m.name === materialName);
-            if (!existingMaterial) {
-                // Create new material
-                result.materials.push({
-                    id: (0, uuid_1.v4)(),
-                    name: materialName,
-                    type: 'board',
-                    thickness: 16
-                });
-                console.log(`Created new material section: ${materialName}`);
-            }
-            // Create a separator piece to trigger frontend dropdown creation
-            result.cutPieces.push({
-                id: (0, uuid_1.v4)(),
+            console.log(`Found material header: ${line}, setting current material to ${materialName}`);
+            currentMaterial = materialName;
+            // Create separator piece for frontend
+            extractedPieces.push({
+                id: `${result.id}-separator-${extractedPieces.length}`,
                 separator: true,
                 name: materialName,
                 material: materialName,
-                description: line, // Store original line for reference
-                lineIndex: i // Track original position in OCR text
+                description: materialName,
+                lineIndex: lineIndex
             });
-            console.log(`Created separator piece for material: ${materialName}`);
-            // Switch to this material
-            currentMaterial = materialName;
-            console.log(`Switched to material section: ${currentMaterial}`);
-            continue; // Skip to next line
+            lineIndex++;
+            continue;
         }
-        // Process dimension lines
-        let matched = false;
-        let width = 0, length = 0, quantity = 0;
-        // Try each dimension pattern
-        for (const pattern of dimensionPatterns) {
-            const match = line.match(pattern);
+        // Try multi-line patterns first
+        const multiLineResult = processMultiLinePatterns(lines, lineIndex);
+        if (multiLineResult.piece) {
+            console.log(`ADDING MULTI-LINE DIMENSION: ${multiLineResult.piece.description}, qty=${multiLineResult.piece.quantity}`);
+            extractedPieces.push(multiLineResult.piece);
+            lineIndex = multiLineResult.nextIndex;
+            continue;
+        }
+        // Fall back to single-line patterns (your existing code)
+        console.log(`Line format analysis for "${line}"`);
+        let dimensionFound = false;
+        // Try each pattern
+        for (let i = 0; i < standardPatterns.length; i++) {
+            const match = line.match(standardPatterns[i]);
             if (match) {
-                // Get first two numbers as dimensions
-                length = parseInt(match[1]);
-                width = parseInt(match[2]);
-                // Get quantity from third group if available
-                quantity = match[3] ? parseInt(match[3]) : 0;
-                if (!isNaN(width) && !isNaN(length) && width > 0 && length > 0) {
-                    console.log(`Pattern matched: ${pattern}. Length=${length}, Width=${width}, Quantity=${quantity}`);
-                    // If quantity is still 0, try to find it in the rest of the string
-                    if (quantity === 0) {
-                        const remainder = line.substring(match[0].length).trim();
-                        console.log(`No quantity in main pattern. Checking remainder: "${remainder}"`);
-                        // Look for a number followed by x or just a number
-                        const quantityMatch = remainder.match(/([0-9]+)\s*(?:x|pcs?|pieces?|pc|ea)?/i);
-                        if (quantityMatch && quantityMatch[1]) {
-                            quantity = parseInt(quantityMatch[1]);
-                            console.log(`Found quantity in remainder: ${quantity}`);
-                        }
-                    }
-                    matched = true;
+                const length = parseInt(match[1]);
+                const width = parseInt(match[2]);
+                const quantity = parseInt(match[3]) || 1;
+                if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                    console.log(`✅ SERVER PATTERN MATCH: ${length}x${width} (Length x Width), qty=${quantity} using pattern ${i + 1} (${standardPatterns[i]})`);
+                    console.log(`ADDING DIMENSION: ${length}x${width} (Length x Width), qty=${quantity}`);
+                    extractedPieces.push({
+                        id: `${result.id}-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: currentMaterial,
+                        description: `${length}x${width}`,
+                        name: `${length}x${width}`,
+                        lineIndex: lineIndex
+                    });
+                    dimensionFound = true;
                     break;
                 }
             }
         }
-        // Fallback: if no pattern matched, try simple numeric extraction
-        if (!matched) {
-            const nums = (_a = line.match(/\d+/g)) === null || _a === void 0 ? void 0 : _a.map(n => parseInt(n));
-            if (nums && nums.length >= 2) {
-                // Check if there are at least 3 numbers (likely length, width, qty)
-                if (nums.length >= 3) {
-                    length = nums[0];
-                    width = nums[1];
-                    quantity = nums[2];
-                }
-                else {
-                    // Only 2 numbers - assume length and width
-                    length = nums[0];
-                    width = nums[1];
-                    quantity = 1; // Default quantity
-                    // Check if line has any quantity indicators
-                    const quantityIndicators = ['x', 'pcs', 'pc', 'pieces', 'piece'];
-                    for (const indicator of quantityIndicators) {
-                        if (line.toLowerCase().includes(indicator)) {
-                            const parts = line.split(indicator);
-                            if (parts.length > 1) {
-                                const potentialQty = parseInt(parts[1].trim());
-                                if (!isNaN(potentialQty) && potentialQty > 0) {
-                                    quantity = potentialQty;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                matched = true;
-                console.log(`Fallback numeric parse -> length ${length}, width ${width}, quantity ${quantity}`);
-            }
+        if (!dimensionFound) {
+            console.log(`No dimension found in line: ${line}`);
         }
-        // Add the piece if we found valid dimensions
-        if (matched && length > 0 && width > 0) {
-            // If quantity is still not found, default to 1
-            if (quantity === 0) {
-                quantity = 1;
-                console.log('Quantity not found, defaulting to 1.');
-            }
-            // Final validation: limit dimensions and quantity to reasonable values
-            // This helps catch OCR errors with unrealistic numbers
-            if (length > 5000)
-                length = 1000;
-            if (width > 5000)
-                width = 500;
-            if (quantity > 100)
-                quantity = 1;
-            result.cutPieces.push({
-                id: (0, uuid_1.v4)(),
-                length,
-                width,
-                quantity,
-                material: currentMaterial,
-                name: `${currentMaterial} Piece ${result.cutPieces.length + 1}`,
-                description: line // Store the original line for reference
-            });
-            console.log(`Added cut piece: ${length}x${width}, Qty: ${quantity}, Material: ${currentMaterial}`);
-        }
-        else {
-            console.log(`No valid dimension found in line: "${line}"`);
-        }
+        lineIndex++;
     }
-    // If no materials were detected, add a default one and assign all pieces to it
+    // Ensure we have at least one material
     if (result.materials.length === 0) {
         result.materials.push({
             id: (0, uuid_1.v4)(),
@@ -563,18 +578,92 @@ const parseHandwrittenFormat = (text, result) => {
             type: 'board',
             thickness: 16
         });
-        // Assign all pieces to the default material
-        result.cutPieces.forEach((piece) => {
-            if (!piece.material) {
+        // Update all pieces to use default material
+        extractedPieces.forEach((piece) => {
+            if (!piece.separator && !piece.material) {
                 piece.material = 'Default Material';
             }
         });
-        console.log('No materials detected, created default material and assigned all pieces to it.');
+        console.log('No materials detected, created default material');
     }
-    console.log('Handwritten format parsing complete.');
-    console.log('Final extracted data:', JSON.stringify(result, null, 2));
+    // ADD EXTRACTED PIECES TO RESULT
+    result.cutPieces = extractedPieces;
+    console.log('\n=== PARSING SUMMARY ===');
+    const actualPiecesCount = extractedPieces.filter((p) => !p.separator).length;
+    console.log(`Total pieces found: ${actualPiecesCount}`);
+    console.log(`Total materials: ${result.materials.length}`);
+    console.log(`Total cut pieces (including separators): ${extractedPieces.length}`);
+    // Log all found pieces for debugging
+    const actualPieces = extractedPieces.filter((p) => !p.separator);
+    console.log('\n=== EXTRACTED PIECES ===');
+    actualPieces.forEach((piece, index) => {
+        console.log(`${index + 1}. ${piece.length}x${piece.width} qty=${piece.quantity} [${piece.material}]`);
+    });
+    console.log('=== END IMPROVED OCR PARSING ===\n');
     return result;
 };
+/**
+ * Test utility function for OCR parsing - helps debug different text formats
+ * @param testText Sample OCR text to test
+ * @returns Parsed results for debugging
+ */
+const testOCRParsing = (testText) => {
+    console.log('\n=== OCR PARSING TEST ===');
+    console.log('Input text:');
+    console.log(testText);
+    const result = {
+        stockPieces: [],
+        cutPieces: [],
+        materials: [],
+        unit: 'mm'
+    };
+    const parsedResult = parseHandwrittenFormat(testText, result);
+    console.log('\n=== TEST RESULTS ===');
+    const pieces = parsedResult.cutPieces.filter((p) => !p.separator);
+    console.log(`Pieces extracted: ${pieces.length}`);
+    pieces.forEach((piece, index) => {
+        console.log(`  ${index + 1}. ${piece.length}x${piece.width} qty=${piece.quantity} [${piece.material}]`);
+    });
+    return parsedResult;
+};
+exports.testOCRParsing = testOCRParsing;
+/**
+ * Sample test cases for different OCR formats
+ */
+const runSampleTests = () => {
+    console.log('🧪 Running OCR parsing sample tests...\n');
+    // Test Case 1: Standard format
+    (0, exports.testOCRParsing)(`
+White Melamine
+1000x500=2
+800x600=1
+1200x400=3
+
+Doors
+500x300=4
+600x400=2
+  `);
+    // Test Case 2: Mixed separators
+    (0, exports.testOCRParsing)(`
+2000x460-2
+918x460=4
+1500x800:1
+1000x500(3)
+  `);
+    // Test Case 3: With noise (like "1Length = 2Width")
+    (0, exports.testOCRParsing)(`
+1800x900=2=1Length=2Width
+1000x500-3-extra text here
+800x600:1:more noise
+  `);
+    // Test Case 4: Space separated
+    (0, exports.testOCRParsing)(`
+1500x800 2
+1000x600 1 pcs
+900x400 3 pieces
+  `);
+};
+exports.runSampleTests = runSampleTests;
 /**
  * Check if a line contains dimension patterns
  * @param line The line to check

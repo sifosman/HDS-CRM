@@ -160,8 +160,8 @@ const extractFromHDSTable = (ocrText) => {
                         // Add new dimension
                         const newDimension = {
                             id: `hds-${Date.now()}-${dimensions.length}`,
-                            length: height, // Use height as length
-                            width: width,
+                            length: width, // Fix: Use width as length (Length x Width format)
+                            width: height, // Fix: Use height as width (Length x Width format)
                             quantity: quantity
                         };
                         dimensionMap.set(dimensionKey, newDimension);
@@ -186,6 +186,7 @@ const extractFromHDSTable = (ocrText) => {
  * This is used when we already have OCR text from n8n
  */
 const extractDimensionsFromText = (ocrText) => {
+    var _a;
     // Create an array for dimensions
     const dimensions = [];
     // Split OCR text into lines
@@ -223,6 +224,57 @@ const extractDimensionsFromText = (ocrText) => {
         }
     ];
     let currentMaterial = null;
+    let extractedPieces = [];
+    let lineIndex = 0;
+    // Helper function to validate dimensions
+    const isValidDimension = (value) => {
+        return value >= 50 && value <= 3000; // Reasonable range for cutting dimensions in mm
+    };
+    // Helper function to validate quantity
+    const isValidQuantity = (value) => {
+        return value >= 0 && value <= 50; // Allow 0 for missing quantities, reasonable range for quantities
+    };
+    // Helper function to check if a line should be ignored (like "glass doors")
+    const shouldIgnoreLine = (line) => {
+        const lowerLine = line.toLowerCase().trim();
+        // Ignore lines containing "glass doors" or similar exclusions
+        const ignorePatterns = [
+            'glass doors',
+            'glass door',
+            'glass',
+            'doors.', // "glass doors." specifically
+        ];
+        return ignorePatterns.some(pattern => lowerLine.includes(pattern));
+    };
+    // Helper function to check if a line is a material header
+    const isMaterialHeader = (line) => {
+        const lowerLine = line.toLowerCase().trim();
+        // First check if this line should be ignored
+        if (shouldIgnoreLine(line)) {
+            return false;
+        }
+        // STRICT RULES: Must be a clean material header, not a dimension line
+        // 1. Skip if it contains any digits (dimension lines have numbers)
+        if (/\d/.test(line)) {
+            return false;
+        }
+        // 2. Skip if it contains dimension indicators (x, ×, *, =, -, :)
+        if (/[xX×*=\-:]/.test(line)) {
+            return false;
+        }
+        // 3. Skip if it's too short (less than 3 characters)
+        if (line.trim().length < 3) {
+            return false;
+        }
+        // 4. Must contain a material keyword (but not glass doors)
+        const materialKeywords = ['white', 'door', 'doors', 'drawer', 'drawers', 'microwave',
+            'masonite', 'messonite', 'melamine', 'oak', 'wood', 'panel',
+            'chipboard', 'mdf', 'plywood', 'pine', 'birch'];
+        const hasKeyword = materialKeywords.some(keyword => lowerLine.includes(keyword));
+        // 5. Additional check: if it's just "doors" or similar single words, it's likely a header
+        const isSingleMaterialWord = materialKeywords.some(keyword => lowerLine === keyword || lowerLine === keyword + 's' || lowerLine === keyword.slice(0, -1));
+        return hasKeyword || isSingleMaterialWord;
+    };
     // Enhanced regex patterns focused on real-world OCR text formats
     const dimensionPatterns = [
         // Format: "10/ 1700 x 450" (quantity-first format with slash)
@@ -237,149 +289,389 @@ const extractDimensionsFromText = (ocrText) => {
         /(\d+)\s*[xX×*]\s*(\d+)\s*\(\s*(\d+)\s*\)/,
         // Format: "500x200x4" (quantity after second x)
         /(\d+)\s*[xX×*]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+        // Format: "1100 x Hoo= 2" (dimension with text in middle)
+        /(\d+)\s*[xX×*]\s*[a-zA-Z]*\s*(\d+)[^\d\r\n]*?=\s*(\d+)/,
+        // Format: "768% 2.00 =1" (dimension with % and decimal)
+        /(\d+)[%\s]*\s*(\d+)(?:\.\d+)?\s*=\s*(\d+)/,
+        // Format: "7684" followed by "273=2" (4-digit number that could be dimensions)
+        /(\d{4})/, // Will be handled specially
+        // Format: "X 468 x 15" (leading X with dimension and quantity) - CHECK FIRST
+        /^[xX]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+        // Format: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
+        /^(\d+)\s*[xX×*]\s*(\d+)\s*[=\-:]\s*[^\d\r\n]*$/,
+        // Format: "1000 x 500" (dimension without any quantity indicator)
+        /^(\d+)\s*[xX×*]\s*(\d+)\s*$/,
+        // Format: "2 = 1000 x 500" (quantity first format - needs reordering)
+        /^(\d+)\s*[=\-:]\s*(\d+)\s*[xX×*]\s*(\d+)/,
+        // Format: "2218 X 468x-" (dimension with trailing x-)
+        /(\d+)\s*[xX×*]\s*(\d+)[xX×*]\s*[\-_]*\s*$/,
     ];
     console.log('Using enhanced dimension patterns for extraction');
-    // Process each line
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        // Check for material keywords first
-        let isMaterialHeader = false;
-        for (const { keys, id, name, displayName } of MATERIAL_KEYWORDS) {
-            if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
-                currentMaterial = { id, name, displayName };
-                console.log(`Found material header: ${line}, setting current material to ${displayName}`);
-                isMaterialHeader = true;
-                break;
+    // MULTI-LINE PARSING - Handle dimensions split across lines
+    const processMultiLinePatterns = (lines, startIndex) => {
+        var _a, _b;
+        if (startIndex >= lines.length - 1)
+            return { piece: null, nextIndex: startIndex + 1 };
+        const currentLine = lines[startIndex].trim();
+        const nextLine = ((_a = lines[startIndex + 1]) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+        const thirdLine = ((_b = lines[startIndex + 2]) === null || _b === void 0 ? void 0 : _b.trim()) || '';
+        // Pattern 1: "1800 x" + "248=2" → 1800x248=2
+        const splitXPattern = /^(\d+)\s*[xX×*]\s*$/;
+        const followupPattern = /^(\d+)\s*[=\-:]\s*(\d+)/;
+        const xMatch = currentLine.match(splitXPattern);
+        const followMatch = nextLine.match(followupPattern);
+        if (xMatch && followMatch) {
+            const length = parseInt(xMatch[1]);
+            const width = parseInt(followMatch[1]);
+            const quantity = parseInt(followMatch[2]);
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `piece-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                        materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                        materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                    },
+                    nextIndex: startIndex + 2 // Skip both lines
+                };
             }
         }
-        if (isMaterialHeader) {
-            continue; // Skip further processing for this line
+        // Pattern 1b: "1100" + "%" + "270=2" → 1100x270=2 (3-line pattern)
+        if (startIndex < lines.length - 2) {
+            const numberPattern = /^(\d+)\s*$/;
+            const symbolPattern = /^[%\s]*$/;
+            const numberMatch = currentLine.match(numberPattern);
+            const symbolMatch = nextLine.match(symbolPattern);
+            const dimensionMatch = thirdLine.match(followupPattern);
+            if (numberMatch && symbolMatch && dimensionMatch) {
+                const length = parseInt(numberMatch[1]);
+                const width = parseInt(dimensionMatch[1]);
+                const quantity = parseInt(dimensionMatch[2]);
+                if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                    console.log(`🔗 3-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 3})`);
+                    return {
+                        piece: {
+                            id: `piece-${extractedPieces.length}`,
+                            length,
+                            width,
+                            quantity,
+                            material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                            materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                            materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                        },
+                        nextIndex: startIndex + 3 // Skip all three lines
+                    };
+                }
+            }
         }
-        if (!line)
+        // Pattern 2: "1100 *" + "420=2" → 1100x420=2  
+        const splitStarPattern = /^(\d+)\s*[*]\s*$/;
+        if (currentLine.match(splitStarPattern) && followMatch) {
+            const length = parseInt(currentLine.match(splitStarPattern)[1]);
+            const width = parseInt(followMatch[1]);
+            const quantity = parseInt(followMatch[2]);
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `piece-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                        materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                        materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                    },
+                    nextIndex: startIndex + 2
+                };
+            }
+        }
+        // Pattern 3: "1100" + "270=2" → 1100x270=2 (number + dimension=quantity)
+        const singleNumberPattern = /^(\d+)\s*$/;
+        const numberMatch = currentLine.match(singleNumberPattern);
+        if (numberMatch && followMatch) {
+            const length = parseInt(numberMatch[1]);
+            const width = parseInt(followMatch[1]);
+            const quantity = parseInt(followMatch[2]);
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `piece-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                        materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                        materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                    },
+                    nextIndex: startIndex + 2
+                };
+            }
+        }
+        // Pattern 4: "1100 f" + "398=2" → 1100x398=2 (number + letter + dimension=quantity)
+        const numberLetterPattern = /^(\d+)\s*[a-zA-Z%]\s*$/;
+        const letterMatch = currentLine.match(numberLetterPattern);
+        if (letterMatch && followMatch) {
+            const length = parseInt(letterMatch[1]);
+            const width = parseInt(followMatch[1]);
+            const quantity = parseInt(followMatch[2]);
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `piece-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                        materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                        materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                    },
+                    nextIndex: startIndex + 2
+                };
+            }
+        }
+        // Pattern 5: "7684" + "273=2" → 768x273=2 (4-digit + dimension=quantity)
+        const fourDigitPattern = /^(\d{4})\s*$/;
+        const fourDigitMatch = currentLine.match(fourDigitPattern);
+        if (fourDigitMatch && followMatch) {
+            const fourDigit = fourDigitMatch[1];
+            // Try to split 7684 as 768|4 → 768x273=2
+            const length = parseInt(fourDigit.substring(0, 3)); // 768
+            const width = parseInt(followMatch[1]); // 273
+            const quantity = parseInt(followMatch[2]); // 2
+            if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                console.log(`🔗 4-DIGIT MULTI-LINE MATCH: ${length}x${width}=${quantity} (lines ${startIndex + 1}-${startIndex + 2})`);
+                return {
+                    piece: {
+                        id: `piece-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                        materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                        materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                    },
+                    nextIndex: startIndex + 2
+                };
+            }
+        }
+        return { piece: null, nextIndex: startIndex + 1 };
+    };
+    // Process lines with multi-line support
+    while (lineIndex < lines.length) {
+        const line = lines[lineIndex].trim();
+        console.log(`Processing line ${lineIndex + 1}: ${line}`);
+        // Check if this line should be ignored (like "glass doors")
+        if (shouldIgnoreLine(line)) {
+            console.log(`🚫 IGNORING LINE: "${line}" (contains excluded pattern)`);
+            lineIndex++;
+            continue;
+        }
+        // Check for material headers first
+        if (isMaterialHeader(line)) {
+            for (const { keys, id, name, displayName } of MATERIAL_KEYWORDS) {
+                if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
+                    currentMaterial = { id, name, displayName };
+                    console.log(`Found material header: ${line}, setting current material to ${displayName}`);
+                    // Create a separator piece for this material
+                    extractedPieces.push({
+                        id: `separator-${extractedPieces.length}`,
+                        width: 0,
+                        length: 0,
+                        quantity: 0,
+                        material: displayName,
+                        separator: true,
+                        name: displayName,
+                        description: line.trim()
+                    });
+                    break;
+                }
+            }
+            lineIndex++;
+            continue;
+        }
+        // Try multi-line patterns first
+        const multiLineResult = processMultiLinePatterns(lines, lineIndex);
+        if (multiLineResult.piece) {
+            console.log(`ADDING MULTI-LINE DIMENSION: ${multiLineResult.piece.length}x${multiLineResult.piece.width}, qty=${multiLineResult.piece.quantity}`);
+            extractedPieces.push(multiLineResult.piece);
+            lineIndex = multiLineResult.nextIndex;
+            continue;
+        }
+        if (!line) {
+            lineIndex++;
             continue; // Skip empty lines
-        // Check if this line is a material trigger that should create a separator
-        let materialTriggerFound = false;
-        let triggeredMaterial = null;
-        for (const { keys, displayName } of MATERIAL_KEYWORDS) {
-            if (keys.some(keyword => line.toLowerCase().includes(keyword.toLowerCase()))) {
-                materialTriggerFound = true;
-                triggeredMaterial = displayName;
-                currentMaterial = { displayName };
-                console.log(`🔗 BACKEND: Material trigger found: "${line}" → ${displayName}`);
-                // Create a separator piece for this material
-                dimensions.push({
-                    id: `separator-${dimensions.length}`,
-                    width: 0,
-                    length: 0,
-                    quantity: 0,
-                    material: displayName,
-                    separator: true,
-                    name: displayName,
-                    description: line.trim()
-                });
-                break;
-            }
         }
-        if (materialTriggerFound) {
-            continue; // Skip further processing for material trigger lines
+        console.log(`Line format analysis for "${line}"`);
+        // Skip dimension extraction if line should be ignored
+        if (shouldIgnoreLine(line)) {
+            console.log(`🚫 SKIPPING DIMENSION EXTRACTION: "${line}" (contains excluded pattern)`);
+            lineIndex++;
+            continue;
         }
-        console.log(`Processing line ${i + 1}:`, line);
+        // Also skip if the NEXT line contains "glass doors" (look-ahead check)
+        const nextLineForCheck = ((_a = lines[lineIndex + 1]) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+        if (shouldIgnoreLine(nextLineForCheck)) {
+            console.log(`🚫 SKIPPING DIMENSION EXTRACTION: "${line}" (next line contains excluded pattern: "${nextLineForCheck}")`);
+            lineIndex++;
+            continue;
+        }
         // Try to extract dimensions using our patterns
         let matched = false;
         let width = 0, length = 0, quantity = 0; // Initialize quantity to 0
-        console.log(`Line format analysis for "${line}"`);
         // First, try the specific patterns
         for (let patternIndex = 0; patternIndex < dimensionPatterns.length; patternIndex++) {
             const pattern = dimensionPatterns[patternIndex];
             const match = line.match(pattern);
             if (match) {
-                // Handle quantity-first format (pattern index 0: "10/ 1700 x 450")
+                // Handle different pattern types
                 if (patternIndex === 0) {
+                    // Pattern 0: "10/ 1700 x 450" (quantity-first format)
                     quantity = parseInt(match[1]);
+                    length = parseInt(match[2]);
+                    width = parseInt(match[3]);
+                }
+                else if (patternIndex === 7) {
+                    // Pattern 7: "1100 x Hoo= 2" (dimension with text in middle)
+                    length = parseInt(match[1]);
                     width = parseInt(match[2]);
-                    length = parseInt(match[3]);
+                    quantity = parseInt(match[3]);
+                }
+                else if (patternIndex === 8) {
+                    // Pattern 8: "768% 2.00 =1" (dimension with % and decimal)
+                    length = parseInt(match[1]);
+                    width = parseInt(match[2]);
+                    quantity = parseInt(match[3]);
+                }
+                else if (patternIndex === 9) {
+                    // Pattern 9: "7684" (4-digit number - try to split into dimensions)
+                    const fourDigit = match[1];
+                    if (fourDigit.length === 4) {
+                        // Try different splits: 76|84, 768|4
+                        const split1 = [parseInt(fourDigit.substring(0, 2)), parseInt(fourDigit.substring(2))];
+                        const split2 = [parseInt(fourDigit.substring(0, 3)), parseInt(fourDigit.substring(3))];
+                        // Use the split that gives more reasonable dimensions
+                        if (isValidDimension(split2[0]) && split2[1] >= 1 && split2[1] <= 9) {
+                            length = split2[0];
+                            width = split2[1] * 100; // Assume missing zeros
+                            quantity = 1; // Default quantity
+                        }
+                        else if (isValidDimension(split1[0]) && isValidDimension(split1[1])) {
+                            length = split1[0] * 10; // Scale up
+                            width = split1[1] * 10;
+                            quantity = 1;
+                        }
+                        else {
+                            continue; // Skip if no valid split found
+                        }
+                    }
+                    else {
+                        continue;
+                    }
+                }
+                else if (patternIndex === 10) {
+                    // Pattern 10: "X 468 x 15" (leading X with dimension and quantity) - NOW FIRST
+                    // Check if this might be "X width x quantity" format
+                    const possibleWidth = parseInt(match[1]);
+                    const possibleQty = parseInt(match[2]);
+                    // If second number is small (likely quantity), treat as width x quantity
+                    if (possibleQty <= 50 && possibleWidth >= 50) {
+                        // Need to find length from previous context or set default
+                        length = 500; // Default length when missing
+                        width = possibleWidth;
+                        quantity = possibleQty;
+                        console.log(`🟠 LEADING-X FORMAT: X ${width}x${quantity}, assuming length=${length}`);
+                    }
+                    else {
+                        // Treat as length x width with no quantity
+                        length = possibleWidth;
+                        width = possibleQty;
+                        quantity = 0;
+                        console.log(`🟠 LEADING-X FORMAT: X ${length}x${width}, setting qty=0`);
+                    }
+                }
+                else if (patternIndex === 11) {
+                    // Pattern 11: "1000x500 =" or "1000x500=-" (dimension with missing/invalid quantity)
+                    length = parseInt(match[1]);
+                    width = parseInt(match[2]);
+                    quantity = 0; // Set quantity to 0 for missing quantities
+                    console.log(`🟡 DIMENSION WITH MISSING QUANTITY: ${length}x${width}, setting qty=0`);
+                }
+                else if (patternIndex === 12) {
+                    // Pattern 12: "1000 x 500" (dimension without any quantity indicator)
+                    length = parseInt(match[1]);
+                    width = parseInt(match[2]);
+                    quantity = 0; // Set quantity to 0 for missing quantities
+                    console.log(`🟡 DIMENSION WITHOUT QUANTITY: ${length}x${width}, setting qty=0`);
+                }
+                else if (patternIndex === 13) {
+                    // Pattern 13: "2 = 1000 x 500" (quantity first format - reorder to standard format)
+                    quantity = parseInt(match[1]);
+                    length = parseInt(match[2]);
+                    width = parseInt(match[3]);
+                    console.log(`🔄 QUANTITY-FIRST FORMAT DETECTED: ${quantity} = ${length}x${width}, reordered to ${length}x${width}=${quantity}`);
+                }
+                else if (patternIndex === 14) {
+                    // Pattern 14: "2218 X 468x-" (dimension with trailing x-)
+                    length = parseInt(match[1]);
+                    width = parseInt(match[2]);
+                    quantity = 0; // No quantity after trailing x-
+                    console.log(`🟠 TRAILING-X FORMAT: ${length}x${width}x-, setting qty=0`);
                 }
                 else {
-                    // All other patterns follow (width, length, quantity) order
-                    width = parseInt(match[1]);
-                    length = parseInt(match[2]);
-                    quantity = match[3] ? parseInt(match[3]) : 0;
+                    // All other patterns follow (length, width, quantity) order
+                    length = parseInt(match[1]);
+                    width = parseInt(match[2]);
+                    quantity = match[3] ? parseInt(match[3]) : 1;
                 }
-                // Validate that this looks like reasonable dimensions and quantity
-                if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) &&
-                    width > 0 && length > 0 && quantity > 0 && quantity <= 100 &&
-                    width >= 10 && width <= 5000 && length >= 10 && length <= 5000) {
-                    console.log(`✅ SERVER PATTERN MATCH: ${width}x${length}, qty=${quantity} using pattern ${patternIndex} (${pattern})`);
+                // Validate using our helper functions
+                if (isValidDimension(length) && isValidDimension(width) && isValidQuantity(quantity)) {
+                    console.log(`✅ SERVER PATTERN MATCH: ${length}x${width} (Length x Width), qty=${quantity} using pattern ${patternIndex} (${pattern})`);
+                    console.log(`ADDING DIMENSION: ${length}x${width} (Length x Width), qty=${quantity}`);
+                    extractedPieces.push({
+                        id: `piece-${extractedPieces.length}`,
+                        length,
+                        width,
+                        quantity,
+                        material: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material',
+                        materialId: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.id) || '201',
+                        materialDisplayName: (currentMaterial === null || currentMaterial === void 0 ? void 0 : currentMaterial.displayName) || 'Default Material'
+                    });
                     matched = true;
                     break;
                 }
             }
         }
-        // If not matched with specific patterns, try more targeted approaches
         if (!matched) {
-            // 1. Extract dimensions first
-            const dimensionMatch = line.match(/(\d+)\s*[xX×*-]\s*(\d+)/);
-            if (dimensionMatch) {
-                width = parseInt(dimensionMatch[1]);
-                length = parseInt(dimensionMatch[2]);
-                console.log(`  Basic dimension found: ${width}x${length}`);
-                // Get the remainder of the string after the dimension match
-                const remainder = line.substring(dimensionMatch[0].length).trim();
-                console.log(`  Remainder for quantity search: "${remainder}"`);
-                // 2. Now try to extract quantity from the remainder
-                const quantityPatterns = [
-                    // Format: "=2" or "= 2" at any position
-                    /=\s*(\d+)/,
-                    // Format: "-2" or "- 2" at any position
-                    /-\s*(\d+)/,
-                    // Format: a number at the end of line
-                    /^(\d+)\s*$/,
-                    // Format: "(2)" or "[2]" (quantity in brackets)
-                    /[\(\[]\s*(\d+)\s*[\)\]]/,
-                    // Format: "2pcs" or "2 pcs" or similar
-                    /\b(\d+)\s*(?:pc|pcs|x|ea|each|unit|units|pieces|piece)/i,
-                ];
-                for (const qPattern of quantityPatterns) {
-                    const qMatch = remainder.match(qPattern);
-                    if (qMatch && qMatch[1]) {
-                        quantity = parseInt(qMatch[1]);
-                        console.log(`  Quantity found: ${quantity} using pattern ${qPattern}`);
-                        matched = true;
-                        break;
-                    }
-                }
-                // If no quantity pattern matched but we have dimensions, still consider it matched
-                if (!matched && width > 0 && length > 0) {
-                    console.log(`  No quantity pattern matched, skipping dimension`);
-                    continue;
-                }
-            }
+            console.log(`No dimension found in line: ${line}`);
         }
-        // If we have valid dimensions and a valid quantity, add them to our collection
-        if (matched && width > 0 && length > 0 && quantity > 0) {
-            // Ensure quantity is a valid number
-            if (isNaN(quantity)) {
-                console.log(`  Invalid quantity detected (${quantity}), skipping dimension`);
-                continue; // Skip if quantity is not a number
-            }
-            // Extra logging to confirm what's being added
-            console.log(`ADDING DIMENSION: ${width}x${length}, qty=${quantity}`);
-            dimensions.push({
-                id: `dim-${Date.now()}-${dimensions.length}`,
-                width,
-                length,
-                quantity,
-                material: currentMaterial ? currentMaterial.displayName : 'White Melamine', // Use displayName for consistency
-                materialId: currentMaterial ? currentMaterial.id : undefined,
-                materialDisplayName: currentMaterial ? currentMaterial.displayName : undefined
-            });
-        }
-        if (!matched) {
-            console.log(`  No dimension found in line: ${line}`);
-        }
+        lineIndex++;
     }
+    // Convert extractedPieces to dimensions format
+    const finalDimensions = extractedPieces.filter((piece) => !piece.separator).map((piece) => ({
+        id: piece.id,
+        length: piece.length,
+        width: piece.width,
+        quantity: piece.quantity,
+        material: piece.material,
+        materialId: piece.materialId,
+        materialDisplayName: piece.materialDisplayName
+    }));
+    // Add any separators as well
+    const separators = extractedPieces.filter((piece) => piece.separator);
+    const allDimensions = [...separators, ...finalDimensions];
     // Log the total number of dimensions found
-    console.log(`Total dimensions extracted: ${dimensions.length}`);
+    console.log(`Total dimensions extracted: ${finalDimensions.length}`);
+    console.log('\n=== EXTRACTED PIECES ===');
+    finalDimensions.forEach((piece, index) => {
+        console.log(`${index + 1}. ${piece.length}x${piece.width} qty=${piece.quantity} [${piece.material}]`);
+    });
     // Only try HDS table format if ALL these conditions are met:
     // 1. Standard parsing found very few results (≤1)
     // 2. Text contains "HDS" (company identifier)
@@ -388,27 +680,27 @@ const extractDimensionsFromText = (ocrText) => {
     const hasHDSIdentifier = ocrText.includes('HDS');
     const hasTableHeaders = ocrText.includes('Height/Length') && ocrText.includes('Width') && (ocrText.includes('Qoy') || ocrText.includes('Qty'));
     const hasNumberedRows = /^\d+\s+\d+\s+\d+\s+\d+/m.test(ocrText); // Look for numbered table rows
-    if (dimensions.length <= 1 && hasHDSIdentifier && hasTableHeaders && hasNumberedRows) {
+    if (finalDimensions.length <= 1 && hasHDSIdentifier && hasTableHeaders && hasNumberedRows) {
         console.log('Standard parsing found few results and this appears to be an HDS table format. Trying HDS table parsing...');
         console.log('HDS conditions met:', { hasHDSIdentifier, hasTableHeaders, hasNumberedRows });
         const hdsResult = extractFromHDSTable(ocrText);
-        if (hdsResult.dimensions.length > dimensions.length) {
-            console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions vs ${dimensions.length} from standard parsing. Using HDS results.`);
+        if (hdsResult.dimensions.length > finalDimensions.length) {
+            console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions vs ${finalDimensions.length} from standard parsing. Using HDS results.`);
             return hdsResult;
         }
         else {
-            console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions, not better than standard parsing (${dimensions.length}). Using standard results.`);
+            console.log(`HDS table parsing found ${hdsResult.dimensions.length} dimensions, not better than standard parsing (${finalDimensions.length}). Using standard results.`);
         }
     }
     else {
         console.log('HDS table parsing conditions not met:', {
-            fewDimensions: dimensions.length <= 1,
+            fewDimensions: finalDimensions.length <= 1,
             hasHDSIdentifier,
             hasTableHeaders,
             hasNumberedRows
         });
     }
-    return { dimensions, unit };
+    return { dimensions: allDimensions, unit };
 };
 exports.extractDimensionsFromText = extractDimensionsFromText;
 /**
