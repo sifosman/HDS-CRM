@@ -1225,20 +1225,20 @@ const generateQuotePdf = (quoteData) => {
         doc.moveDown(0.5);
     }
     const currentPaymentBoxY = doc.y;
-    // Draw main payment box with green gradient-like effect
+    // Draw main payment box with professional green styling
     doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
-        .fillAndStroke('#e8f5e8', '#28a745');
-    // Add inner highlight for button effect
+        .fillAndStroke('#f0f8f0', '#2d7a2d');
+    // Add inner border for professional look
     doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
-        .stroke('#ffffff');
-    // Payment box header
-    doc.fontSize(14).fillColor('#28a745').font('Helvetica-Bold');
-    doc.text('💳 SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 20, {
+        .stroke('#4a934a');
+    // Payment box header with professional styling
+    doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
+    doc.text('💳 SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, {
         width: doc.page.width - 120,
         align: 'center'
     });
-    doc.fontSize(11).fillColor('#333333').font('Helvetica');
-    doc.text('Pay instantly with PayFast • Credit Cards • EFT • Debit Cards', 60, currentPaymentBoxY + 45, {
+    doc.fontSize(10).fillColor('#555555').font('Helvetica');
+    doc.text('Pay securely with PayFast • All major payment methods accepted', 60, currentPaymentBoxY + 42, {
         width: doc.page.width - 120,
         align: 'center'
     });
@@ -1250,29 +1250,38 @@ const generateQuotePdf = (quoteData) => {
     const buttonHeight = 35;
     const buttonWidth = 300;
     const buttonX = (doc.page.width - buttonWidth) / 2; // Center the button
-    // Draw button background
+    // Draw professional green button with gradient effect
     doc.rect(buttonX, buttonY, buttonWidth, buttonHeight)
-        .fillAndStroke('#007bff', '#0056b3');
-    // Add button shadow effect
-    doc.rect(buttonX + 2, buttonY + 2, buttonWidth, buttonHeight)
-        .stroke('#cccccc');
-    // Button text - large and prominent
+        .fillAndStroke('#28a745', '#1e7e34');
+    // Add button highlight for 3D effect
+    doc.rect(buttonX + 1, buttonY + 1, buttonWidth - 2, 2)
+        .fillAndStroke('#4caf50', '#4caf50');
+    // Add subtle shadow
+    doc.rect(buttonX + 3, buttonY + 3, buttonWidth, buttonHeight)
+        .stroke('#d4d4d4');
+    // Button text - professional and clear
+    doc.fontSize(13).fillColor('#ffffff').font('Helvetica-Bold');
+    doc.text('PAY NOW SECURELY', buttonX, buttonY + 8, {
+        width: buttonWidth,
+        align: 'center',
+        link: paymentUrl
+    });
+    // Add amount display on button with currency symbol
     doc.fontSize(14).fillColor('#ffffff').font('Helvetica-Bold');
-    doc.text('CLICK HERE TO PAY NOW', buttonX, buttonY + 10, {
+    doc.text(`R ${finalTotal.toFixed(2)}`, buttonX, buttonY + 22, {
         width: buttonWidth,
         align: 'center',
         link: paymentUrl
     });
-    // Add amount display on button
-    doc.fontSize(12).fillColor('#ffffff').font('Helvetica-Bold');
-    doc.text(`R ${finalTotal.toFixed(2)}`, buttonX, buttonY + 25, {
-        width: buttonWidth,
-        align: 'center',
-        link: paymentUrl
-    });
-    // Add instruction text below button
+    // Add professional instruction text below button
     doc.fontSize(9).fillColor('#666666').font('Helvetica');
-    doc.text('Click the blue button above to proceed to secure payment', 60, currentPaymentBoxY + 110, {
+    doc.text('Click the green button above to proceed to PayFast secure payment gateway', 60, currentPaymentBoxY + 110, {
+        width: doc.page.width - 120,
+        align: 'center'
+    });
+    // Add security badge text
+    doc.fontSize(8).fillColor('#28a745').font('Helvetica-Bold');
+    doc.text('🔒 256-bit SSL Encryption • PCI DSS Compliant', 60, currentPaymentBoxY + 125, {
         width: doc.page.width - 120,
         align: 'center'
     });

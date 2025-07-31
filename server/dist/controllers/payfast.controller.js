@@ -37,11 +37,12 @@ const getPayFastConfig = () => {
 };
 // Generate PayFast signature
 const generateSignature = (data, passphrase) => {
-    // Remove signature field if it exists
+    console.log('🔐 Starting PayFast signature generation...');
+    console.log('📋 Input data:', JSON.stringify(data, null, 2));
+    console.log('🔑 Passphrase provided:', !!passphrase);
+    // Remove existing signature if present
     const { signature: existingSignature } = data, dataForSignature = __rest(data, ["signature"]);
-    // PayFast requires fields in the order they appear in the form, NOT alphabetical
-    // Order: merchant_id, merchant_key, return_url, cancel_url, notify_url, 
-    //        name_first, name_last, email_address, m_payment_id, amount, item_name, item_description
+    // PayFast requires exact field order - NOT alphabetical
     const fieldOrder = [
         'merchant_id', 'merchant_key', 'return_url', 'cancel_url', 'notify_url',
         'name_first', 'name_last', 'email_address', 'cell_number',
@@ -50,26 +51,22 @@ const generateSignature = (data, passphrase) => {
         'custom_str1', 'custom_str2', 'custom_str3', 'custom_str4', 'custom_str5',
         'email_confirmation', 'confirmation_address', 'payment_method'
     ];
-    // Create parameter string in the correct order
     const paramPairs = [];
-    // Add fields in the specified order
+    // Build parameter string in exact order, only including non-empty values
     fieldOrder.forEach(key => {
-        if (dataForSignature[key] && dataForSignature[key] !== '' && dataForSignature[key] !== undefined) {
-            paramPairs.push(`${key}=${dataForSignature[key].toString().trim()}`);
+        const value = dataForSignature[key];
+        if (value !== undefined && value !== null && value !== '') {
+            const stringValue = String(value).trim();
+            paramPairs.push(`${key}=${stringValue}`);
         }
     });
-    // Add any remaining fields not in the standard order (shouldn't happen but just in case)
-    Object.keys(dataForSignature).forEach(key => {
-        if (!fieldOrder.includes(key) && dataForSignature[key] && dataForSignature[key] !== '' && dataForSignature[key] !== undefined) {
-            paramPairs.push(`${key}=${dataForSignature[key].toString().trim()}`);
-        }
-    });
+    // Create parameter string
     const paramString = paramPairs.join('&');
     // Add passphrase if provided
     const stringToHash = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;
     console.log('PayFast signature string:', stringToHash);
-    // Generate MD5 hash
-    const generatedSignature = crypto_1.default.createHash('md5').update(stringToHash).digest('hex');
+    // Generate MD5 hash (must be lowercase)
+    const generatedSignature = crypto_1.default.createHash('md5').update(stringToHash).digest('hex').toLowerCase();
     console.log('Generated signature:', generatedSignature);
     return generatedSignature;
 };
@@ -85,18 +82,27 @@ const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, func
         }
         const config = getPayFastConfig();
         const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
-        // Prepare payment data
+        // Prepare payment data - ensure all values are strings and properly formatted
         const paymentData = {
             merchant_id: config.merchantId,
             merchant_key: config.merchantKey,
-            return_url: `${config.baseUrl}/api/payfast/success?quote_id=${quoteId}`,
-            cancel_url: `${config.baseUrl}/api/payfast/cancel?quote_id=${quoteId}`,
-            notify_url: `${config.baseUrl}/api/payfast/notify`,
-            amount: amount.toString(),
-            item_name: `HDS Quote ${quoteId}`,
-            item_description: projectName ? `Quote for project: ${projectName}` : `HDS Group Quotation ${quoteId}`,
-            m_payment_id: paymentId
+            amount: parseFloat(amount.toString()).toFixed(2),
+            item_name: `HDS Quote ${quoteId}`
         };
+        // Add optional fields only if we have URLs configured
+        if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
+            paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
+            paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
+            paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
+        }
+        // Add customer details if needed
+        if (projectName) {
+            paymentData.item_description = projectName.toString();
+        }
+        if (paymentId) {
+            paymentData.m_payment_id = paymentId;
+        }
+        console.log('PayFast payment data before signature:', JSON.stringify(paymentData, null, 2));
         // Add customer details if provided
         if (customerName) {
             const nameParts = customerName.toString().split(' ');

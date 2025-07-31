@@ -5,6 +5,7 @@ import {
   handlePaymentCancel,
   handlePaymentNotification
 } from '../controllers/payfast.controller';
+import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
 
 const router = express.Router();
 
@@ -19,5 +20,45 @@ router.get('/cancel', (req: Request, res: Response) => handlePaymentCancel(req, 
 
 // Handle PayFast ITN (Instant Transaction Notification)
 router.post('/notify', (req: Request, res: Response) => handlePaymentNotification(req, res));
+
+// Debug endpoint to test signature generation
+router.get('/debug', (req: Request, res: Response) => debugPayFastSignature(req, res));
+
+// Test endpoint for signature verification
+router.get('/test-signature', (req: Request, res: Response) => {
+  const testData: Record<string, string> = {
+    merchant_id: '10000100',
+    merchant_key: '46f0cd694581a',
+    amount: '100.00',
+    item_name: 'Test Item'
+  };
+  
+  const passphrase = 'jt7NOE43FZPn';
+  const crypto = require('crypto');
+  
+  // Generate signature with field order
+  const fieldOrder = [
+    'merchant_id', 'merchant_key', 'amount', 'item_name'
+  ];
+  
+  const paramPairs: string[] = [];
+  fieldOrder.forEach(key => {
+    if (testData[key]) {
+      paramPairs.push(`${key}=${testData[key]}`);
+    }
+  });
+  
+  const paramString = paramPairs.join('&');
+  const stringToHash = `${paramString}&passphrase=${passphrase}`;
+  const signature = crypto.createHash('md5').update(stringToHash).digest('hex').toLowerCase();
+  
+  res.json({
+    testData,
+    paramString,
+    stringToHash,
+    signature,
+    expected: crypto.createHash('md5').update('merchant_id=10000100&merchant_key=46f0cd694581a&amount=100.00&item_name=Test Item&passphrase=jt7NOE43FZPn').digest('hex').toLowerCase()
+  });
+});
 
 export default router;
