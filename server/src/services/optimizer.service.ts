@@ -1537,13 +1537,13 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   
   // Payment box header with professional styling
   doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
-  doc.text('💳 SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, { 
+  doc.text('SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, { 
     width: doc.page.width - 120,
     align: 'center'
   });
   
   doc.fontSize(10).fillColor('#555555').font('Helvetica');
-  doc.text('Pay securely with PayFast • All major payment methods accepted', 60, currentPaymentBoxY + 42, { 
+  doc.text('Pay securely with PayFast. All major payment methods accepted.', 60, currentPaymentBoxY + 42, { 
     width: doc.page.width - 120,
     align: 'center'
   });
@@ -1588,14 +1588,14 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   
   // Add professional instruction text below button
   doc.fontSize(9).fillColor('#666666').font('Helvetica');
-  doc.text('Click the green button above to proceed to PayFast secure payment gateway', 60, currentPaymentBoxY + 110, { 
+  doc.text('Click the button above to proceed to secure payment', 60, currentPaymentBoxY + 110, { 
     width: doc.page.width - 120,
     align: 'center'
   });
   
   // Add security badge text
   doc.fontSize(8).fillColor('#28a745').font('Helvetica-Bold');
-  doc.text('🔒 256-bit SSL Encryption • PCI DSS Compliant', 60, currentPaymentBoxY + 125, { 
+  doc.text('256-bit SSL Encryption • PCI DSS Compliant', 60, currentPaymentBoxY + 125, { 
     width: doc.page.width - 120,
     align: 'center'
   });
