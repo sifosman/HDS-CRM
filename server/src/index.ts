@@ -18,6 +18,7 @@ import debugRoutes from './routes/debug.routes';
 import supabaseRoutes from './routes/supabase.routes';
 import { diagnosticRoutes } from './routes/diagnostic.routes';
 import payfastRoutes from './routes/payfast.routes';
+import invoiceRoutes from './routes/invoice.routes';
 
 // Load environment variables
 dotenv.config();
@@ -53,6 +54,7 @@ app.use('/api/iqretail', iqretailRoutes);
 app.use('/api/supabase', supabaseRoutes);
 app.use('/api/diagnostic', diagnosticRoutes);
 app.use('/api/payfast', payfastRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {

@@ -900,6 +900,185 @@ export const generatePdf = (solution: Solution, unit: number, cutWidth: number =
   return pdfId;
 };
 
+// Generate a PDF invoice from quote data
+export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: string }> => {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('Generating invoice PDF for quote:', quoteData.quote_number || quoteData.id);
+      
+      // Extract data from quote
+      const quoteId = quoteData.quote_number || quoteData.id || `INV-${Date.now()}`;
+      const customerName = quoteData.customer_name || 'Customer';
+      const projectName = quoteData.project_name || 'Project';
+      const quoteDate = quoteData.created_at ? new Date(quoteData.created_at).toLocaleDateString() : new Date().toLocaleDateString();
+      const invoiceDate = new Date().toLocaleDateString();
+      const invoiceNumber = `INV-${quoteId}-${Date.now()}`;
+      
+      // Parse quote data
+      let parsedQuoteData;
+      try {
+        parsedQuoteData = typeof quoteData.quote_data === 'string' 
+          ? JSON.parse(quoteData.quote_data) 
+          : quoteData.quote_data;
+      } catch (e) {
+        console.warn('Could not parse quote_data, using fallback');
+        parsedQuoteData = { items: [], totals: { finalTotal: 0 } };
+      }
+      
+      const items = parsedQuoteData.items || [];
+      const totals = parsedQuoteData.totals || { finalTotal: 0 };
+      const finalTotal = totals.finalTotal || 0;
+      
+      // Create PDF document
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      
+      // Setup buffer to store PDF content
+      const buffers: any[] = [];
+      let pdfBuffer: any = null;
+      
+      doc.on('data', (chunk: any) => {
+        buffers.push(chunk);
+      });
+      
+      doc.on('end', () => {
+        pdfBuffer = Buffer.concat(buffers);
+        resolve({
+          buffer: pdfBuffer,
+          id: invoiceNumber
+        });
+      });
+      
+      doc.on('error', (error: any) => {
+        console.error('PDF generation error:', error);
+        reject(error);
+      });
+      
+      // Generate a unique ID for this invoice
+      const pdfId = invoiceNumber;
+      
+      // ===== INVOICE HEADER =====
+      doc.fontSize(28).fillColor('#003366').font('Helvetica-Bold');
+      doc.text('INVOICE', 50, 50, { align: 'center', width: doc.page.width - 100 });
+      
+      doc.moveDown(1);
+      
+      // Company details (left side)
+      doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+      doc.text('HDS (Pty) Ltd', 50, doc.y);
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
+      doc.text('123 Business Street', 50, doc.y + 5);
+      doc.text('Cape Town, 8000', 50, doc.y + 5);
+      doc.text('Tel: +27 21 123 4567', 50, doc.y + 5);
+      doc.text('Email: info@hds.co.za', 50, doc.y + 5);
+      
+      // Invoice details (right side)
+      const rightColumnX = doc.page.width - 250;
+      const topY = 120;
+      
+      doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+      doc.text('Invoice Details', rightColumnX, topY);
+      
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
+      doc.text('Invoice Number:', rightColumnX, topY + 20);
+      doc.text(invoiceNumber, rightColumnX + 80, topY + 20);
+      
+      doc.text('Invoice Date:', rightColumnX, topY + 35);
+      doc.text(invoiceDate, rightColumnX + 80, topY + 35);
+      
+      doc.text('Quote Number:', rightColumnX, topY + 50);
+      doc.text(quoteId, rightColumnX + 80, topY + 50);
+      
+      doc.text('Quote Date:', rightColumnX, topY + 65);
+      doc.text(quoteDate, rightColumnX + 80, topY + 65);
+      
+      // Customer details
+      doc.y = topY + 100;
+      doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+      doc.text('Bill To:', 50, doc.y);
+      
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
+      doc.text(customerName, 50, doc.y + 15);
+      doc.text(projectName, 50, doc.y + 15);
+      
+      doc.moveDown(2);
+      
+      // ===== INVOICE ITEMS TABLE =====
+      const tableTop = doc.y + 20;
+      const tableLeft = 50;
+      const tableWidth = doc.page.width - 100;
+      
+      // Table headers
+      doc.fontSize(10).fillColor('#003366').font('Helvetica-Bold');
+      
+      // Draw header background
+      doc.rect(tableLeft, tableTop, tableWidth, 25)
+         .fillAndStroke('#f0f0f0', '#cccccc');
+      
+      // Header text
+      doc.fillColor('#003366');
+      doc.text('Description', tableLeft + 10, tableTop + 8, { width: 200 });
+      doc.text('Qty', tableLeft + 220, tableTop + 8, { width: 50, align: 'center' });
+      doc.text('Unit Price', tableLeft + 280, tableTop + 8, { width: 80, align: 'right' });
+      doc.text('Total', tableLeft + 370, tableTop + 8, { width: 80, align: 'right' });
+      
+      // Table rows
+      let currentY = tableTop + 25;
+      doc.font('Helvetica').fontSize(9).fillColor('#333333');
+      
+      items.forEach((item: any, index: number) => {
+        const rowHeight = 20;
+        
+        // Alternate row colors
+        if (index % 2 === 0) {
+          doc.rect(tableLeft, currentY, tableWidth, rowHeight)
+             .fillAndStroke('#f9f9f9', '#f9f9f9');
+        }
+        
+        doc.fillColor('#333333');
+        doc.text(item.description || item.name || 'Item', tableLeft + 10, currentY + 6, { width: 200 });
+        doc.text((item.quantity || 1).toString(), tableLeft + 220, currentY + 6, { width: 50, align: 'center' });
+        doc.text(`R ${(item.unitPrice || 0).toFixed(2)}`, tableLeft + 280, currentY + 6, { width: 80, align: 'right' });
+        doc.text(`R ${(item.total || 0).toFixed(2)}`, tableLeft + 370, currentY + 6, { width: 80, align: 'right' });
+        
+        currentY += rowHeight;
+      });
+      
+      // Total section
+      currentY += 10;
+      doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+      
+      // Draw total background
+      doc.rect(tableLeft + 250, currentY, 200, 25)
+         .fillAndStroke('#e8f4f8', '#003366');
+      
+      doc.fillColor('#003366');
+      doc.text('TOTAL:', tableLeft + 260, currentY + 8);
+      doc.text(`R ${finalTotal.toFixed(2)}`, tableLeft + 370, currentY + 8, { width: 80, align: 'right' });
+      
+      // ===== PAYMENT STATUS =====
+      doc.moveDown(3);
+      doc.fontSize(14).fillColor('#28a745').font('Helvetica-Bold');
+      doc.text('PAYMENT STATUS: PAID', 50, doc.y, { align: 'center', width: doc.page.width - 100 });
+      
+      doc.fontSize(10).fillColor('#666666').font('Helvetica');
+      doc.text(`Payment received on ${invoiceDate}`, 50, doc.y + 10, { align: 'center', width: doc.page.width - 100 });
+      
+      // ===== FOOTER =====
+      doc.moveDown(2);
+      doc.fontSize(9).fillColor('#666666').font('Helvetica');
+      doc.text('Thank you for your business!', 50, doc.y, { align: 'center', width: doc.page.width - 100 });
+      doc.text('This is a computer-generated invoice and does not require a signature.', 50, doc.y + 15, { align: 'center', width: doc.page.width - 100 });
+      
+      // Finalize PDF
+      doc.end();
+      
+    } catch (error) {
+      console.error('Error generating invoice PDF:', error);
+      reject(error);
+    }
+  });
+};
+
 // Generate IQ software compatible export data
 export const generateIQExport = (solution: Solution, unit: number, cutWidth: number = 3, layout: number = 0): any => {
   // Create an object structure that matches the IQ software import format

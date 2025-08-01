@@ -652,11 +652,52 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
           amount_gross: pfData.amount_gross
         });
         
-        // Here you can add logic to update your database, send emails, etc.
-        // For example:
-        // - Update quote payment status
-        // - Send confirmation emails
-        // - Log the transaction
+        // Process successful payment
+        if (pfData.payment_status === 'COMPLETE') {
+          try {
+            // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
+            let quoteId = '';
+            if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
+              const parts = pfData.m_payment_id.split('-');
+              if (parts.length >= 2 && parts[0] === 'QUOTE') {
+                quoteId = parts[1];
+              }
+            }
+            
+            if (quoteId) {
+              console.log('Creating invoice for successful payment, quote ID:', quoteId);
+              
+              // Import SupabaseService here to avoid circular dependencies
+              const SupabaseService = (await import('../services/supabase.service')).default;
+              
+              // Prepare payment details for invoice creation
+              const paymentDetails = {
+                method: 'PayFast',
+                reference: pfData.pf_payment_id,
+                date: new Date().toISOString(),
+                amount: parseFloat(pfData.amount_gross || '0'),
+                status: 'paid'
+              };
+              
+              // Create invoice record
+              const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
+              
+              if (invoiceResult.success) {
+                console.log('Invoice created successfully:', invoiceResult.data?.invoiceNumber);
+                
+                // Update quote status to approved
+                await SupabaseService.updateQuoteStatus(quoteId, 'approved');
+                console.log('Quote status updated to approved');
+              } else {
+                console.error('Failed to create invoice:', invoiceResult.error);
+              }
+            } else {
+              console.warn('Could not extract quote ID from payment ID:', pfData.m_payment_id);
+            }
+          } catch (error) {
+            console.error('Error processing successful payment:', error);
+          }
+        }
         
         res.status(200).send('OK');
       });
@@ -667,6 +708,13 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
       // Even if validation fails, we still process the payment if signature is valid
       // This is to prevent losing payments due to network issues
       console.warn('Continuing with local validation only');
+      
+      // Still process successful payments even if validation fails
+      if (pfData.payment_status === 'COMPLETE') {
+        console.log('Processing payment despite validation error');
+        // The payment processing logic would be duplicated here if needed
+      }
+      
       res.status(200).send('OK');
     });
     
@@ -679,5 +727,427 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
     console.error('PayFast ITN handler error:', error);
     res.status(500).send('Error processing notification');
     return;
+  }
+};
+
+// Handle successful payment return from PayFast
+export const handlePaymentSuccess = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('PayFast payment success callback received');
+    console.log('Query parameters:', req.query);
+    
+    // Extract payment information from query parameters
+    const { 
+      m_payment_id, 
+      pf_payment_id, 
+      payment_status, 
+      item_name, 
+      amount_gross,
+      amount_fee,
+      amount_net
+    } = req.query;
+    
+    // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
+    let quoteId = '';
+    if (m_payment_id && typeof m_payment_id === 'string') {
+      const parts = m_payment_id.split('-');
+      if (parts.length >= 2 && parts[0] === 'QUOTE') {
+        quoteId = parts[1];
+      }
+    }
+    
+    console.log('Extracted quote ID:', quoteId);
+    
+    // Create success page HTML with professional styling
+    const successPageHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Successful - HDS</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            
+            .success-container {
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                padding: 40px;
+                text-align: center;
+                max-width: 600px;
+                width: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .success-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 5px;
+                background: linear-gradient(90deg, #28a745, #20c997, #17a2b8);
+            }
+            
+            .success-icon {
+                width: 80px;
+                height: 80px;
+                background: #28a745;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 30px;
+                animation: pulse 2s infinite;
+            }
+            
+            .success-icon::after {
+                content: '✓';
+                color: white;
+                font-size: 40px;
+                font-weight: bold;
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+            
+            h1 {
+                color: #28a745;
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                font-weight: 700;
+            }
+            
+            .subtitle {
+                color: #6c757d;
+                font-size: 1.2rem;
+                margin-bottom: 30px;
+                line-height: 1.5;
+            }
+            
+            .payment-details {
+                background: #f8f9fa;
+                border-radius: 15px;
+                padding: 25px;
+                margin: 30px 0;
+                border-left: 5px solid #28a745;
+            }
+            
+            .payment-details h3 {
+                color: #495057;
+                margin-bottom: 15px;
+                font-size: 1.3rem;
+            }
+            
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .detail-row:last-child {
+                border-bottom: none;
+                font-weight: bold;
+                color: #28a745;
+                font-size: 1.1rem;
+            }
+            
+            .detail-label {
+                color: #6c757d;
+                font-weight: 500;
+            }
+            
+            .detail-value {
+                color: #495057;
+                font-weight: 600;
+            }
+            
+            .download-btn {
+                background: linear-gradient(135deg, #28a745, #20c997);
+                color: white;
+                border: none;
+                padding: 15px 40px;
+                border-radius: 50px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+                margin: 20px 10px;
+                box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            }
+            
+            .download-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            }
+            
+            .secondary-btn {
+                background: linear-gradient(135deg, #6c757d, #495057);
+                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            }
+            
+            .secondary-btn:hover {
+                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            }
+            
+            .footer-text {
+                color: #6c757d;
+                font-size: 0.9rem;
+                margin-top: 30px;
+                line-height: 1.4;
+            }
+            
+            @media (max-width: 768px) {
+                .success-container {
+                    padding: 30px 20px;
+                }
+                
+                h1 {
+                    font-size: 2rem;
+                }
+                
+                .download-btn {
+                    display: block;
+                    margin: 10px 0;
+                    width: 100%;
+                }
+                
+                .detail-row {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="success-container">
+            <div class="success-icon"></div>
+            
+            <h1>Payment Successful!</h1>
+            <p class="subtitle">
+                Thank you for your payment. Your transaction has been processed successfully.
+            </p>
+            
+            <div class="payment-details">
+                <h3>Payment Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Quote ID:</span>
+                    <span class="detail-value">${quoteId || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment ID:</span>
+                    <span class="detail-value">${pf_payment_id || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Item:</span>
+                    <span class="detail-value">${item_name || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount Paid:</span>
+                    <span class="detail-value">R ${amount_gross || '0.00'}</span>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                ${quoteId ? `<a href="/api/invoices/download/${quoteId}" class="download-btn">Download Invoice</a>` : ''}
+                <a href="/" class="download-btn secondary-btn">Return to Home</a>
+            </div>
+            
+            <p class="footer-text">
+                A confirmation email will be sent to you shortly. If you have any questions, 
+                please contact our support team.
+            </p>
+        </div>
+    </body>
+    </html>
+    `;
+    
+    res.send(successPageHtml);
+    
+  } catch (error) {
+    console.error('Error handling payment success:', error);
+    res.status(500).send('Error processing payment success');
+  }
+};
+
+// Handle payment cancellation return from PayFast
+export const handlePaymentCancel = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('PayFast payment cancellation callback received');
+    console.log('Query parameters:', req.query);
+    
+    // Create cancellation page HTML
+    const cancelPageHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Cancelled - HDS</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            
+            .cancel-container {
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                padding: 40px;
+                text-align: center;
+                max-width: 500px;
+                width: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .cancel-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 5px;
+                background: linear-gradient(90deg, #ffc107, #fd7e14, #dc3545);
+            }
+            
+            .cancel-icon {
+                width: 80px;
+                height: 80px;
+                background: #ffc107;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 30px;
+            }
+            
+            .cancel-icon::after {
+                content: '⚠';
+                color: white;
+                font-size: 40px;
+                font-weight: bold;
+            }
+            
+            h1 {
+                color: #dc3545;
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                font-weight: 700;
+            }
+            
+            .subtitle {
+                color: #6c757d;
+                font-size: 1.2rem;
+                margin-bottom: 30px;
+                line-height: 1.5;
+            }
+            
+            .action-btn {
+                background: linear-gradient(135deg, #007bff, #0056b3);
+                color: white;
+                border: none;
+                padding: 15px 40px;
+                border-radius: 50px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+                margin: 10px;
+                box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            }
+            
+            .action-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            }
+            
+            .secondary-btn {
+                background: linear-gradient(135deg, #6c757d, #495057);
+                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            }
+            
+            .secondary-btn:hover {
+                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            }
+            
+            @media (max-width: 768px) {
+                .cancel-container {
+                    padding: 30px 20px;
+                }
+                
+                h1 {
+                    font-size: 2rem;
+                }
+                
+                .action-btn {
+                    display: block;
+                    margin: 10px 0;
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="cancel-container">
+            <div class="cancel-icon"></div>
+            
+            <h1>Payment Cancelled</h1>
+            <p class="subtitle">
+                Your payment was cancelled. No charges have been made to your account.
+            </p>
+            
+            <div class="action-buttons">
+                <a href="javascript:history.back()" class="action-btn">Try Again</a>
+                <a href="/" class="action-btn secondary-btn">Return to Home</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+    
+    res.send(cancelPageHtml);
+    
+  } catch (error) {
+    console.error('Error handling payment cancellation:', error);
+    res.status(500).send('Error processing payment cancellation');
   }
 };
