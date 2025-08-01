@@ -10,10 +10,11 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       const { quoteId } = req.params;
       
       if (!quoteId) {
-        return res.status(400).json({ 
+        res.status(400).json({ 
           success: false, 
           message: 'Quote ID is required' 
         });
+        return;
       }
 
       console.log('Generating invoice for quote:', quoteId);
@@ -22,10 +23,11 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       const quoteResult = await SupabaseService.fetchQuoteById(quoteId);
       
       if (!quoteResult.success || !quoteResult.data) {
-        return res.status(404).json({ 
+        res.status(404).json({ 
           success: false, 
           message: 'Quote not found' 
         });
+        return;
       }
 
       const quoteData = quoteResult.data;
@@ -34,10 +36,11 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       const invoiceResult = await generateInvoicePdf(quoteData);
       
       if (!invoiceResult || !invoiceResult.buffer) {
-        return res.status(500).json({ 
+        res.status(500).json({ 
           success: false, 
           message: 'Failed to generate invoice PDF' 
         });
+        return;
       }
 
       // Set response headers for PDF download
@@ -65,20 +68,22 @@ export const createInvoiceFromPayment = async (req: Request, res: Response): Pro
       const { quoteId, paymentDetails } = req.body;
       
       if (!quoteId || !paymentDetails) {
-        return res.status(400).json({ 
+        res.status(400).json({ 
           success: false, 
           message: 'Quote ID and payment details are required' 
         });
+        return;
       }
 
       // Create invoice record in database
       const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
       
       if (!invoiceResult.success) {
-        return res.status(500).json({ 
+        res.status(500).json({ 
           success: false, 
           message: 'Failed to create invoice record' 
         });
+        return;
       }
 
       // Update quote status to 'approved'
