@@ -64,28 +64,74 @@ const generateSignature = (data: Record<string, string>, passphrase: string): st
   // PayFast requires exact field order - NOT alphabetical
   // This is the correct field order according to PayFast documentation
   const fieldOrder = [
-    'merchant_id', 'merchant_key', 'return_url', 'cancel_url', 'notify_url',
-    'name_first', 'name_last', 'email_address', 'cell_number',
-    'm_payment_id', 'amount', 'item_name', 'item_description',
-    'custom_int1', 'custom_int2', 'custom_int3', 'custom_int4', 'custom_int5',
-    'custom_str1', 'custom_str2', 'custom_str3', 'custom_str4', 'custom_str5',
-    'email_confirmation', 'confirmation_address', 'payment_method'
+    // Merchant Details
+    'merchant_id',
+    'merchant_key',
+    'return_url',
+    'cancel_url',
+    'notify_url',
+    // Buyer Detail
+    'name_first',
+    'name_last',
+    'email_address',
+    'cell_number',
+    // Transaction Details
+    'm_payment_id',
+    'amount',
+    'item_name',
+    'item_description',
+    'custom_int1',
+    'custom_int2',
+    'custom_int3',
+    'custom_int4',
+    'custom_int5',
+    'custom_str1',
+    'custom_str2',
+    'custom_str3',
+    'custom_str4',
+    'custom_str5',
+    // Transaction Options
+    'email_confirmation',
+    'confirmation_address',
+    // Set Payment Method
+    'payment_method',
+    // Recurring Billing Details
+    'subscription_type',
+    'billing_date',
+    'recurring_amount',
+    'frequency',
+    'cycles'
   ];
   
   const paramPairs: string[] = [];
   
   // Build parameter string in exact order, only including non-empty values
+  // First, filter out blank values and remove surrounding spaces
+  const filteredData: Record<string, string> = {};
+  Object.entries(dataForSignature).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      filteredData[key] = String(value).trim();
+    }
+  });
+  
+  // Build parameter string in exact order
   fieldOrder.forEach(key => {
-    const value = dataForSignature[key];
-    if (value !== undefined && value !== null && value !== '') {
+    const value = filteredData[key];
+    if (value !== undefined) {
       // URL encode the value according to PayFast requirements
-      const encodedValue = encodeURIComponent(String(value).trim());
+      // Using encodeURIComponent and then replacing spaces with + to match Python's quote_plus
+      const encodedValue = encodeURIComponent(value).replace(/%20/g, '+');
       paramPairs.push(`${key}=${encodedValue}`);
     }
   });
   
   // Create parameter string
-  const paramString = paramPairs.join('&');
+  let paramString = paramPairs.join('&');
+  
+  // Remove the trailing '&' if it exists
+  if (paramString.endsWith('&')) {
+    paramString = paramString.slice(0, -1);
+  }
   
   console.log('Param pairs:', paramPairs);
   console.log('Param string:', paramString);
@@ -93,9 +139,18 @@ const generateSignature = (data: Record<string, string>, passphrase: string): st
   // Add passphrase if provided
   let stringToHash = paramString;
   if (passphrase && passphrase.trim() !== '') {
-    const encodedPassphrase = encodeURIComponent(passphrase.trim());
-    stringToHash = `${paramString}&passphrase=${encodedPassphrase}`;
+    // Remove the trailing '&' if it exists
+    if (stringToHash.endsWith('&')) {
+      stringToHash = stringToHash.slice(0, -1);
+    }
+    // Append passphrase
+    stringToHash += `&passphrase=${passphrase.trim()}`;
     console.log('Adding passphrase to signature string');
+  } else {
+    // Remove the trailing '&' if it exists
+    if (stringToHash.endsWith('&')) {
+      stringToHash = stringToHash.slice(0, -1);
+    }
   }
   
   console.log('PayFast signature string:', stringToHash);
