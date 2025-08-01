@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import https from 'https';
 
 interface PayFastConfig {
   merchantId: string;
@@ -36,7 +37,7 @@ const getPayFastConfig = (): PayFastConfig => {
   };
 };
 
-// Generate PayFast signature
+// Generate PayFast signature according to PayFast documentation
 const generateSignature = (data: Record<string, string>, passphrase: string): string => {
   console.log('🔐 Starting PayFast signature generation...');
   console.log('📋 Input data:', JSON.stringify(data, null, 2));
@@ -46,6 +47,7 @@ const generateSignature = (data: Record<string, string>, passphrase: string): st
   const { signature: existingSignature, ...dataForSignature } = data;
   
   // PayFast requires exact field order - NOT alphabetical
+  // This is the correct field order according to PayFast documentation
   const fieldOrder = [
     'merchant_id', 'merchant_key', 'return_url', 'cancel_url', 'notify_url',
     'name_first', 'name_last', 'email_address', 'cell_number',
@@ -61,17 +63,17 @@ const generateSignature = (data: Record<string, string>, passphrase: string): st
   fieldOrder.forEach(key => {
     const value = dataForSignature[key];
     if (value !== undefined && value !== null && value !== '') {
-      const stringValue = String(value).trim();
-      paramPairs.push(`${key}=${stringValue}`);
+      // URL encode the value according to PayFast requirements
+      const encodedValue = encodeURIComponent(String(value).trim());
+      paramPairs.push(`${key}=${encodedValue}`);
     }
   });
-  
   
   // Create parameter string
   const paramString = paramPairs.join('&');
   
   // Add passphrase if provided
-  const stringToHash = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;
+  const stringToHash = passphrase ? `${paramString}&passphrase=${encodeURIComponent(passphrase)}` : paramString;
   
   console.log('PayFast signature string:', stringToHash);
   
@@ -466,6 +468,7 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
     
     console.log('PayFast ITN data received:', pfData);
     
+    // Step 1: Validate signature
     // Extract signature and prepare data for validation
     const receivedSignature = pfData.signature;
     
@@ -483,21 +486,78 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
       return;
     }
     
-    // Process the payment notification
-    console.log('PayFast ITN validated successfully:', {
-      payment_status: pfData.payment_status,
-      m_payment_id: pfData.m_payment_id,
-      pf_payment_id: pfData.pf_payment_id,
-      amount_gross: pfData.amount_gross
+    // Step 2: Validate against PayFast server (recommended by PayFast documentation)
+    // Create validation data (remove signature and paymentId from pfData)
+    const validationData = { ...pfData };
+    delete validationData.signature;
+    
+    // Add validate route to validation data
+    validationData['ptp'] = 'yes'; // Ping PayFast to validate
+    
+    // Convert validation data to query string
+    const validationParams = Object.entries(validationData)
+      .map(([key, value]: [string, any]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&');
+    
+    // Determine validation URL based on environment
+    const validationUrl = config.sandbox 
+      ? 'https://sandbox.payfast.co.za/eng/query/validate'
+      : 'https://www.payfast.co.za/eng/query/validate';
+    
+    console.log('Validating against PayFast server:', validationUrl);
+    
+    // Send validation request to PayFast
+    const validationOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': validationParams.length
+      }
+    };
+    
+    const validationReq = https.request(validationUrl, validationOptions, (validationRes: any) => {
+      let responseData = '';
+      validationRes.on('data', (chunk: any) => {
+        responseData += chunk;
+      });
+      
+      validationRes.on('end', () => {
+        console.log('PayFast validation response:', responseData);
+        
+        if (responseData !== 'VALID') {
+          console.error('PayFast ITN server validation failed');
+          res.status(400).send('Invalid notification');
+          return;
+        }
+        
+        // Process the payment notification
+        console.log('PayFast ITN validated successfully:', {
+          payment_status: pfData.payment_status,
+          m_payment_id: pfData.m_payment_id,
+          pf_payment_id: pfData.pf_payment_id,
+          amount_gross: pfData.amount_gross
+        });
+        
+        // Here you can add logic to update your database, send emails, etc.
+        // For example:
+        // - Update quote payment status
+        // - Send confirmation emails
+        // - Log the transaction
+        
+        res.status(200).send('OK');
+      });
     });
     
-    // Here you can add logic to update your database, send emails, etc.
-    // For example:
-    // - Update quote payment status
-    // - Send confirmation emails
-    // - Log the transaction
+    validationReq.on('error', (error: any) => {
+      console.error('PayFast validation request error:', error);
+      // Even if validation fails, we still process the payment if signature is valid
+      // This is to prevent losing payments due to network issues
+      console.warn('Continuing with local validation only');
+      res.status(200).send('OK');
+    });
     
-    res.status(200).send('OK');
+    validationReq.write(validationParams);
+    validationReq.end();
 
   } catch (error) {
     console.error('PayFast ITN handler error:', error);
