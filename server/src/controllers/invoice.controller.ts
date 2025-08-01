@@ -5,7 +5,7 @@ import SupabaseService from '../services/supabase.service';
 /**
  * Generate and download invoice PDF for a quote
  */
-export const downloadInvoice = async (req: Request, res: Response) => {
+export const downloadInvoice = async (req: Request, res: Response): Promise<void> => {
     try {
       const { quoteId } = req.params;
       
@@ -60,7 +60,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 /**
  * Create an invoice from a quote after successful payment
  */
-export const createInvoiceFromPayment = async (req: Request, res: Response) => {
+export const createInvoiceFromPayment = async (req: Request, res: Response): Promise<void> => {
     try {
       const { quoteId, paymentDetails } = req.body;
       
