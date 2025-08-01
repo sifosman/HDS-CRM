@@ -3,13 +3,9 @@ import { generateInvoicePdf } from '../services/optimizer.service';
 import SupabaseService from '../services/supabase.service';
 
 /**
- * Controller for handling invoice operations
+ * Generate and download invoice PDF for a quote
  */
-export const invoiceController = {
-  /**
-   * Generate and download invoice PDF for a quote
-   */
-  async downloadInvoice(req: Request, res: Response) {
+export const downloadInvoice = async (req: Request, res: Response) => {
     try {
       const { quoteId } = req.params;
       
@@ -59,12 +55,12 @@ export const invoiceController = {
         message: 'Internal server error while generating invoice' 
       });
     }
-  },
+};
 
-  /**
-   * Create an invoice from a quote after successful payment
-   */
-  async createInvoiceFromPayment(req: Request, res: Response) {
+/**
+ * Create an invoice from a quote after successful payment
+ */
+export const createInvoiceFromPayment = async (req: Request, res: Response) => {
     try {
       const { quoteId, paymentDetails } = req.body;
       
@@ -101,7 +97,4 @@ export const invoiceController = {
         message: 'Internal server error while creating invoice' 
       });
     }
-  }
 };
-
-export default invoiceController;
