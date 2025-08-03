@@ -19,6 +19,8 @@ import supabaseRoutes from './routes/supabase.routes';
 import { diagnosticRoutes } from './routes/diagnostic.routes';
 import payfastRoutes from './routes/payfast.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import emailTestRoutes from './routes/email-test.routes';
+import emailTestHardcodedRoutes from './routes/email-test-hardcoded.routes';
 
 // Load environment variables
 dotenv.config();
@@ -48,13 +50,14 @@ app.use('/api/botsailor', botsailorRoutes);
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/cutlist', cutlistRoutes);
 app.use('/api/n8n', n8nRoutes);
-app.use('/api/webhook', webhookDirectRoutes);
+app.use('/api/webhook-direct', webhookDirectRoutes);
 app.use('/api/debug', debugRoutes);
-app.use('/api/iqretail', iqretailRoutes);
 app.use('/api/supabase', supabaseRoutes);
 app.use('/api/diagnostic', diagnosticRoutes);
 app.use('/api/payfast', payfastRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/email', emailTestRoutes);
+app.use('/api/email-hardcoded', emailTestHardcodedRoutes);
 
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {

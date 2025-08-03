@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import https from 'https';
+import path from 'path';
 
 interface PayFastConfig {
   merchantId: string;
@@ -516,6 +517,55 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                 // Update quote status to approved
                 await SupabaseService.updateQuoteStatus(quoteId, 'approved');
                 console.log('Quote status updated to approved');
+                
+                // NEW: Send email notification after successful payment
+                try {
+                  // Import email service and get customer email
+                  const EmailService = (await import('../services/email.service')).EmailService;
+                  const emailService = new EmailService();
+                  
+                  // Get customer email from database
+                  const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
+                  
+                  if (customerEmail) {
+                    // Get quote details for email
+                    const quoteData = await SupabaseService.fetchQuoteById(quoteId);
+                    
+                    if (quoteData.success && quoteData.data) {
+                      const customerName = quoteData.data.customer_name || 'Customer';
+                      const quoteNumber = quoteData.data.quote_number || quoteId;
+                      const amount = parseFloat(pfData.amount_gross || '0');
+                      
+                      // Generate invoice PDF path (assuming it's created during invoice creation)
+                      const invoicePath = path.join(__dirname, '../invoices', `invoice-${quoteNumber}.pdf`);
+                      
+                      // Prepare optimization details
+                      const optimizationDetails = {
+                        totalBoards: quoteData.data.total_boards,
+                        totalLength: quoteData.data.total_length,
+                        wastage: quoteData.data.wastage_percentage,
+                        cutlistUrl: quoteData.data.cutlist_url
+                      };
+                      
+                      // Send email notification
+                      await emailService.sendPaymentConfirmationEmail({
+                        customerName,
+                        customerEmail,
+                        quoteNumber,
+                        amount,
+                        invoicePath,
+                        optimizationDetails
+                      });
+                      
+                      console.log('Payment confirmation email sent successfully to:', customerEmail);
+                    }
+                  } else {
+                    console.warn('No email address found for quote:', quoteId);
+                  }
+                } catch (emailError) {
+                  console.error('Error sending payment confirmation email:', emailError);
+                  // Don't fail the payment processing if email fails
+                }
               } else {
                 console.error('Failed to create invoice:', invoiceResult.error);
               }

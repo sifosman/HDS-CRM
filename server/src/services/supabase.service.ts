@@ -737,6 +737,86 @@ const SupabaseService = {
     }
   },
 
+  /**
+   * Get customer email from quote
+   */
+  async getCustomerEmailFromQuote(quoteId: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('customer_email')
+        .eq('id', quoteId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching customer email from quote:', error);
+        return null;
+      }
+
+      return data?.customer_email || null;
+    } catch (error) {
+      console.error('Error in getCustomerEmailFromQuote:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get branch email from branch_details table
+   */
+  async getBranchEmailByQuote(quoteId: string): Promise<string | null> {
+    try {
+      // First, get the quote to find the branch/trading name
+      const { data: quoteData, error: quoteError } = await supabase
+        .from('quotes')
+        .select('customer_name, branch_name')
+        .eq('id', quoteId)
+        .single();
+
+      if (quoteError) {
+        console.error('Error fetching quote for branch email:', quoteError);
+        return null;
+      }
+
+      // Try to get branch details using customer_name or branch_name
+      const branchName = quoteData.branch_name || quoteData.customer_name;
+      
+      const { data: branchData, error: branchError } = await supabase
+        .from('branch_details')
+        .select('email')
+        .eq('trading_as', branchName)
+        .single();
+
+      if (branchError) {
+        console.error('Error fetching branch email:', branchError);
+        return null;
+      }
+
+      return branchData?.email || null;
+    } catch (error) {
+      console.error('Error in getBranchEmailByQuote:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get the best email address for a quote (priority: branch email, then customer email)
+   */
+  async getBestEmailForQuote(quoteId: string): Promise<string | null> {
+    try {
+      // Try branch email first
+      const branchEmail = await this.getBranchEmailByQuote(quoteId);
+      if (branchEmail) {
+        return branchEmail;
+      }
+
+      // Fallback to customer email from quote
+      const customerEmail = await this.getCustomerEmailFromQuote(quoteId);
+      return customerEmail;
+    } catch (error) {
+      console.error('Error in getBestEmailForQuote:', error);
+      return null;
+    }
+  }
 };
 
 export default SupabaseService;
