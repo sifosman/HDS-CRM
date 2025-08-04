@@ -1554,7 +1554,7 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
      .stroke('#000000'); // Only black border, no background fill
   
   // Make the grand total bold but consistent with other totals
-  doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold'); // Bold text but normal size
+  doc.fontSize(12).fillColor('#000000'); // Bold text but normal size
   doc.text('GRAND TOTAL:', 60, summaryY + 8); // Same positioning as other rows
   doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
   doc.font('Helvetica'); // Reset font
