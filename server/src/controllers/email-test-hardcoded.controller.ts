@@ -4,15 +4,16 @@ import { EmailService } from '../services/email.service';
 /**
  * Test endpoint with hardcoded email for sifosman@gmail.com
  */
-export const testPaymentEmailHardcoded = async (req: Request, res: Response) => {
+export const testPaymentEmailHardcoded = async (req: Request, res: Response): Promise<void> => {
   try {
     const { quoteNumber, amount, invoicePath } = req.body;
 
     if (!quoteNumber || !amount) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Missing required fields: quoteNumber, amount'
       });
+      return;
     }
 
     // Hardcoded test email
@@ -55,7 +56,7 @@ export const testPaymentEmailHardcoded = async (req: Request, res: Response) => 
 /**
  * Quick test endpoint - just send a test email
  */
-export const quickTestEmail = async (req: Request, res: Response) => {
+export const quickTestEmail = async (req: Request, res: Response): Promise<void> => {
   try {
     const emailService = new EmailService();
     

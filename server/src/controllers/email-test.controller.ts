@@ -4,7 +4,7 @@ import { EmailService } from '../services/email.service';
 /**
  * Test email service connection
  */
-export const testEmailConnection = async (req: Request, res: Response) => {
+export const testEmailConnection = async (req: Request, res: Response): Promise<void> => {
   try {
     const emailService = new EmailService();
     const isConnected = await emailService.testConnection();
@@ -25,7 +25,7 @@ export const testEmailConnection = async (req: Request, res: Response) => {
 /**
  * Test sending a payment confirmation email
  */
-export const testPaymentEmail = async (req: Request, res: Response) => {
+export const testPaymentEmail = async (req: Request, res: Response): Promise<void> => {
   try {
     const { 
       customerName, 
@@ -37,10 +37,11 @@ export const testPaymentEmail = async (req: Request, res: Response) => {
     } = req.body;
 
     if (!customerEmail || !quoteNumber || !amount) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Missing required fields: customerEmail, quoteNumber, amount'
       });
+      return;
     }
 
     const emailService = new EmailService();
