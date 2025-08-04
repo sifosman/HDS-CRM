@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import {
   generatePaymentForm,
   handlePaymentSuccess,
@@ -8,6 +8,26 @@ import {
 import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
 
 const router = express.Router();
+
+// Middleware to capture raw body for PayFast notifications
+const rawBodyMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  if (req.originalUrl.endsWith('/notify')) {
+    // Capture raw body for signature validation
+    let rawBody = '';
+    req.on('data', (chunk: Buffer) => {
+      rawBody += chunk.toString();
+    });
+    req.on('end', () => {
+      (req as any).rawBody = rawBody;
+      next();
+    });
+  } else {
+    next();
+  }
+};
+
+// Apply raw body middleware
+router.use(rawBodyMiddleware);
 
 // Generate payment form for a quote
 router.get('/pay', (req: Request, res: Response) => generatePaymentForm(req, res));

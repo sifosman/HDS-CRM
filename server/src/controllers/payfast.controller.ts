@@ -178,12 +178,31 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     const config = getPayFastConfig();
     const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
     
+    // NEW: Fetch quote details to get branch name
+    let branchName = '';
+    if (quoteId) {
+      try {
+        // Import SupabaseService here to avoid circular dependencies
+        const SupabaseService = (await import('../services/supabase.service')).default;
+        const quoteResult = await SupabaseService.fetchQuoteById(quoteId.toString());
+        
+        if (quoteResult.success && quoteResult.data) {
+          branchName = quoteResult.data.trading_as || '';
+          console.log('Branch name fetched:', branchName);
+        } else {
+          console.warn('Failed to fetch quote details for branch name:', quoteResult.error);
+        }
+      } catch (error) {
+        console.error('Error fetching quote details for branch name:', error);
+      }
+    }
+    
     // Prepare payment data - ensure all values are strings and properly formatted
     const paymentData: Record<string, string> = {
       merchant_id: config.merchantId,
       merchant_key: config.merchantKey,
       amount: parseFloat(amount.toString()).toFixed(2),
-      item_name: `HDS Quote ${quoteId}`
+      item_name: branchName ? `HDS Quote ${quoteId} - ${branchName}` : `HDS Quote ${quoteId}`
     };
     
     // Add URLs only if we have a base URL configured
@@ -392,23 +411,62 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
     // Log the raw data received from PayFast
     console.log('Raw PayFast ITN data received:', JSON.stringify(pfData, null, 2));
     
-    // Generate signature for validation using the same method
-    // Create a copy of the data to avoid modifying the original
-    const dataForSignature = { ...pfData };
-    const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
-    
-    console.log('Received signature:', receivedSignature);
-    console.log('Calculated signature:', calculatedSignature);
-    
-    if (receivedSignature !== calculatedSignature) {
-      console.error('PayFast ITN signature validation failed');
-      console.error('Expected:', calculatedSignature);
-      console.error('Received:', receivedSignature);
-      // Log the data that was used for signature generation
-      console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
-      console.error('All data received:', JSON.stringify(pfData, null, 2));
-      res.status(400).send('Invalid signature');
-      return;
+    // NEW: Use raw body for signature validation if available
+    if ((req as any).rawBody) {
+      console.log('Using raw body for signature validation');
+      console.log('Raw body:', (req as any).rawBody);
+      
+      // Parse raw body to get the exact data that was sent
+      const rawBody = (req as any).rawBody;
+      const rawParams = new URLSearchParams(rawBody);
+      const rawData: Record<string, string> = {};
+      
+      // Convert URLSearchParams to object
+      for (const [key, value] of rawParams.entries()) {
+        rawData[key] = value;
+      }
+      
+      console.log('Parsed raw data:', rawData);
+      
+      // Use raw data for signature validation
+      const dataForSignature = { ...rawData };
+      const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
+      
+      console.log('Received signature:', receivedSignature);
+      console.log('Calculated signature (from raw):', calculatedSignature);
+      
+      if (receivedSignature !== calculatedSignature) {
+        console.error('PayFast ITN signature validation failed (using raw data)');
+        console.error('Expected:', calculatedSignature);
+        console.error('Received:', receivedSignature);
+        // Log the data that was used for signature generation
+        console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
+        console.error('All raw data received:', JSON.stringify(rawData, null, 2));
+        res.status(400).send('Invalid signature');
+        return;
+      }
+    } else {
+      // Fallback to existing method
+      console.log('Using parsed body for signature validation');
+      
+      // Generate signature for validation using the same method
+      // Create a copy of the data to avoid modifying the original
+      const dataForSignature = { ...pfData };
+      const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
+      
+      console.log('Received signature:', receivedSignature);
+      console.log('Calculated signature (from parsed):', calculatedSignature);
+      
+      if (receivedSignature !== calculatedSignature) {
+        console.error('PayFast ITN signature validation failed (using parsed data)');
+        console.error('Expected:', calculatedSignature);
+        console.error('Received:', receivedSignature);
+        // Log the data that was used for signature generation
+        console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
+        console.error('All data received:', JSON.stringify(pfData, null, 2));
+        res.status(400).send('Invalid signature');
+        return;
+      }
     }
     
     // Step 2: Validate against PayFast server (recommended by PayFast documentation)
@@ -687,6 +745,25 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     
     console.log('Extracted quote ID:', quoteId);
     
+    // NEW: Fetch quote details from database for better success page
+    let quoteDetails: any = null;
+    if (quoteId) {
+      try {
+        // Import SupabaseService here to avoid circular dependencies
+        const SupabaseService = (await import('../services/supabase.service')).default;
+        const quoteResult = await SupabaseService.fetchQuoteById(quoteId);
+        
+        if (quoteResult.success && quoteResult.data) {
+          quoteDetails = quoteResult.data;
+          console.log('Quote details fetched successfully:', quoteDetails);
+        } else {
+          console.warn('Failed to fetch quote details:', quoteResult.error);
+        }
+      } catch (error) {
+        console.error('Error fetching quote details:', error);
+      }
+    }
+    
     // Create success page HTML with professional styling
     const successPageHtml = `
     <!DOCTYPE html>
@@ -900,6 +977,40 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                     <span class="detail-value">R ${amount_gross || '0.00'}</span>
                 </div>
             </div>
+            
+            ${quoteDetails ? `
+            <div class="payment-details">
+                <h3>Order Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Customer Name:</span>
+                    <span class="detail-value">${quoteDetails.customer_name || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Customer Email:</span>
+                    <span class="detail-value">${quoteDetails.customer_email || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Customer Phone:</span>
+                    <span class="detail-value">${quoteDetails.customer_phone || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Branch:</span>
+                    <span class="detail-value">${quoteDetails.trading_as || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Project Name:</span>
+                    <span class="detail-value">${quoteDetails.project_name || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Total Amount:</span>
+                    <span class="detail-value">R ${quoteDetails.total_amount?.toFixed(2) || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Created At:</span>
+                    <span class="detail-value">${quoteDetails.created_at ? new Date(quoteDetails.created_at).toLocaleString() : 'N/A'}</span>
+                </div>
+            </div>
+            ` : ''}
             
             <div class="action-buttons">
                 ${quoteId ? `<a href="/api/invoices/download/${quoteId}" class="download-btn">Download Invoice</a>` : ''}
