@@ -727,6 +727,9 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     // PayFast can send data via GET (query) or POST (body)
     const paymentData = { ...req.query, ...req.body };
     
+    console.log('All available payment data keys:', Object.keys(paymentData));
+    console.log('All payment data values:', paymentData);
+    
     const { 
       m_payment_id, 
       pf_payment_id, 
@@ -774,16 +777,24 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     }
     
     // If not found, try to extract from item_name 
-    // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824-HDSPRO - BranchName"
+    // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824-HDSPRODUCTS - BranchName"
     if (!quoteId && item_name && typeof item_name === 'string') {
       // Updated regex to handle both old format (Q-YYYYMMDD-XXXX) and new format (Q-YYYYMMDD-XXXX-BRANCH)
-      const match = item_name.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,6})?)/);
+      // Branch abbreviation can now be up to 10 characters
+      const match = item_name.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,10})?)/);
       if (match) {
         quoteId = match[1];
       }
     }
     
     console.log('Extracted quote ID:', quoteId);
+    console.log('Final payment data for display:', {
+      quoteId,
+      pf_payment_id,
+      item_name,
+      amount_gross,
+      m_payment_id
+    });
     
     // NEW: Fetch quote details from database for better success page
     let quoteDetails: any = null;
@@ -1032,19 +1043,19 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 <h3>Payment Details</h3>
                 <div class="detail-row">
                     <span class="detail-label">Quote ID:</span>
-                    <span class="detail-value">${quoteId || 'N/A'}</span>
+                    <span class="detail-value">${quoteId || 'Not Available'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Payment ID:</span>
-                    <span class="detail-value">${pf_payment_id || 'N/A'}</span>
+                    <span class="detail-value">${pf_payment_id || m_payment_id || 'Not Available'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Item:</span>
-                    <span class="detail-value">${item_name || 'N/A'}</span>
+                    <span class="detail-value">${item_name || 'HDS Quote Payment'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Amount Paid:</span>
-                    <span class="detail-value">R ${Number(amount_gross || 0).toFixed(2)}</span>
+                    <span class="detail-value">R ${(parseFloat(amount_gross) || parseFloat(amount_net) || 0).toFixed(2)}</span>
                 </div>
             </div>
             

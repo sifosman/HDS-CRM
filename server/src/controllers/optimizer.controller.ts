@@ -467,12 +467,25 @@ export const generateQuote = async (req: Request, res: Response) => {
     // Include branch name in quote ID if available
     let quoteId;
     if (branchData && branchData.trading_as) {
-      // Create branch abbreviation from trading_as (first 3 letters of each word, max 6 chars)
-      const branchAbbr = branchData.trading_as
-        .split(' ')
-        .map((word: string) => word.substring(0, 3).toUpperCase())
-        .join('')
-        .substring(0, 6);
+      // Create branch abbreviation from trading_as (more descriptive)
+      let branchAbbr = '';
+      const words = branchData.trading_as.split(' ').filter((word: string) => word.length > 0);
+      
+      if (words.length === 1) {
+        // Single word: take first 8 characters
+        branchAbbr = words[0].substring(0, 8).toUpperCase();
+      } else if (words.length === 2) {
+        // Two words: take first 4 chars of each
+        branchAbbr = words[0].substring(0, 4).toUpperCase() + words[1].substring(0, 4).toUpperCase();
+      } else {
+        // Multiple words: take first 3 chars of first 3 words
+        branchAbbr = words.slice(0, 3)
+          .map((word: string) => word.substring(0, 3).toUpperCase())
+          .join('');
+      }
+      
+      // Ensure max length of 10 characters for readability
+      branchAbbr = branchAbbr.substring(0, 10);
       quoteId = `Q-${dateStr}-${randomNum}-${branchAbbr}`;
       console.log(`Generated quote ID with branch: ${quoteId} (Branch: ${branchData.trading_as})`);
     } else {
