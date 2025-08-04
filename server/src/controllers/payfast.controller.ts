@@ -991,12 +991,12 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 button.disabled = true;
                 
                 // Create download URL
-                const downloadUrl = `/api/invoices/download/${quoteId}`;
+                const downloadUrl = '/api/invoices/download/' + quoteId;
                 
                 // Create temporary link
                 const link = document.createElement('a');
                 link.href = downloadUrl;
-                link.download = `invoice-${quoteId}.pdf`;
+                link.download = 'invoice-' + quoteId + '.pdf';
                 link.style.display = 'none';
                 
                 // Add to DOM and trigger download
