@@ -167,7 +167,7 @@ const generateSignature = (data: Record<string, any>, passphrase: string): strin
 // Generate payment form for a quote
 export const generatePaymentForm = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { quoteId, amount, customerName, projectName, customerEmail } = req.query;
+    const { quoteId, amount, customerName, projectName, customerEmail, branchName } = req.query;
     
     if (!quoteId || !amount) {
       res.status(400).json({ 
@@ -177,33 +177,19 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     }
 
     const config = getPayFastConfig();
-    // NEW: Fetch quote details to get branch name
-    let branchName = '';
-    if (quoteId) {
-      try {
-        // Import SupabaseService here to avoid circular dependencies
-        const SupabaseService = (await import('../services/supabase.service')).default;
-        const quoteResult = await SupabaseService.fetchQuoteById(quoteId.toString());
-        
-        if (quoteResult.success && quoteResult.data) {
-          branchName = quoteResult.data.trading_as || '';
-          console.log('Branch name fetched:', branchName);
-        } else {
-          console.warn('Failed to fetch quote details for branch name:', quoteResult.error);
-        }
-      } catch (error) {
-        console.error('Error fetching quote details for branch name:', error);
-      }
-    }
     
-    const paymentId = branchName ? `QUOTE-${quoteId}-${branchName.replace(/\s+/g, '-')}-${Date.now()}` : `QUOTE-${quoteId}-${Date.now()}`;
+    // Use branch name from parameter or empty string
+    const effectiveBranchName = branchName?.toString() || '';
+    console.log('Using branch name for payment form:', effectiveBranchName);
+    
+    const paymentId = effectiveBranchName ? `QUOTE-${quoteId}-${effectiveBranchName.replace(/\s+/g, '-')}-${Date.now()}` : `QUOTE-${quoteId}-${Date.now()}`;
     
     // Prepare payment data - ensure all values are strings and properly formatted
     const paymentData: Record<string, string> = {
       merchant_id: config.merchantId,
       merchant_key: config.merchantKey,
       amount: parseFloat(amount.toString()).toFixed(2),
-      item_name: branchName ? `HDS Quote ${quoteId} - ${branchName}` : `HDS Quote ${quoteId}`
+      item_name: effectiveBranchName ? `HDS Quote ${quoteId} - ${effectiveBranchName}` : `HDS Quote ${quoteId}`
     };
     
     // Add URLs only if we have a base URL configured
@@ -232,13 +218,6 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     
     if (customerEmail) {
       paymentData.email_address = customerEmail.toString();
-    }
-    
-    // Add URLs only if we have a base URL configured
-    if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
-      paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
-      paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
-      paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
     }
     
     console.log('PayFast payment data before signature:', JSON.stringify(paymentData, null, 2));
@@ -743,8 +722,13 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
   try {
     console.log('PayFast payment success callback received');
     console.log('Query parameters:', req.query);
+    console.log('Request body:', req.body);
+    console.log('Request method:', req.method);
     
-    // Extract payment information from query parameters
+    // Extract payment information from both query parameters and request body
+    // PayFast can send data via GET (query) or POST (body)
+    const paymentData = { ...req.query, ...req.body };
+    
     const { 
       m_payment_id, 
       pf_payment_id, 
@@ -753,7 +737,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       amount_gross,
       amount_fee,
       amount_net
-    } = req.query;
+    } = paymentData;
     
     console.log('Payment success details:', {
       m_payment_id,
@@ -765,12 +749,33 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       amount_net
     });
     
-    // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
+    // Extract quote ID from payment ID or item name
     let quoteId = '';
+    
+    // Try to extract from m_payment_id 
+    // Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
     if (m_payment_id && typeof m_payment_id === 'string') {
       const parts = m_payment_id.split('-');
-      if (parts.length >= 2 && parts[0] === 'QUOTE') {
-        quoteId = parts[1];
+      if (parts.length >= 3 && parts[0] === 'QUOTE') {
+        if (parts.length === 5) {
+          // Format: "QUOTE-Q-20250804-4824-1754311399090" (without branch)
+          // Extract "Q-20250804-4824" (parts 1, 2, 3)
+          quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
+        } else if (parts.length > 5) {
+          // Format: "QUOTE-Q-20250804-4824-HDS-Products-1754311399090" (with branch)
+          // Extract "Q-20250804-4824" (parts 1, 2, 3)
+          // The timestamp is the last part, everything else in between is branch name
+          quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
+        }
+      }
+    }
+    
+    // If not found, try to extract from item_name 
+    // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824 - BranchName"
+    if (!quoteId && item_name && typeof item_name === 'string') {
+      const match = item_name.match(/HDS Quote ([Q]-\d{8}-\d{4})/);
+      if (match) {
+        quoteId = match[1];
       }
     }
     
@@ -782,7 +787,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       try {
         // Import SupabaseService here to avoid circular dependencies
         const SupabaseService = (await import('../services/supabase.service')).default;
-        const quoteResult = await SupabaseService.fetchQuoteById(quoteId);
+        const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteId);
         
         if (quoteResult.success && quoteResult.data) {
           quoteDetails = quoteResult.data;

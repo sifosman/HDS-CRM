@@ -32,8 +32,9 @@ router.use(rawBodyMiddleware);
 // Generate payment form for a quote
 router.get('/pay', (req: Request, res: Response) => generatePaymentForm(req, res));
 
-// Handle payment success return
+// Handle payment success return (both GET and POST)
 router.get('/success', (req: Request, res: Response) => handlePaymentSuccess(req, res));
+router.post('/success', (req: Request, res: Response) => handlePaymentSuccess(req, res));
 
 // Handle payment cancellation return
 router.get('/cancel', (req: Request, res: Response) => handlePaymentCancel(req, res));
