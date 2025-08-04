@@ -23,10 +23,12 @@
     "handlebars": "^4.7.8",
     "mongoose": "^8.0.3",
     "multer": "^2.0.0",
+    "nodemailer": "^7.0.5",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/handlebars": "^4.1.0",
+    "@types/nodemailer": "^6.4.17",
     "concurrently": "^8.2.2",
     "nodemon": "^3.0.2"
   }

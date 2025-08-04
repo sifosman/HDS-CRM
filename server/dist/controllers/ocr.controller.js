@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -86,10 +77,10 @@ const upload = (0, multer_1.default)({
  * Process a cutting list image using OCR
  * This endpoint accepts an image file and extracts cutting list data using OCR
  */
-const processCutlistImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const processCutlistImage = async (req, res) => {
     // Use multer middleware to handle the file upload
     const uploadMiddleware = upload.single('image');
-    uploadMiddleware(req, res, (err) => __awaiter(void 0, void 0, void 0, function* () {
+    uploadMiddleware(req, res, async (err) => {
         if (err) {
             return res.status(400).json({
                 success: false,
@@ -110,13 +101,13 @@ const processCutlistImage = (req, res) => __awaiter(void 0, void 0, void 0, func
             const { phoneNumber, customerName, projectName } = req.body;
             // Process the image with OCR
             const filePath = multerReq.file.path;
-            const ocrResults = yield ocrService.processImageWithOCR(filePath);
+            const ocrResults = await ocrService.processImageWithOCR(filePath);
             // Convert OCR results to cutting list data
             const cutlistData = ocrService.convertOCRToCutlistData(ocrResults);
             // Send confirmation to WhatsApp if phone number is provided
             let whatsappResponse = null;
             if (phoneNumber) {
-                whatsappResponse = yield whatsappService.sendWhatsAppConfirmation(phoneNumber, cutlistData, customerName || 'Customer', projectName || 'Cutting List Project');
+                whatsappResponse = await whatsappService.sendWhatsAppConfirmation(phoneNumber, cutlistData, customerName || 'Customer', projectName || 'Cutting List Project');
             }
             // Return the extracted data
             res.status(200).json({
@@ -137,13 +128,13 @@ const processCutlistImage = (req, res) => __awaiter(void 0, void 0, void 0, func
                 error: error instanceof Error ? error.message : String(error)
             });
         }
-    }));
-});
+    });
+};
 exports.processCutlistImage = processCutlistImage;
 /**
  * Get the status of a previously processed image
  */
-const getProcessingStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getProcessingStatus = async (req, res) => {
     try {
         const { id } = req.params;
         // In a real implementation, you would check a database or cache for the status
@@ -163,13 +154,13 @@ const getProcessingStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 exports.getProcessingStatus = getProcessingStatus;
 /**
  * Process OCR data from n8n workflow
  * This endpoint accepts pre-processed OCR data from n8n and stores it for editing
  */
-const processN8nOcrData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const processN8nOcrData = async (req, res) => {
     try {
         // Log the incoming data for debugging
         console.log('Received data from n8n:', JSON.stringify(req.body, null, 2));
@@ -207,7 +198,7 @@ const processN8nOcrData = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // Try to create a proper cutlist record in the database
         try {
             console.log('Attempting to create cutlist via API...');
-            const response = yield axios_1.default.post(`${baseUrl}/api/cutlist/n8n-data`, {
+            const response = await axios_1.default.post(`${baseUrl}/api/cutlist/n8n-data`, {
                 ocrText,
                 phoneNumber,
                 senderName,
@@ -250,7 +241,7 @@ const processN8nOcrData = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     };
                     // Send the webhook to Botsailor
                     const axios = require('axios'); // Make sure axios is imported at the top
-                    botsailorResponse = yield axios.post(botsailorWebhookUrl, botsailorPayload, {
+                    botsailorResponse = await axios.post(botsailorWebhookUrl, botsailorPayload, {
                         headers: {
                             'Content-Type': 'application/json'
                         },
@@ -269,7 +260,7 @@ const processN8nOcrData = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 console.error('Error sending Botsailor webhook:', webhookError);
                 // If webhook fails, fallback to the existing WhatsApp service
                 console.log('Falling back to legacy WhatsApp service...');
-                whatsappResponse = yield whatsappService.sendWhatsAppConfirmation(phoneNumber, cutlistData, senderName || 'WhatsApp User', 'Cutting List from WhatsApp');
+                whatsappResponse = await whatsappService.sendWhatsAppConfirmation(phoneNumber, cutlistData, senderName || 'WhatsApp User', 'Cutting List from WhatsApp');
             }
         }
         // Return the information needed
@@ -290,12 +281,12 @@ const processN8nOcrData = (req, res) => __awaiter(void 0, void 0, void 0, functi
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 exports.processN8nOcrData = processN8nOcrData;
 /**
  * Update cutting list data after OCR processing
  */
-const updateCutlistData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateCutlistData = async (req, res) => {
     try {
         const { cutlistData } = req.body;
         if (!cutlistData) {
@@ -320,12 +311,12 @@ const updateCutlistData = (req, res) => __awaiter(void 0, void 0, void 0, functi
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 exports.updateCutlistData = updateCutlistData;
 /**
  * Send WhatsApp confirmation for a cutting list
  */
-const sendWhatsAppConfirmation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const sendWhatsAppConfirmation = async (req, res) => {
     try {
         const { phoneNumber, cutlistData, customerName, projectName } = req.body;
         if (!phoneNumber || !cutlistData) {
@@ -335,7 +326,7 @@ const sendWhatsAppConfirmation = (req, res) => __awaiter(void 0, void 0, void 0,
             });
         }
         // Send WhatsApp confirmation
-        const whatsappResponse = yield whatsappService.sendWhatsAppConfirmation(phoneNumber, cutlistData, customerName || 'Customer', projectName || 'Cutting List Project');
+        const whatsappResponse = await whatsappService.sendWhatsAppConfirmation(phoneNumber, cutlistData, customerName || 'Customer', projectName || 'Cutting List Project');
         res.status(200).json({
             success: true,
             message: 'WhatsApp confirmation sent successfully',
@@ -350,5 +341,5 @@ const sendWhatsAppConfirmation = (req, res) => __awaiter(void 0, void 0, void 0,
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 exports.sendWhatsAppConfirmation = sendWhatsAppConfirmation;

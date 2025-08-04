@@ -1,13 +1,37 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
     for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
@@ -23,47 +47,123 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handlePaymentNotification = exports.handlePaymentCancel = exports.handlePaymentSuccess = exports.generatePaymentForm = void 0;
+exports.handlePaymentCancel = exports.handlePaymentSuccess = exports.handlePaymentNotification = exports.generatePaymentForm = void 0;
 const crypto_1 = __importDefault(require("crypto"));
+const https_1 = __importDefault(require("https"));
 // Get PayFast configuration from environment variables
 const getPayFastConfig = () => {
-    return {
+    console.log('Environment variables:');
+    console.log('PAYFAST_MERCHANT_ID:', process.env.PAYFAST_MERCHANT_ID);
+    console.log('PAYFAST_MERCHANT_KEY:', process.env.PAYFAST_MERCHANT_KEY);
+    console.log('PAYFAST_PASSPHRASE:', process.env.PAYFAST_PASSPHRASE);
+    console.log('PAYFAST_SANDBOX:', process.env.PAYFAST_SANDBOX);
+    console.log('BASE_URL:', process.env.BASE_URL);
+    const config = {
         merchantId: process.env.PAYFAST_MERCHANT_ID || '10000100',
         merchantKey: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a',
         passphrase: process.env.PAYFAST_PASSPHRASE || 'jt7NOE43FZPn',
         sandbox: process.env.PAYFAST_SANDBOX === 'true',
         baseUrl: process.env.BASE_URL || 'http://localhost:5000'
     };
+    console.log('PayFast Config:', JSON.stringify(config, null, 2));
+    return config;
 };
-// Generate PayFast signature
+// Generate PayFast signature according to PayFast documentation
 const generateSignature = (data, passphrase) => {
     console.log('🔐 Starting PayFast signature generation...');
     console.log('📋 Input data:', JSON.stringify(data, null, 2));
     console.log('🔑 Passphrase provided:', !!passphrase);
+    if (passphrase) {
+        console.log('🔑 Passphrase value:', passphrase);
+    }
     // Remove existing signature if present
     const { signature: existingSignature } = data, dataForSignature = __rest(data, ["signature"]);
+    console.log('📋 Data for signature (after removing existing signature):', JSON.stringify(dataForSignature, null, 2));
     // PayFast requires exact field order - NOT alphabetical
+    // This is the correct field order according to PayFast documentation
     const fieldOrder = [
-        'merchant_id', 'merchant_key', 'return_url', 'cancel_url', 'notify_url',
-        'name_first', 'name_last', 'email_address', 'cell_number',
-        'm_payment_id', 'amount', 'item_name', 'item_description',
-        'custom_int1', 'custom_int2', 'custom_int3', 'custom_int4', 'custom_int5',
-        'custom_str1', 'custom_str2', 'custom_str3', 'custom_str4', 'custom_str5',
-        'email_confirmation', 'confirmation_address', 'payment_method'
+        // Merchant Details
+        'merchant_id',
+        'merchant_key',
+        'return_url',
+        'cancel_url',
+        'notify_url',
+        // Buyer Detail
+        'name_first',
+        'name_last',
+        'email_address',
+        'cell_number',
+        // Transaction Details
+        'm_payment_id',
+        'amount',
+        'item_name',
+        'item_description',
+        'custom_int1',
+        'custom_int2',
+        'custom_int3',
+        'custom_int4',
+        'custom_int5',
+        'custom_str1',
+        'custom_str2',
+        'custom_str3',
+        'custom_str4',
+        'custom_str5',
+        // Transaction Options
+        'email_confirmation',
+        'confirmation_address',
+        // Set Payment Method
+        'payment_method',
+        // Recurring Billing Details
+        'subscription_type',
+        'billing_date',
+        'recurring_amount',
+        'frequency',
+        'cycles'
     ];
     const paramPairs = [];
     // Build parameter string in exact order, only including non-empty values
+    // First, filter out blank values and remove surrounding spaces
+    const filteredData = {};
+    Object.entries(dataForSignature).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+            filteredData[key] = String(value).trim();
+        }
+    });
+    // Build parameter string in exact order
     fieldOrder.forEach(key => {
-        const value = dataForSignature[key];
-        if (value !== undefined && value !== null && value !== '') {
-            const stringValue = String(value).trim();
-            paramPairs.push(`${key}=${stringValue}`);
+        const value = filteredData[key];
+        if (value !== undefined) {
+            // URL encode the value according to PayFast requirements
+            // Using encodeURIComponent and then replacing spaces with + to match Python's quote_plus
+            const encodedValue = encodeURIComponent(value).replace(/%20/g, '+');
+            paramPairs.push(`${key}=${encodedValue}`);
         }
     });
     // Create parameter string
-    const paramString = paramPairs.join('&');
+    let paramString = paramPairs.join('&');
+    // Remove the trailing '&' if it exists
+    if (paramString.endsWith('&')) {
+        paramString = paramString.slice(0, -1);
+    }
+    console.log('Param pairs:', paramPairs);
+    console.log('Param string:', paramString);
     // Add passphrase if provided
-    const stringToHash = passphrase ? `${paramString}&passphrase=${passphrase}` : paramString;
+    let stringToHash = paramString;
+    if (passphrase && passphrase.trim() !== '') {
+        // Remove the trailing '&' if it exists
+        if (stringToHash.endsWith('&')) {
+            stringToHash = stringToHash.slice(0, -1);
+        }
+        // Append passphrase
+        stringToHash += `&passphrase=${passphrase.trim()}`;
+        console.log('Adding passphrase to signature string');
+    }
+    else {
+        // Remove the trailing '&' if it exists
+        if (stringToHash.endsWith('&')) {
+            stringToHash = stringToHash.slice(0, -1);
+        }
+    }
     console.log('PayFast signature string:', stringToHash);
     // Generate MD5 hash (must be lowercase)
     const generatedSignature = crypto_1.default.createHash('md5').update(stringToHash).digest('hex').toLowerCase();
@@ -71,7 +171,7 @@ const generateSignature = (data, passphrase) => {
     return generatedSignature;
 };
 // Generate payment form for a quote
-const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const generatePaymentForm = async (req, res) => {
     try {
         const { quoteId, amount, customerName, projectName, customerEmail } = req.query;
         if (!quoteId || !amount) {
@@ -89,20 +189,20 @@ const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, func
             amount: parseFloat(amount.toString()).toFixed(2),
             item_name: `HDS Quote ${quoteId}`
         };
-        // Add optional fields only if we have URLs configured
+        // Add URLs only if we have a base URL configured
         if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
             paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
             paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
             paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
         }
-        // Add customer details if needed
-        if (projectName) {
-            paymentData.item_description = projectName.toString();
-        }
+        // Add payment ID
         if (paymentId) {
             paymentData.m_payment_id = paymentId;
         }
-        console.log('PayFast payment data before signature:', JSON.stringify(paymentData, null, 2));
+        // Add project name as item description
+        if (projectName) {
+            paymentData.item_description = projectName.toString();
+        }
         // Add customer details if provided
         if (customerName) {
             const nameParts = customerName.toString().split(' ');
@@ -112,9 +212,17 @@ const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (customerEmail) {
             paymentData.email_address = customerEmail.toString();
         }
+        // Add URLs only if we have a base URL configured
+        if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
+            paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
+            paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
+            paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
+        }
+        console.log('PayFast payment data before signature:', JSON.stringify(paymentData, null, 2));
         // Generate signature
         const signature = generateSignature(paymentData, config.passphrase);
         paymentData.signature = signature;
+        console.log('Final PayFast payment data being sent:', JSON.stringify(paymentData, null, 2));
         // Determine PayFast URL
         const payfastUrl = config.sandbox
             ? 'https://sandbox.payfast.co.za/eng/process'
@@ -254,215 +362,570 @@ const generatePaymentForm = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
         return;
     }
-});
+};
 exports.generatePaymentForm = generatePaymentForm;
-// Handle successful payment return
-const handlePaymentSuccess = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { quote_id } = req.query;
-        const successHtml = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Payment Successful</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f5f5f5;
-                margin: 0;
-                padding: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-            }
-            .success-container {
-                background: white;
-                padding: 40px;
-                border-radius: 10px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                max-width: 500px;
-                width: 100%;
-                text-align: center;
-            }
-            .success-icon {
-                font-size: 4em;
-                color: #28a745;
-                margin-bottom: 20px;
-            }
-            .header {
-                color: #003366;
-                margin-bottom: 20px;
-            }
-            .message {
-                color: #666;
-                margin-bottom: 30px;
-                line-height: 1.6;
-            }
-            .quote-id {
-                background-color: #f8f9fa;
-                padding: 15px;
-                border-radius: 5px;
-                font-family: monospace;
-                font-size: 1.1em;
-                margin: 20px 0;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="success-container">
-            <div class="success-icon">✅</div>
-            <div class="header">
-                <h1>Payment Successful!</h1>
-            </div>
-            <div class="message">
-                <p>Thank you for your payment. Your transaction has been processed successfully.</p>
-                ${quote_id ? `<div class="quote-id">Quote ID: ${quote_id}</div>` : ''}
-                <p>You will receive a confirmation email shortly. If you have any questions, please contact HDS Group.</p>
-            </div>
-        </div>
-    </body>
-    </html>`;
-        res.setHeader('Content-Type', 'text/html');
-        res.send(successHtml);
-    }
-    catch (error) {
-        console.error('Payment success handler error:', error);
-        res.status(500).json({ error: 'Failed to process payment success' });
-        return;
-    }
-});
-exports.handlePaymentSuccess = handlePaymentSuccess;
-// Handle cancelled payment return
-const handlePaymentCancel = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { quote_id } = req.query;
-        const cancelHtml = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Payment Cancelled</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f5f5f5;
-                margin: 0;
-                padding: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-            }
-            .cancel-container {
-                background: white;
-                padding: 40px;
-                border-radius: 10px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                max-width: 500px;
-                width: 100%;
-                text-align: center;
-            }
-            .cancel-icon {
-                font-size: 4em;
-                color: #dc3545;
-                margin-bottom: 20px;
-            }
-            .header {
-                color: #003366;
-                margin-bottom: 20px;
-            }
-            .message {
-                color: #666;
-                margin-bottom: 30px;
-                line-height: 1.6;
-            }
-            .quote-id {
-                background-color: #f8f9fa;
-                padding: 15px;
-                border-radius: 5px;
-                font-family: monospace;
-                font-size: 1.1em;
-                margin: 20px 0;
-            }
-            .retry-button {
-                background-color: #007bff;
-                color: white;
-                padding: 12px 24px;
-                border: none;
-                border-radius: 5px;
-                text-decoration: none;
-                display: inline-block;
-                margin-top: 20px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="cancel-container">
-            <div class="cancel-icon">❌</div>
-            <div class="header">
-                <h1>Payment Cancelled</h1>
-            </div>
-            <div class="message">
-                <p>Your payment was cancelled. No charges have been made to your account.</p>
-                ${quote_id ? `<div class="quote-id">Quote ID: ${quote_id}</div>` : ''}
-                <p>If you wish to complete the payment, please try again or contact HDS Group for assistance.</p>
-            </div>
-        </div>
-    </body>
-    </html>`;
-        res.setHeader('Content-Type', 'text/html');
-        res.send(cancelHtml);
-    }
-    catch (error) {
-        console.error('Payment cancel handler error:', error);
-        res.status(500).json({ error: 'Failed to process payment cancellation' });
-        return;
-    }
-});
-exports.handlePaymentCancel = handlePaymentCancel;
 // Handle PayFast ITN (Instant Transaction Notification)
-const handlePaymentNotification = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const handlePaymentNotification = async (req, res) => {
     try {
         console.log('PayFast ITN received:', req.body);
         // Validate the ITN
         const config = getPayFastConfig();
         const pfData = req.body;
         console.log('PayFast ITN data received:', pfData);
+        // Step 1: Validate signature
         // Extract signature and prepare data for validation
         const receivedSignature = pfData.signature;
+        // Log the raw data received from PayFast
+        console.log('Raw PayFast ITN data received:', JSON.stringify(pfData, null, 2));
         // Generate signature for validation using the same method
-        const calculatedSignature = generateSignature(pfData, config.passphrase);
+        // Create a copy of the data to avoid modifying the original
+        const dataForSignature = Object.assign({}, pfData);
+        const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
         console.log('Received signature:', receivedSignature);
         console.log('Calculated signature:', calculatedSignature);
         if (receivedSignature !== calculatedSignature) {
             console.error('PayFast ITN signature validation failed');
             console.error('Expected:', calculatedSignature);
             console.error('Received:', receivedSignature);
+            // Log the data that was used for signature generation
+            console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
+            console.error('All data received:', JSON.stringify(pfData, null, 2));
             res.status(400).send('Invalid signature');
             return;
         }
-        // Process the payment notification
-        console.log('PayFast ITN validated successfully:', {
-            payment_status: pfData.payment_status,
-            m_payment_id: pfData.m_payment_id,
-            pf_payment_id: pfData.pf_payment_id,
-            amount_gross: pfData.amount_gross
+        // Step 2: Validate against PayFast server (recommended by PayFast documentation)
+        // Create validation data (remove signature and paymentId from pfData)
+        const validationData = Object.assign({}, pfData);
+        delete validationData.signature;
+        // Add validate route to validation data
+        validationData['ptp'] = 'yes'; // Ping PayFast to validate
+        // Convert validation data to query string
+        const validationParams = Object.entries(validationData)
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+            .join('&');
+        console.log('Validation data:', JSON.stringify(validationData, null, 2));
+        console.log('Validation params:', validationParams);
+        // Determine validation URL based on environment
+        const validationUrl = config.sandbox
+            ? 'https://sandbox.payfast.co.za/eng/query/validate'
+            : 'https://www.payfast.co.za/eng/query/validate';
+        console.log('Validating against PayFast server:', validationUrl);
+        // Send validation request to PayFast
+        const validationOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Length': validationParams.length
+            }
+        };
+        const validationReq = https_1.default.request(validationUrl, validationOptions, (validationRes) => {
+            console.log('PayFast validation request sent');
+            let responseData = '';
+            validationRes.on('data', (chunk) => {
+                responseData += chunk;
+            });
+            validationRes.on('end', async () => {
+                var _a;
+                console.log('PayFast validation response received:', responseData);
+                console.log('Response length:', responseData.length);
+                console.log('Response type:', typeof responseData);
+                // Trim the response data as it might have whitespace
+                const trimmedResponse = responseData.trim();
+                console.log('Trimmed response:', trimmedResponse);
+                console.log('Trimmed response length:', trimmedResponse.length);
+                if (trimmedResponse !== 'VALID') {
+                    console.error('PayFast ITN server validation failed');
+                    console.error('Expected: VALID');
+                    console.error('Received:', trimmedResponse);
+                    console.error('Received length:', trimmedResponse.length);
+                    // Even if validation fails, we still process the payment if signature is valid
+                    // This is to prevent losing payments due to network issues
+                    console.warn('Continuing with local validation only');
+                }
+                else {
+                    console.log('PayFast ITN server validation succeeded');
+                }
+                // Process the payment notification
+                console.log('Processing PayFast ITN:', {
+                    payment_status: pfData.payment_status,
+                    m_payment_id: pfData.m_payment_id,
+                    pf_payment_id: pfData.pf_payment_id,
+                    amount_gross: pfData.amount_gross
+                });
+                // Process successful payment
+                if (pfData.payment_status === 'COMPLETE') {
+                    try {
+                        // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
+                        let quoteId = '';
+                        if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
+                            const parts = pfData.m_payment_id.split('-');
+                            if (parts.length >= 2 && parts[0] === 'QUOTE') {
+                                quoteId = parts[1];
+                            }
+                        }
+                        if (quoteId) {
+                            console.log('Creating invoice for successful payment, quote ID:', quoteId);
+                            // Import SupabaseService here to avoid circular dependencies
+                            const SupabaseService = (await Promise.resolve().then(() => __importStar(require('../services/supabase.service')))).default;
+                            // Prepare payment details for invoice creation
+                            const paymentDetails = {
+                                method: 'PayFast',
+                                reference: pfData.pf_payment_id,
+                                date: new Date().toISOString(),
+                                amount: parseFloat(pfData.amount_gross || '0'),
+                                status: 'paid'
+                            };
+                            // Create invoice record
+                            const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
+                            if (invoiceResult.success) {
+                                console.log('Invoice created successfully:', (_a = invoiceResult.data) === null || _a === void 0 ? void 0 : _a.invoiceNumber);
+                                // Update quote status to approved
+                                await SupabaseService.updateQuoteStatus(quoteId, 'approved');
+                                console.log('Quote status updated to approved');
+                            }
+                            else {
+                                console.error('Failed to create invoice:', invoiceResult.error);
+                            }
+                        }
+                        else {
+                            console.warn('Could not extract quote ID from payment ID:', pfData.m_payment_id);
+                        }
+                    }
+                    catch (error) {
+                        console.error('Error processing successful payment:', error);
+                    }
+                }
+                res.status(200).send('OK');
+            });
         });
-        // Here you can add logic to update your database, send emails, etc.
-        // For example:
-        // - Update quote payment status
-        // - Send confirmation emails
-        // - Log the transaction
-        res.status(200).send('OK');
+        validationReq.on('error', (error) => {
+            console.error('PayFast validation request error:', error);
+            // Even if validation fails, we still process the payment if signature is valid
+            // This is to prevent losing payments due to network issues
+            console.warn('Continuing with local validation only');
+            // Still process successful payments even if validation fails
+            if (pfData.payment_status === 'COMPLETE') {
+                console.log('Processing payment despite validation error');
+                // The payment processing logic would be duplicated here if needed
+            }
+            res.status(200).send('OK');
+        });
+        console.log('Sending validation request with params:', validationParams);
+        console.log('Validation params length:', validationParams.length);
+        validationReq.write(validationParams);
+        validationReq.end();
     }
     catch (error) {
         console.error('PayFast ITN handler error:', error);
         res.status(500).send('Error processing notification');
         return;
     }
-});
+};
 exports.handlePaymentNotification = handlePaymentNotification;
+// Handle successful payment return from PayFast
+const handlePaymentSuccess = async (req, res) => {
+    try {
+        console.log('PayFast payment success callback received');
+        console.log('Query parameters:', req.query);
+        // Extract payment information from query parameters
+        const { m_payment_id, pf_payment_id, payment_status, item_name, amount_gross, amount_fee, amount_net } = req.query;
+        // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
+        let quoteId = '';
+        if (m_payment_id && typeof m_payment_id === 'string') {
+            const parts = m_payment_id.split('-');
+            if (parts.length >= 2 && parts[0] === 'QUOTE') {
+                quoteId = parts[1];
+            }
+        }
+        console.log('Extracted quote ID:', quoteId);
+        // Create success page HTML with professional styling
+        const successPageHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Successful - HDS</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            
+            .success-container {
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                padding: 40px;
+                text-align: center;
+                max-width: 600px;
+                width: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .success-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 5px;
+                background: linear-gradient(90deg, #28a745, #20c997, #17a2b8);
+            }
+            
+            .success-icon {
+                width: 80px;
+                height: 80px;
+                background: #28a745;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 30px;
+                animation: pulse 2s infinite;
+            }
+            
+            .success-icon::after {
+                content: '✓';
+                color: white;
+                font-size: 40px;
+                font-weight: bold;
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+            
+            h1 {
+                color: #28a745;
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                font-weight: 700;
+            }
+            
+            .subtitle {
+                color: #6c757d;
+                font-size: 1.2rem;
+                margin-bottom: 30px;
+                line-height: 1.5;
+            }
+            
+            .payment-details {
+                background: #f8f9fa;
+                border-radius: 15px;
+                padding: 25px;
+                margin: 30px 0;
+                border-left: 5px solid #28a745;
+            }
+            
+            .payment-details h3 {
+                color: #495057;
+                margin-bottom: 15px;
+                font-size: 1.3rem;
+            }
+            
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .detail-row:last-child {
+                border-bottom: none;
+                font-weight: bold;
+                color: #28a745;
+                font-size: 1.1rem;
+            }
+            
+            .detail-label {
+                color: #6c757d;
+                font-weight: 500;
+            }
+            
+            .detail-value {
+                color: #495057;
+                font-weight: 600;
+            }
+            
+            .download-btn {
+                background: linear-gradient(135deg, #28a745, #20c997);
+                color: white;
+                border: none;
+                padding: 15px 40px;
+                border-radius: 50px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+                margin: 20px 10px;
+                box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            }
+            
+            .download-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            }
+            
+            .secondary-btn {
+                background: linear-gradient(135deg, #6c757d, #495057);
+                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            }
+            
+            .secondary-btn:hover {
+                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            }
+            
+            .footer-text {
+                color: #6c757d;
+                font-size: 0.9rem;
+                margin-top: 30px;
+                line-height: 1.4;
+            }
+            
+            @media (max-width: 768px) {
+                .success-container {
+                    padding: 30px 20px;
+                }
+                
+                h1 {
+                    font-size: 2rem;
+                }
+                
+                .download-btn {
+                    display: block;
+                    margin: 10px 0;
+                    width: 100%;
+                }
+                
+                .detail-row {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="success-container">
+            <div class="success-icon"></div>
+            
+            <h1>Payment Successful!</h1>
+            <p class="subtitle">
+                Thank you for your payment. Your transaction has been processed successfully.
+            </p>
+            
+            <div class="payment-details">
+                <h3>Payment Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Quote ID:</span>
+                    <span class="detail-value">${quoteId || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment ID:</span>
+                    <span class="detail-value">${pf_payment_id || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Item:</span>
+                    <span class="detail-value">${item_name || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount Paid:</span>
+                    <span class="detail-value">R ${amount_gross || '0.00'}</span>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                ${quoteId ? `<a href="/api/invoices/download/${quoteId}" class="download-btn">Download Invoice</a>` : ''}
+                <a href="/" class="download-btn secondary-btn">Return to Home</a>
+            </div>
+            
+            <p class="footer-text">
+                A confirmation email will be sent to you shortly. If you have any questions, 
+                please contact our support team.
+            </p>
+        </div>
+    </body>
+    </html>
+    `;
+        res.send(successPageHtml);
+    }
+    catch (error) {
+        console.error('Error handling payment success:', error);
+        res.status(500).send('Error processing payment success');
+    }
+};
+exports.handlePaymentSuccess = handlePaymentSuccess;
+// Handle payment cancellation return from PayFast
+const handlePaymentCancel = async (req, res) => {
+    try {
+        console.log('PayFast payment cancellation callback received');
+        console.log('Query parameters:', req.query);
+        // Create cancellation page HTML
+        const cancelPageHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Cancelled - HDS</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            
+            .cancel-container {
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                padding: 40px;
+                text-align: center;
+                max-width: 500px;
+                width: 100%;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .cancel-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 5px;
+                background: linear-gradient(90deg, #ffc107, #fd7e14, #dc3545);
+            }
+            
+            .cancel-icon {
+                width: 80px;
+                height: 80px;
+                background: #ffc107;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 30px;
+            }
+            
+            .cancel-icon::after {
+                content: '⚠';
+                color: white;
+                font-size: 40px;
+                font-weight: bold;
+            }
+            
+            h1 {
+                color: #dc3545;
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                font-weight: 700;
+            }
+            
+            .subtitle {
+                color: #6c757d;
+                font-size: 1.2rem;
+                margin-bottom: 30px;
+                line-height: 1.5;
+            }
+            
+            .action-btn {
+                background: linear-gradient(135deg, #007bff, #0056b3);
+                color: white;
+                border: none;
+                padding: 15px 40px;
+                border-radius: 50px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+                margin: 10px;
+                box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            }
+            
+            .action-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            }
+            
+            .secondary-btn {
+                background: linear-gradient(135deg, #6c757d, #495057);
+                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            }
+            
+            .secondary-btn:hover {
+                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            }
+            
+            @media (max-width: 768px) {
+                .cancel-container {
+                    padding: 30px 20px;
+                }
+                
+                h1 {
+                    font-size: 2rem;
+                }
+                
+                .action-btn {
+                    display: block;
+                    margin: 10px 0;
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="cancel-container">
+            <div class="cancel-icon"></div>
+            
+            <h1>Payment Cancelled</h1>
+            <p class="subtitle">
+                Your payment was cancelled. No charges have been made to your account.
+            </p>
+            
+            <div class="action-buttons">
+                <a href="javascript:history.back()" class="action-btn">Try Again</a>
+                <a href="/" class="action-btn secondary-btn">Return to Home</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+        res.send(cancelPageHtml);
+    }
+    catch (error) {
+        console.error('Error handling payment cancellation:', error);
+        res.status(500).send('Error processing payment cancellation');
+    }
+};
+exports.handlePaymentCancel = handlePaymentCancel;

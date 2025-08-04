@@ -32,15 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -104,65 +95,59 @@ class IQRetailService {
      * Check connection to IQ Retail API
      * @returns Promise resolving to boolean indicating if connection is successful
      */
-    checkConnection() {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // Simple request to check if API is accessible
-                const xml = `${this.generateRequestHeader()}${this.generateRequestFooter()}`;
-                const response = yield this.client.post('/IQ_API_Test_Int', xml);
-                return response.status === 200;
-            }
-            catch (error) {
-                console.error('IQ Retail API connection error:', error);
-                return false;
-            }
-        });
+    async checkConnection() {
+        try {
+            // Simple request to check if API is accessible
+            const xml = `${this.generateRequestHeader()}${this.generateRequestFooter()}`;
+            const response = await this.client.post('/IQ_API_Test_Int', xml);
+            return response.status === 200;
+        }
+        catch (error) {
+            console.error('IQ Retail API connection error:', error);
+            return false;
+        }
     }
     /**
      * Look up stock/product information by code
      * @param stockCode Product/stock code to look up
      * @returns Promise resolving to product information
      */
-    getStockAttributes(stockCode) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const xml = `${this.generateRequestHeader()}
+    async getStockAttributes(stockCode) {
+        try {
+            const xml = `${this.generateRequestHeader()}
       <IQ_API_Request_Stock_Attributes>
         <Stock_Code>${stockCode}</Stock_Code>
       </IQ_API_Request_Stock_Attributes>
       ${this.generateRequestFooter()}`;
-                const response = yield this.client.post('/Stock_Attributes', xml);
-                // Parse response XML and return as JSON
-                // In a real implementation, you would use an XML parser here
-                return this.parseResponse(response);
-            }
-            catch (error) {
-                console.error('Error fetching stock attributes:', error);
-                throw new Error('Failed to fetch stock information from IQ Retail');
-            }
-        });
+            const response = await this.client.post('/Stock_Attributes', xml);
+            // Parse response XML and return as JSON
+            // In a real implementation, you would use an XML parser here
+            return this.parseResponse(response);
+        }
+        catch (error) {
+            console.error('Error fetching stock attributes:', error);
+            throw new Error('Failed to fetch stock information from IQ Retail');
+        }
     }
     /**
      * Get pricing for a specific product
      * @param stockCode Product/stock code
      * @returns Promise resolving to product pricing information
      */
-    getStockPricing(stockCode) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const xml = `${this.generateRequestHeader()}
+    async getStockPricing(stockCode) {
+        try {
+            const xml = `${this.generateRequestHeader()}
       <IQ_API_Request_Stock_ActiveSellingPrice>
         <Stock_Code>${stockCode}</Stock_Code>
       </IQ_API_Request_Stock_ActiveSellingPrice>
       ${this.generateRequestFooter()}`;
-                const response = yield this.client.post('/Stock_ActiveSellingPrice', xml);
-                return this.parseResponse(response);
-            }
-            catch (error) {
-                console.error('Error fetching stock pricing:', error);
-                throw new Error('Failed to fetch product pricing from IQ Retail');
-            }
-        });
+            const response = await this.client.post('/Stock_ActiveSellingPrice', xml);
+            return this.parseResponse(response);
+        }
+        catch (error) {
+            console.error('Error fetching stock pricing:', error);
+            throw new Error('Failed to fetch product pricing from IQ Retail');
+        }
     }
     /**
      * Get contract pricing for a specific product
@@ -170,82 +155,74 @@ class IQRetailService {
      * @param accountCode Optional account code for specific pricing
      * @returns Promise resolving to product contract pricing information
      */
-    getContractPricing(stockCode, accountCode) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                let accountXml = '';
-                if (accountCode) {
-                    accountXml = `<Account_Code>${accountCode}</Account_Code>`;
-                }
-                const xml = `${this.generateRequestHeader()}
+    async getContractPricing(stockCode, accountCode) {
+        try {
+            let accountXml = '';
+            if (accountCode) {
+                accountXml = `<Account_Code>${accountCode}</Account_Code>`;
+            }
+            const xml = `${this.generateRequestHeader()}
       <IQ_API_Request_Stock_ContractPricing>
         <Stock_Code>${stockCode}</Stock_Code>
         ${accountXml}
       </IQ_API_Request_Stock_ContractPricing>
       ${this.generateRequestFooter()}`;
-                const response = yield this.client.post('/Stock_ContractPricing', xml);
-                return this.parseResponse(response);
-            }
-            catch (error) {
-                console.error('Error fetching contract pricing:', error);
-                throw new Error('Failed to fetch contract pricing from IQ Retail');
-            }
-        });
+            const response = await this.client.post('/Stock_ContractPricing', xml);
+            return this.parseResponse(response);
+        }
+        catch (error) {
+            console.error('Error fetching contract pricing:', error);
+            throw new Error('Failed to fetch contract pricing from IQ Retail');
+        }
     }
     /**
      * Create a quote in IQ Retail
      * @param quoteData Quote data including product info and customer details
      * @returns Promise resolving to created quote information
      */
-    createQuote(quoteData) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // Build XML for quote creation based on provided data
-                const xml = this.buildQuoteXml(quoteData);
-                const response = yield this.client.post('/Document_Quote', xml);
-                return this.parseResponse(response);
-            }
-            catch (error) {
-                console.error('Error creating quote:', error);
-                throw new Error('Failed to create quote in IQ Retail');
-            }
-        });
+    async createQuote(quoteData) {
+        try {
+            // Build XML for quote creation based on provided data
+            const xml = this.buildQuoteXml(quoteData);
+            const response = await this.client.post('/Document_Quote', xml);
+            return this.parseResponse(response);
+        }
+        catch (error) {
+            console.error('Error creating quote:', error);
+            throw new Error('Failed to create quote in IQ Retail');
+        }
     }
     /**
      * Create a sales order from quote data
      * @param orderData Sales order data (converted from quote)
      * @returns Promise resolving to created sales order information
      */
-    createSalesOrder(orderData) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const xml = this.buildSalesOrderXml(orderData);
-                const response = yield this.client.post('/Document_Sales_Order', xml);
-                return this.parseResponse(response);
-            }
-            catch (error) {
-                console.error('Error creating sales order:', error);
-                throw new Error('Failed to create sales order in IQ Retail');
-            }
-        });
+    async createSalesOrder(orderData) {
+        try {
+            const xml = this.buildSalesOrderXml(orderData);
+            const response = await this.client.post('/Document_Sales_Order', xml);
+            return this.parseResponse(response);
+        }
+        catch (error) {
+            console.error('Error creating sales order:', error);
+            throw new Error('Failed to create sales order in IQ Retail');
+        }
     }
     /**
      * Generate an invoice from a sales order
      * @param invoiceData Invoice data including order reference
      * @returns Promise resolving to created invoice information
      */
-    createInvoice(invoiceData) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const xml = this.buildInvoiceXml(invoiceData);
-                const response = yield this.client.post('/Document_Invoice', xml);
-                return this.parseResponse(response);
-            }
-            catch (error) {
-                console.error('Error creating invoice:', error);
-                throw new Error('Failed to create invoice in IQ Retail');
-            }
-        });
+    async createInvoice(invoiceData) {
+        try {
+            const xml = this.buildInvoiceXml(invoiceData);
+            const response = await this.client.post('/Document_Invoice', xml);
+            return this.parseResponse(response);
+        }
+        catch (error) {
+            console.error('Error creating invoice:', error);
+            throw new Error('Failed to create invoice in IQ Retail');
+        }
     }
     /**
      * Parse XML response to JSON (simplified implementation)

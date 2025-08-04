@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -18,7 +9,7 @@ const fs_1 = __importDefault(require("fs"));
 const optimizer_service_1 = require("../services/optimizer.service");
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 // Optimize cutting layout
-const optimizeCutting = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const optimizeCutting = async (req, res) => {
     try {
         const { pieces, unit, width, layout } = req.body;
         // Validate input
@@ -53,10 +44,10 @@ const optimizeCutting = (req, res) => __awaiter(void 0, void 0, void 0, function
         console.error('Optimization error:', error);
         res.status(500).json({ message: 'Error during optimization', error });
     }
-});
+};
 exports.optimizeCutting = optimizeCutting;
 // Download PDF result
-const downloadPdf = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const downloadPdf = async (req, res) => {
     try {
         const { id } = req.params;
         const pdfPath = path_1.default.join(__dirname, '../../pdfs', `solution_${id}.pdf`);
@@ -71,10 +62,10 @@ const downloadPdf = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         console.error('PDF download error:', error);
         res.status(500).json({ message: 'Error downloading PDF', error });
     }
-});
+};
 exports.downloadPdf = downloadPdf;
 // Export IQ data for a specific optimization
-const exportIQData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const exportIQData = async (req, res) => {
     try {
         const { solution, unit, width, layout } = req.body;
         // Validate input
@@ -93,10 +84,10 @@ const exportIQData = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         console.error('IQ export error:', error);
         res.status(500).json({ message: 'Error exporting IQ data', error });
     }
-});
+};
 exports.exportIQData = exportIQData;
 // Import data from IQ software
-const importIQData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const importIQData = async (req, res) => {
     try {
         const iqData = req.body;
         // Validate input
@@ -137,10 +128,10 @@ const importIQData = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 exports.importIQData = importIQData;
 // Generate a complete quote with optimization, pricing, and PDF
-const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const generateQuote = async (req, res) => {
     var _a;
     try {
         const { sections, customerName, projectName, phoneNumber, branchData } = req.body;
@@ -173,7 +164,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // 1. Get product pricing by description from Supabase
             console.log(`Getting pricing for material: ${material}`);
             // 1. Look up pricing for this material from Supabase
-            const pricingResult = yield supabase_service_1.default.getProductPricingByDescription(material, true);
+            const pricingResult = await supabase_service_1.default.getProductPricingByDescription(material, true);
             if (!pricingResult.success) {
                 console.error(`No pricing found for ${material}`);
                 // Instead of skipping, add error information to the response
@@ -409,7 +400,7 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         let bankingDetails = null;
         if (branchData && branchData.trading_as) {
             console.log(`Fetching banking details for branch: ${branchData.trading_as}`);
-            const bankingResult = yield supabase_service_1.default.getBankingDetailsByBranch(branchData.trading_as);
+            const bankingResult = await supabase_service_1.default.getBankingDetailsByBranch(branchData.trading_as);
             if (bankingResult.success && bankingResult.data) {
                 console.log('Banking details found:', bankingResult.data.bank);
                 bankingDetails = bankingResult.data;
@@ -442,11 +433,11 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         else {
             console.log('No banking details found, using fallback information');
         }
-        const pdfResult = yield (0, optimizer_service_1.generateQuotePdf)(quoteData);
+        const pdfResult = await (0, optimizer_service_1.generateQuotePdf)(quoteData);
         const pdfId = pdfResult.id;
         // Upload PDF to storage and get URL
         // Note: uploadQuotePdf takes fileBuffer first, then fileName
-        const uploadResult = yield supabase_service_1.default.uploadQuotePdf(pdfResult.buffer, pdfId);
+        const uploadResult = await supabase_service_1.default.uploadQuotePdf(pdfResult.buffer, pdfId);
         pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
         // Return the processed data without returning the response object
         res.status(200).json({
@@ -468,10 +459,10 @@ const generateQuote = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             error: (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error'
         });
     }
-});
+};
 exports.generateQuote = generateQuote;
 // Send quote to WhatsApp (legacy - now handled in the frontend)
-const sendQuoteToWhatsApp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const sendQuoteToWhatsApp = async (req, res) => {
     try {
         const { quoteId, phoneNumber, customerName, message } = req.body;
         if (!quoteId || !phoneNumber) {
@@ -481,7 +472,7 @@ const sendQuoteToWhatsApp = (req, res) => __awaiter(void 0, void 0, void 0, func
             });
         }
         // Fetch quote data based on quoteId
-        const quoteData = yield supabase_service_1.default.fetchQuoteById(quoteId);
+        const quoteData = await supabase_service_1.default.fetchQuoteById(quoteId);
         if (!quoteData) {
             return res.status(404).json({
                 success: false,
@@ -512,5 +503,5 @@ const sendQuoteToWhatsApp = (req, res) => __awaiter(void 0, void 0, void 0, func
             error: (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error'
         });
     }
-});
+};
 exports.sendQuoteToWhatsApp = sendQuoteToWhatsApp;

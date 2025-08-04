@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -48,7 +39,7 @@ router.get('/data/:id', cutlist_controller_1.cutlistController.getCutlistData);
 // API endpoint to get all cutlists
 router.get('/', cutlist_controller_1.cutlistController.getAllCutlists);
 // Route to handle image upload and processing
-router.post('/process', upload.single('image'), ((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/process', upload.single('image'), (async (req, res) => {
     try {
         // Check if image was uploaded
         if (!req.file) {
@@ -56,9 +47,9 @@ router.post('/process', upload.single('image'), ((req, res) => __awaiter(void 0,
         }
         // Save the image
         const fileExtension = path_1.default.extname(req.file.originalname) || '.jpg';
-        const imagePath = yield (0, ocr_disabled_service_1.saveImageFile)(req.file.buffer, fileExtension);
+        const imagePath = await (0, ocr_disabled_service_1.saveImageFile)(req.file.buffer, fileExtension);
         // Process the image with OCR
-        const ocrResults = yield (0, ocr_disabled_service_1.processImageWithOCR)(imagePath);
+        const ocrResults = await (0, ocr_disabled_service_1.processImageWithOCR)(imagePath);
         // Create a new cutlist
         const cutlist = new cutlist_model_1.default({
             rawText: ocrResults.rawText,
@@ -68,7 +59,7 @@ router.post('/process', upload.single('image'), ((req, res) => __awaiter(void 0,
             projectName: req.body.projectName || 'Cutting List Project',
         });
         // Save the cutlist
-        yield cutlist.save();
+        await cutlist.save();
         // Return success
         res.json({
             success: true,
@@ -80,9 +71,9 @@ router.post('/process', upload.single('image'), ((req, res) => __awaiter(void 0,
         console.error('Error processing image:', error);
         res.status(500).json({ success: false, message: 'Error processing image' });
     }
-})));
+}));
 // Route to process the sample cutlist.jpg
-router.get('/process-sample', ((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/process-sample', (async (req, res) => {
     try {
         // Get the path to cutlist.jpg in the project root
         const sampleImagePath = path_1.default.join(process.cwd(), 'cutlist.jpg');
@@ -91,7 +82,7 @@ router.get('/process-sample', ((req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(404).json({ success: false, message: 'Sample cutlist.jpg not found' });
         }
         // Process the image with OCR
-        const ocrResults = yield (0, ocr_disabled_service_1.processImageWithOCR)(sampleImagePath);
+        const ocrResults = await (0, ocr_disabled_service_1.processImageWithOCR)(sampleImagePath);
         // Create a new cutlist
         const cutlist = new cutlist_model_1.default({
             rawText: ocrResults.rawText,
@@ -101,7 +92,7 @@ router.get('/process-sample', ((req, res) => __awaiter(void 0, void 0, void 0, f
             projectName: 'Sample Cutting List',
         });
         // Save the cutlist
-        yield cutlist.save();
+        await cutlist.save();
         // Redirect to the cutlist view
         res.redirect(`/api/cutlist/view/${cutlist._id}`);
     }
@@ -109,7 +100,7 @@ router.get('/process-sample', ((req, res) => __awaiter(void 0, void 0, void 0, f
         console.error('Error processing sample image:', error);
         res.status(500).json({ success: false, message: 'Error processing sample image' });
     }
-})));
+}));
 // Route to test the cutlist feature
 router.get('/test', (req, res) => {
     res.redirect('/cutlist-test.html');

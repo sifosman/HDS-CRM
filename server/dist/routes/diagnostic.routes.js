@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.diagnosticRoutes = void 0;
 const express_1 = require("express");
@@ -112,7 +103,7 @@ router.get('/info', (req, res) => {
  * @description Test the controller's cutlist creation with OCR text
  * @access Public
  */
-router.post('/test-controller', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/test-controller', async (req, res) => {
     var _a, _b, _c, _d;
     try {
         const { ocrText } = req.body;
@@ -176,7 +167,7 @@ router.post('/test-controller', (req, res) => __awaiter(void 0, void 0, void 0, 
         global.require = mockedRequire;
         try {
             // Execute the controller function with our mock request/response
-            yield cutlist_controller_1.cutlistController.createFromN8nData(mockRequest, mockResponse);
+            await cutlist_controller_1.cutlistController.createFromN8nData(mockRequest, mockResponse);
             // Check the result and restore the original require
             global.require = originalRequire;
             // Compare direct parser vs controller results
@@ -219,5 +210,5 @@ router.post('/test-controller', (req, res) => __awaiter(void 0, void 0, void 0, 
             error: error instanceof Error ? error.message : String(error)
         });
     }
-}));
+});
 exports.diagnosticRoutes = router;

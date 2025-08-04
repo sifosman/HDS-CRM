@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30,6 +21,7 @@ const debug_routes_1 = __importDefault(require("./routes/debug.routes"));
 const supabase_routes_1 = __importDefault(require("./routes/supabase.routes"));
 const diagnostic_routes_1 = require("./routes/diagnostic.routes");
 const payfast_routes_1 = __importDefault(require("./routes/payfast.routes"));
+const invoice_routes_1 = __importDefault(require("./routes/invoice.routes"));
 // Load environment variables
 dotenv_1.default.config();
 // Create Express app
@@ -59,6 +51,7 @@ app.use('/api/iqretail', iqretail_routes_1.default);
 app.use('/api/supabase', supabase_routes_1.default);
 app.use('/api/diagnostic', diagnostic_routes_1.diagnosticRoutes);
 app.use('/api/payfast', payfast_routes_1.default);
+app.use('/api/invoices', invoice_routes_1.default);
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {
     res.status(200).json({
@@ -68,10 +61,10 @@ app.get('/api/direct-test', (req, res) => {
     });
 });
 // Direct POST endpoint for n8n data - use our webhook direct controller
-app.post('/api/direct-n8n', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/api/direct-n8n', async (req, res) => {
     try {
         // Use our specialized webhook direct controller
-        yield webhook_direct_controller_1.webhookDirectController.processN8n(req, res);
+        await webhook_direct_controller_1.webhookDirectController.processN8n(req, res);
     }
     catch (error) {
         console.error('Error in direct-n8n endpoint:', error);
@@ -83,7 +76,7 @@ app.post('/api/direct-n8n', (req, res) => __awaiter(void 0, void 0, void 0, func
             });
         }
     }
-}));
+});
 // Root route
 app.get('/', (req, res) => {
     res.json({

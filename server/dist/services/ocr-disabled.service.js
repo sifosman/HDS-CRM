@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.convertOCRToCutlistData = exports.processImageWithOCR = exports.processOcrText = exports.saveImageFile = exports.extractDimensionsFromText = void 0;
 /**
@@ -706,10 +697,10 @@ exports.extractDimensionsFromText = extractDimensionsFromText;
 /**
  * Save an image file locally (stub implementation for compatibility)
  */
-const saveImageFile = (fileBuffer, filename) => __awaiter(void 0, void 0, void 0, function* () {
+const saveImageFile = async (fileBuffer, filename) => {
     console.log('saveImageFile called - this is a stub implementation since OCR is handled by n8n');
     return 'file-path-placeholder';
-});
+};
 exports.saveImageFile = saveImageFile;
 /**
  * Process OCR results from text (use this for data from n8n)
@@ -723,14 +714,14 @@ exports.processOcrText = processOcrText;
 /**
  * Process image with OCR (stub for compatibility)
  */
-const processImageWithOCR = (imagePath) => __awaiter(void 0, void 0, void 0, function* () {
+const processImageWithOCR = async (imagePath) => {
     console.log('processImageWithOCR called - this is a stub implementation since OCR is handled by n8n');
     return {
         dimensions: [],
         unit: 'mm',
         rawText: 'OCR processing is now handled by n8n'
     };
-});
+};
 exports.processImageWithOCR = processImageWithOCR;
 /**
  * Convert OCR results to cutlist data format (stub for compatibility)

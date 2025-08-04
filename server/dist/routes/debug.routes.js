@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -69,7 +60,7 @@ router.post('/test-recipient', ((req, res) => {
 }));
 // Debug endpoint to test Botsailor webhook with different recipient formats
 router.post('/test-botsailor', ((req, res) => {
-    (() => __awaiter(void 0, void 0, void 0, function* () {
+    (async () => {
         var _a, _b, _c;
         try {
             console.log('===== BOTSAILOR FORMAT TEST =====');
@@ -106,7 +97,7 @@ router.post('/test-botsailor', ((req, res) => {
                 try {
                     console.log(`Testing format: ${format.name}`);
                     console.log('Payload:', JSON.stringify(format.payload, null, 2));
-                    const response = yield axios_1.default.post(WEBHOOK_URL, format.payload, {
+                    const response = await axios_1.default.post(WEBHOOK_URL, format.payload, {
                         headers: { 'Content-Type': 'application/json' },
                         timeout: 10000
                     });
@@ -144,15 +135,15 @@ router.post('/test-botsailor', ((req, res) => {
                 error: error.message
             });
         }
-    }))();
+    })();
 }));
 // Debug endpoint to test Supabase connection and cutlist creation
 router.get('/test-supabase', ((req, res) => {
-    (() => __awaiter(void 0, void 0, void 0, function* () {
+    (async () => {
         try {
             console.log('===== SUPABASE CONNECTION TEST =====');
             // Step 1: Test basic connection to Supabase
-            const connectionResult = yield supabase_service_1.default.checkConnection();
+            const connectionResult = await supabase_service_1.default.checkConnection();
             if (!connectionResult) {
                 return res.status(500).json({
                     success: false,
@@ -162,7 +153,7 @@ router.get('/test-supabase', ((req, res) => {
             }
             console.log('Basic connection test successful');
             // Step 2: Test material options query (existing functionality)
-            const materialResult = yield supabase_service_1.default.getMaterialOptions();
+            const materialResult = await supabase_service_1.default.getMaterialOptions();
             // Step 3: Test cutlist table by creating a test cutlist
             const testId = `test-${new Date().getTime()}`;
             const testCutlistData = {
@@ -181,7 +172,7 @@ router.get('/test-supabase', ((req, res) => {
                 unit: 'mm'
             };
             console.log('Attempting to save test cutlist with ID:', testId);
-            const saveResult = yield supabase_service_1.default.saveCutlist(testCutlistData);
+            const saveResult = await supabase_service_1.default.saveCutlist(testCutlistData);
             // Return all test results
             return res.status(200).json({
                 success: true,
@@ -214,6 +205,6 @@ router.get('/test-supabase', ((req, res) => {
                 error: error.message || 'Unknown error'
             });
         }
-    }))();
+    })();
 }));
 exports.default = router;

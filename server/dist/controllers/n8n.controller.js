@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -23,17 +14,17 @@ const BOTSAILOR_WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workfl
 const DIRECT_GET_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
 const FLOW_URL = 'https://www.botsailor.com/flow-webhook/145613.157394.183999.1748553417';
 // Function to try multiple webhook methods
-const tryWebhookMethods = (phoneNumber_1, cutlistUrl_1, senderName_1, dimensionsCount_1, ocrText_1, ...args_1) => __awaiter(void 0, [phoneNumber_1, cutlistUrl_1, senderName_1, dimensionsCount_1, ocrText_1, ...args_1], void 0, function* (phoneNumber, cutlistUrl, senderName, dimensionsCount, ocrText, originalRequestBody = {}) {
+const tryWebhookMethods = async (phoneNumber, cutlistUrl, senderName, dimensionsCount, ocrText, originalRequestBody = {}) => {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     console.log('===== WEBHOOK METHODS DEBUGGING =====');
     console.log('phoneNumber received by tryWebhookMethods:', phoneNumber);
     const methods = [
         // Method 1: Standard JSON POST
-        () => __awaiter(void 0, void 0, void 0, function* () {
+        async () => {
             console.log('Trying method 1: Standard JSON POST...');
             console.log('Method 1 recipient value:', phoneNumber);
             // Preserve original values from the n8n workflow
-            const response = yield axios_1.default.post(BOTSAILOR_WEBHOOK_URL, {
+            const response = await axios_1.default.post(BOTSAILOR_WEBHOOK_URL, {
                 recipient: phoneNumber,
                 customer_name: senderName || originalRequestBody.customer_name || originalRequestBody.name || 'Customer',
                 cutlist_url: cutlistUrl,
@@ -44,12 +35,12 @@ const tryWebhookMethods = (phoneNumber_1, cutlistUrl_1, senderName_1, dimensions
                 timeout: 10000
             });
             return response;
-        }),
+        },
         // Method 2: Simple phone & message format
-        () => __awaiter(void 0, void 0, void 0, function* () {
+        async () => {
             console.log('Trying method 2: Simple phone & message format...');
             console.log('Method 2 phone_number value:', phoneNumber);
-            const response = yield axios_1.default.post(BOTSAILOR_WEBHOOK_URL, {
+            const response = await axios_1.default.post(BOTSAILOR_WEBHOOK_URL, {
                 phone_number: phoneNumber,
                 message: `Your cutting list has been processed! View and edit it here: ${cutlistUrl}\n\nFound ${dimensionsCount} dimensions in your image.`
             }, {
@@ -57,25 +48,25 @@ const tryWebhookMethods = (phoneNumber_1, cutlistUrl_1, senderName_1, dimensions
                 timeout: 10000
             });
             return response;
-        }),
+        },
         // Method 3: URL-encoded GET request
-        () => __awaiter(void 0, void 0, void 0, function* () {
+        async () => {
             console.log('Trying method 3: URL-encoded GET request...');
             console.log('Method 3 phone param value (will remove +):', phoneNumber);
             const params = new URLSearchParams({
                 phone: phoneNumber.replace('+', ''),
                 message: `Your cutting list has been processed! View and edit it here: ${cutlistUrl}. Found ${dimensionsCount} dimensions in your image.`
             });
-            const response = yield axios_1.default.get(`${DIRECT_GET_URL}?${params.toString()}`, {
+            const response = await axios_1.default.get(`${DIRECT_GET_URL}?${params.toString()}`, {
                 timeout: 10000
             });
             return response;
-        }),
+        },
         // Method 4: Flow webhook format
-        () => __awaiter(void 0, void 0, void 0, function* () {
+        async () => {
             console.log('Trying method 4: Flow webhook format...');
             console.log('Method 4 recipient value:', phoneNumber);
-            const response = yield axios_1.default.post(FLOW_URL, {
+            const response = await axios_1.default.post(FLOW_URL, {
                 recipient: phoneNumber,
                 text: `Your cutting list has been processed! View and edit it here: ${cutlistUrl}\n\nFound ${dimensionsCount} dimensions in your image.`,
                 ocr_data: ocrText
@@ -84,13 +75,13 @@ const tryWebhookMethods = (phoneNumber_1, cutlistUrl_1, senderName_1, dimensions
                 timeout: 10000
             });
             return response;
-        })
+        }
     ];
     // Try each method in sequence until one works
     console.log('Beginning webhook method attempts with phone number:', phoneNumber);
     for (let i = 0; i < methods.length; i++) {
         try {
-            const response = yield methods[i]();
+            const response = await methods[i]();
             console.log(`Method ${i + 1} succeeded with status ${response.status}`);
             console.log('Successful response data:', response.data);
             return { success: true, method: i + 1, response };
@@ -112,9 +103,9 @@ const tryWebhookMethods = (phoneNumber_1, cutlistUrl_1, senderName_1, dimensions
         }
     }
     return { success: false, message: 'All webhook methods failed' };
-});
+};
 // Process n8n data directly
-const processN8nData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const processN8nData = async (req, res) => {
     try {
         console.log('======= N8N DEBUGGING - START =======');
         console.log('TIMESTAMP:', new Date().toISOString());
@@ -257,7 +248,7 @@ const processN8nData = (req, res) => __awaiter(void 0, void 0, void 0, function*
         console.log('Starting webhook communication attempts...');
         console.log('======= N8N DEBUGGING - END =======');
         // Pass the original request body to preserve values
-        const webhookResult = yield tryWebhookMethods(phoneNumber, cutlistUrl, senderName || 'Customer', dimensionsCount, ocrText, req.body);
+        const webhookResult = await tryWebhookMethods(phoneNumber, cutlistUrl, senderName || 'Customer', dimensionsCount, ocrText, req.body);
         if (webhookResult === null || webhookResult === void 0 ? void 0 : webhookResult.success) {
             console.log(`Successfully sent WhatsApp message using method ${webhookResult === null || webhookResult === void 0 ? void 0 : webhookResult.method}`);
         }
@@ -284,7 +275,7 @@ const processN8nData = (req, res) => __awaiter(void 0, void 0, void 0, function*
             error: error.message
         });
     }
-});
+};
 exports.n8nController = {
     processN8nData
 };

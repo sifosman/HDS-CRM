@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30,9 +21,9 @@ const botsailorApi = axios_1.default.create({
 /**
  * Check the connection status with Botsailor
  */
-const checkConnectionStatus = () => __awaiter(void 0, void 0, void 0, function* () {
+const checkConnectionStatus = async () => {
     try {
-        const response = yield botsailorApi.get('/status');
+        const response = await botsailorApi.get('/status');
         return {
             connected: response.status === 200,
             message: 'Connection to Botsailor established'
@@ -45,12 +36,12 @@ const checkConnectionStatus = () => __awaiter(void 0, void 0, void 0, function* 
             message: 'Failed to connect to Botsailor API'
         };
     }
-});
+};
 exports.checkConnectionStatus = checkConnectionStatus;
 /**
  * Process incoming data from Botsailor
  */
-const processIncomingData = (data, type) => __awaiter(void 0, void 0, void 0, function* () {
+const processIncomingData = async (data, type) => {
     // Validate and process incoming data based on type
     switch (type) {
         case 'project':
@@ -64,17 +55,17 @@ const processIncomingData = (data, type) => __awaiter(void 0, void 0, void 0, fu
         default:
             throw new Error(`Unsupported data type: ${type}`);
     }
-});
+};
 exports.processIncomingData = processIncomingData;
 /**
  * Send data to Botsailor
  */
-const sendDataToBotsailor = (data, type) => __awaiter(void 0, void 0, void 0, function* () {
+const sendDataToBotsailor = async (data, type) => {
     try {
         // Transform data to Botsailor format if needed
         const transformedData = transformDataForBotsailor(data, type);
         // Send data to Botsailor API
-        const response = yield botsailorApi.post(`/${type}`, transformedData);
+        const response = await botsailorApi.post(`/${type}`, transformedData);
         return {
             success: true,
             id: response.data.id,
@@ -85,23 +76,23 @@ const sendDataToBotsailor = (data, type) => __awaiter(void 0, void 0, void 0, fu
         console.error('Error sending data to Botsailor:', error);
         throw error;
     }
-});
+};
 exports.sendDataToBotsailor = sendDataToBotsailor;
 /**
  * Sync project with Botsailor
  */
-const syncProjectWithBotsailor = (projectId_1, ...args_1) => __awaiter(void 0, [projectId_1, ...args_1], void 0, function* (projectId, direction = 'push') {
+const syncProjectWithBotsailor = async (projectId, direction = 'push') => {
     try {
         if (direction === 'push') {
             // Get project data from our database
             // This is a placeholder - implement actual project retrieval
             const projectData = { id: projectId, name: 'Sample Project' };
             // Send to Botsailor
-            return yield (0, exports.sendDataToBotsailor)(projectData, 'project');
+            return await (0, exports.sendDataToBotsailor)(projectData, 'project');
         }
         else {
             // Pull from Botsailor
-            const response = yield botsailorApi.get(`/project/${projectId}`);
+            const response = await botsailorApi.get(`/project/${projectId}`);
             // Process and save to our database
             // This is a placeholder - implement actual project saving
             return {
@@ -115,35 +106,35 @@ const syncProjectWithBotsailor = (projectId_1, ...args_1) => __awaiter(void 0, [
         console.error('Error syncing project with Botsailor:', error);
         throw error;
     }
-});
+};
 exports.syncProjectWithBotsailor = syncProjectWithBotsailor;
 /**
  * Get available materials from Botsailor
  */
-const getAvailableMaterials = () => __awaiter(void 0, void 0, void 0, function* () {
+const getAvailableMaterials = async () => {
     try {
-        const response = yield botsailorApi.get('/materials');
+        const response = await botsailorApi.get('/materials');
         return response.data.materials || [];
     }
     catch (error) {
         console.error('Error fetching materials from Botsailor:', error);
         throw error;
     }
-});
+};
 exports.getAvailableMaterials = getAvailableMaterials;
 /**
  * Get available stock pieces from Botsailor
  */
-const getAvailableStockPieces = (materialId) => __awaiter(void 0, void 0, void 0, function* () {
+const getAvailableStockPieces = async (materialId) => {
     try {
-        const response = yield botsailorApi.get(`/stock?materialId=${materialId}`);
+        const response = await botsailorApi.get(`/stock?materialId=${materialId}`);
         return response.data.stockPieces || [];
     }
     catch (error) {
         console.error('Error fetching stock pieces from Botsailor:', error);
         throw error;
     }
-});
+};
 exports.getAvailableStockPieces = getAvailableStockPieces;
 // Helper functions for data processing
 const processProjectData = (data) => {
@@ -222,7 +213,7 @@ const transformDataForBotsailor = (data, type) => {
  * @param imagePath Path to the uploaded image
  * @returns Extracted cutting list data
  */
-const processImageWithOCR = (imagePath) => __awaiter(void 0, void 0, void 0, function* () {
+const processImageWithOCR = async (imagePath) => {
     try {
         // In a real implementation, we would use Google Cloud Vision API here
         // For now, we'll use a mock implementation that returns sample data
@@ -247,7 +238,7 @@ const processImageWithOCR = (imagePath) => __awaiter(void 0, void 0, void 0, fun
         console.error('OCR processing error:', error);
         throw error;
     }
-});
+};
 exports.processImageWithOCR = processImageWithOCR;
 /**
  * Parse OCR text to extract cutting list data
@@ -703,7 +694,7 @@ const parseSimpleFormat = (text, result) => {
  * @param projectName The project name
  * @returns WhatsApp message sending result
  */
-const sendWhatsAppConfirmation = (phoneNumber, extractedData, customerName, projectName) => __awaiter(void 0, void 0, void 0, function* () {
+const sendWhatsAppConfirmation = async (phoneNumber, extractedData, customerName, projectName) => {
     var _a;
     try {
         // Format the message content (for both regular and template messages)
@@ -752,7 +743,7 @@ const sendWhatsAppConfirmation = (phoneNumber, extractedData, customerName, proj
         // Try to send message - first attempt using template
         try {
             console.log('Attempting to send WhatsApp template message...');
-            const templateResponse = yield axios_1.default.post(`${BOTSAILOR_API_URL}/whatsapp/send-template`, {
+            const templateResponse = await axios_1.default.post(`${BOTSAILOR_API_URL}/whatsapp/send-template`, {
                 apiToken: BOTSAILOR_API_KEY,
                 phone_number_id: phoneNumberId,
                 template: templateMessage,
@@ -781,7 +772,7 @@ const sendWhatsAppConfirmation = (phoneNumber, extractedData, customerName, proj
         }
         // Fallback: try to send as regular message
         console.log('Attempting to send regular WhatsApp message...');
-        const response = yield axios_1.default.post(`${BOTSAILOR_API_URL}/whatsapp/send`, {
+        const response = await axios_1.default.post(`${BOTSAILOR_API_URL}/whatsapp/send`, {
             apiToken: BOTSAILOR_API_KEY,
             phone_number_id: phoneNumberId,
             message: formattedMessage,
@@ -823,7 +814,7 @@ const sendWhatsAppConfirmation = (phoneNumber, extractedData, customerName, proj
         console.error('Error sending WhatsApp confirmation:', error);
         throw error;
     }
-});
+};
 exports.sendWhatsAppConfirmation = sendWhatsAppConfirmation;
 /**
  * Format a WhatsApp message with the extracted cutting list data

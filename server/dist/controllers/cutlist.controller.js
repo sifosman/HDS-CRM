@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -36,20 +27,20 @@ const prepareCutlistData = (cutlistData) => {
     };
 };
 // View cutlist by ID
-const viewCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const viewCutlistById = async (req, res) => {
     try {
         const cutlistId = req.params.id;
         if (!mongoose_1.default.Types.ObjectId.isValid(cutlistId)) {
             return res.status(400).send('Invalid cutting list ID');
         }
-        const cutlist = yield Cutlist.findById(cutlistId);
+        const cutlist = await Cutlist.findById(cutlistId);
         if (!cutlist) {
             return res.status(404).send('Cutting list not found');
         }
         // Prepare data for template
         const templateData = prepareCutlistData(cutlist);
         // Render the template
-        const htmlContent = yield (0, template_service_1.renderTemplate)('cutlist-template', templateData);
+        const htmlContent = await (0, template_service_1.renderTemplate)('cutlist-template', templateData);
         // Return HTML page
         res.setHeader('Content-Type', 'text/html');
         res.send(htmlContent);
@@ -58,9 +49,9 @@ const viewCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, function
         console.error('Error viewing cutting list:', error);
         res.status(500).send('Server error');
     }
-});
+};
 // Update cutting list by ID
-const updateCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateCutlistById = async (req, res) => {
     try {
         const cutlistId = req.params.id;
         const { cutlistData } = req.body;
@@ -68,7 +59,7 @@ const updateCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!mongoose_1.default.Types.ObjectId.isValid(cutlistId)) {
             return res.status(400).json({ success: false, message: 'Invalid cutting list ID' });
         }
-        const cutlist = yield Cutlist.findById(cutlistId);
+        const cutlist = await Cutlist.findById(cutlistId);
         if (!cutlist) {
             return res.status(404).json({ success: false, message: 'Cutting list not found' });
         }
@@ -84,7 +75,7 @@ const updateCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (cutlistData && cutlistData.materials) {
             cutlist.materials = cutlistData.materials;
         }
-        yield cutlist.save();
+        await cutlist.save();
         // For the response, map dimensions back to cutPieces for frontend consistency
         const responseData = Object.assign(Object.assign({}, cutlist.toObject()), { cutPieces: cutlist.dimensions || [] });
         res.json({
@@ -97,15 +88,15 @@ const updateCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, functi
         console.error('Error updating cutting list:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
-});
+};
 // Get cutlist data as JSON
-const getCutlistData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getCutlistData = async (req, res) => {
     var _a;
     try {
         const cutlistId = req.params.id;
         console.log(`Getting cutlist data for ID: ${cutlistId}`);
         // First try to fetch from Supabase (new storage system)
-        const supabaseResult = yield supabase_service_1.default.getCutlistById(cutlistId);
+        const supabaseResult = await supabase_service_1.default.getCutlistById(cutlistId);
         if (supabaseResult && supabaseResult.success) {
             console.log('Cutlist found in Supabase');
             return res.json({
@@ -117,7 +108,7 @@ const getCutlistData = (req, res) => __awaiter(void 0, void 0, void 0, function*
         console.log('Cutlist not found in Supabase, trying MongoDB');
         // If not found in Supabase, try to fetch from MongoDB (legacy storage)
         if (mongoose_1.default.Types.ObjectId.isValid(cutlistId)) {
-            const cutlist = yield Cutlist.findById(cutlistId);
+            const cutlist = await Cutlist.findById(cutlistId);
             if (!cutlist) {
                 return res.status(404).json({
                     success: false,
@@ -170,11 +161,11 @@ const getCutlistData = (req, res) => __awaiter(void 0, void 0, void 0, function*
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 // Get all cutlists
-const getAllCutlists = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllCutlists = async (req, res) => {
     try {
-        const cutlists = yield Cutlist.find().sort({ createdAt: -1 });
+        const cutlists = await Cutlist.find().sort({ createdAt: -1 });
         res.json({
             success: true,
             message: 'Cutlists retrieved successfully',
@@ -185,9 +176,9 @@ const getAllCutlists = (req, res) => __awaiter(void 0, void 0, void 0, function*
         console.error('Error retrieving all cutlists:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
-});
+};
 // Helper function to send cutlist link via WhatsApp
-const sendCutlistLinkViaWhatsApp = (cutlistId, phoneNumber, customerName) => __awaiter(void 0, void 0, void 0, function* () {
+const sendCutlistLinkViaWhatsApp = async (cutlistId, phoneNumber, customerName) => {
     var _a;
     try {
         // Skip if no phone number is provided
@@ -204,7 +195,7 @@ const sendCutlistLinkViaWhatsApp = (cutlistId, phoneNumber, customerName) => __a
         const baseUrl = process.env.BASE_URL || 'https://hds-sifosmans-projects.vercel.app';
         const cutlistUrl = `${baseUrl}/cutlist-edit/${cutlistId}`;
         // Get the cutlist from the database
-        const cutlist = yield Cutlist.findById(cutlistId);
+        const cutlist = await Cutlist.findById(cutlistId);
         if (!cutlist) {
             console.error('Cutlist not found when sending WhatsApp message');
             return { success: false, message: 'Cutlist not found' };
@@ -219,7 +210,7 @@ const sendCutlistLinkViaWhatsApp = (cutlistId, phoneNumber, customerName) => __a
         };
         console.log('Sending cutlist link to WhatsApp via Botsailor webhook:', webhookData);
         // Send the data to the Botsailor webhook
-        const response = yield axios_1.default.post(BOTSAILOR_WEBHOOK_URL, webhookData, {
+        const response = await axios_1.default.post(BOTSAILOR_WEBHOOK_URL, webhookData, {
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -235,9 +226,9 @@ const sendCutlistLinkViaWhatsApp = (cutlistId, phoneNumber, customerName) => __a
             message: `Error sending WhatsApp message: ${error instanceof Error ? error.message : String(error)}`
         };
     }
-});
+};
 // Create cutlist from n8n data
-const createFromN8nData = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const createFromN8nData = async (req, res) => {
     try {
         console.log('Received data for cutlist creation:', JSON.stringify(req.body, null, 2));
         const { cutlistData, phoneNumber, senderName, ocrText } = req.body;
@@ -313,11 +304,11 @@ const createFromN8nData = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 console.log(`Dimension ${idx + 1}: ${dim.width}x${dim.length}, Qty=${dim.quantity}, Type=${typeof dim.quantity}`);
             });
             newCutlist = new Cutlist(cutlistData);
-            yield newCutlist.save();
+            await newCutlist.save();
             console.log('Created new cutlist with ID:', newCutlist._id);
             // Automatically send the cutlist link via WhatsApp
             if (phoneNumber) {
-                whatsAppResult = yield sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), phoneNumber, senderName || 'WhatsApp User');
+                whatsAppResult = await sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), phoneNumber, senderName || 'WhatsApp User');
             }
         }
         // If we have cutlist data directly, use it
@@ -325,11 +316,11 @@ const createFromN8nData = (req, res) => __awaiter(void 0, void 0, void 0, functi
             console.log('Creating cutlist from provided data');
             // Create a new cutlist with the provided data
             newCutlist = new Cutlist(Object.assign(Object.assign({}, cutlistData), { customerName: senderName || 'WhatsApp User', projectName: 'Cutting List from WhatsApp', phoneNumber: phoneNumber || '' }));
-            yield newCutlist.save();
+            await newCutlist.save();
             console.log('Created new cutlist with ID:', newCutlist._id);
             // Automatically send the cutlist link via WhatsApp
             if (phoneNumber) {
-                whatsAppResult = yield sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), phoneNumber, senderName || 'WhatsApp User');
+                whatsAppResult = await sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), phoneNumber, senderName || 'WhatsApp User');
             }
         }
         else {
@@ -359,11 +350,11 @@ const createFromN8nData = (req, res) => __awaiter(void 0, void 0, void 0, functi
             error: error instanceof Error ? error.message : String(error)
         });
     }
-});
+};
 // Reprocess an existing cutlist to fix quantities
-const reprocessCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const reprocessCutlistById = async (req, res) => {
     try {
-        const cutlist = yield Cutlist.findById(req.params.id);
+        const cutlist = await Cutlist.findById(req.params.id);
         if (!cutlist) {
             return res.status(404).json({ success: false, message: 'Cutlist not found' });
         }
@@ -373,7 +364,7 @@ const reprocessCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, fun
         // Update the dimensions with the reprocessed data
         cutlist.dimensions = ocrResults.dimensions;
         // Save the updated cutlist
-        yield cutlist.save();
+        await cutlist.save();
         res.json({
             success: true,
             message: 'Cutlist reprocessed successfully',
@@ -384,7 +375,7 @@ const reprocessCutlistById = (req, res) => __awaiter(void 0, void 0, void 0, fun
         console.error('Error reprocessing cutlist:', error);
         res.status(500).json({ success: false, message: 'Error reprocessing cutlist' });
     }
-});
+};
 // Export controller as an object with methods
 exports.cutlistController = {
     viewCutlistById,
