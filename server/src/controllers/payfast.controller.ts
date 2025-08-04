@@ -39,7 +39,7 @@ const getPayFastConfig = (): PayFastConfig => {
     merchantId: process.env.PAYFAST_MERCHANT_ID || '10000100',
     merchantKey: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a',
     passphrase: process.env.PAYFAST_PASSPHRASE || 'jt7NOE43FZPn',
-    sandbox: process.env.PAYFAST_SANDBOX === 'true',
+    sandbox: process.env.PAYFAST_SANDBOX === 'true' || true, // Default to sandbox mode
     baseUrl: process.env.BASE_URL || 'http://localhost:5000'
   };
   
@@ -527,6 +527,9 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                   // Get customer email from database
                   const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
                   
+                  // TEMPORARY: Also send to hardcoded test email
+                  const testEmail = 'sifosman@gmail.com';
+                  
                   if (customerEmail) {
                     // Get quote details for email
                     const quoteData = await SupabaseService.fetchQuoteById(quoteId);
@@ -558,9 +561,57 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                       });
                       
                       console.log('Payment confirmation email sent successfully to:', customerEmail);
+                      
+                      // TEMPORARY: Also send to hardcoded test email
+                      try {
+                        await emailService.sendPaymentConfirmationEmail({
+                          customerName,
+                          customerEmail: testEmail,
+                          quoteNumber,
+                          amount,
+                          invoicePath,
+                          optimizationDetails
+                        });
+                        console.log('Payment confirmation email sent successfully to test email:', testEmail);
+                      } catch (testEmailError) {
+                        console.error('Error sending payment confirmation email to test email:', testEmailError);
+                      }
                     }
                   } else {
                     console.warn('No email address found for quote:', quoteId);
+                    
+                    // TEMPORARY: Send to hardcoded test email even if no customer email
+                    try {
+                      const quoteData = await SupabaseService.fetchQuoteById(quoteId);
+                      if (quoteData.success && quoteData.data) {
+                        const customerName = quoteData.data.customer_name || 'Customer';
+                        const quoteNumber = quoteData.data.quote_number || quoteId;
+                        const amount = parseFloat(pfData.amount_gross || '0');
+                        
+                        // Generate invoice PDF path (assuming it's created during invoice creation)
+                        const invoicePath = path.join(__dirname, '../invoices', `invoice-${quoteNumber}.pdf`);
+                        
+                        // Prepare optimization details
+                        const optimizationDetails = {
+                          totalBoards: quoteData.data.total_boards,
+                          totalLength: quoteData.data.total_length,
+                          wastage: quoteData.data.wastage_percentage,
+                          cutlistUrl: quoteData.data.cutlist_url
+                        };
+                        
+                        await emailService.sendPaymentConfirmationEmail({
+                          customerName,
+                          customerEmail: testEmail,
+                          quoteNumber,
+                          amount,
+                          invoicePath,
+                          optimizationDetails
+                        });
+                        console.log('Payment confirmation email sent successfully to test email:', testEmail);
+                      }
+                    } catch (testEmailError) {
+                      console.error('Error sending payment confirmation email to test email:', testEmailError);
+                    }
                   }
                 } catch (emailError) {
                   console.error('Error sending payment confirmation email:', emailError);
