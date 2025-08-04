@@ -779,15 +779,14 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     console.log('All available payment data keys:', Object.keys(paymentData));
     console.log('All payment data values:', paymentData);
     
-    const { 
-      m_payment_id, 
-      pf_payment_id, 
-      payment_status, 
-      item_name, 
-      amount_gross,
-      amount_fee,
-      amount_net
-    } = paymentData;
+    // Safely extract payment data properties
+    const m_payment_id = paymentData.m_payment_id;
+    const pf_payment_id = paymentData.pf_payment_id;
+    const payment_status = paymentData.payment_status;
+    const item_name = paymentData.item_name;
+    const amount_gross = paymentData.amount_gross;
+    const amount_fee = paymentData.amount_fee;
+    const amount_net = paymentData.amount_net;
     
     console.log('Payment success details:', {
       m_payment_id,
@@ -1096,7 +1095,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Payment ID:</span>
-                    <span class="detail-value">${pf_payment_id || m_payment_id || 'Not Available'}</span>
+                    <span class="detail-value">${(pf_payment_id || m_payment_id) || 'Not Available'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Item:</span>
@@ -1104,7 +1103,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Amount Paid:</span>
-                    <span class="detail-value">R ${(parseFloat(amount_gross) || parseFloat(amount_net) || 0).toFixed(2)}</span>
+                    <span class="detail-value">R ${((amount_gross && parseFloat(amount_gross)) || (amount_net && parseFloat(amount_net)) || 0).toFixed(2)}</span>
                 </div>
             </div>
             
