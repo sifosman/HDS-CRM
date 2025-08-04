@@ -1232,8 +1232,4 @@ if (m_payment_id && typeof m_payment_id === 'string') {
 `;
     
     res.send(successPageHtml);
-  } catch (error) {
-    // Error handling for payment success
-    res.status(500).send('Error processing payment success');
-  }
 };
