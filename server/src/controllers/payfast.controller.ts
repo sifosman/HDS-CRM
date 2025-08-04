@@ -815,7 +815,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       }
     }
     
-    // Create success page HTML with professional styling
+    // Create simplified success page HTML with just success message and buttons
     const successPageHtml = `
     <!DOCTYPE html>
     <html lang="en">
@@ -846,7 +846,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
                 padding: 40px;
                 text-align: center;
-                max-width: 600px;
+                max-width: 500px;
                 width: 100%;
                 position: relative;
                 overflow: hidden;
@@ -901,73 +901,41 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 line-height: 1.5;
             }
             
-            .payment-details {
-                background: #f8f9fa;
-                border-radius: 15px;
-                padding: 25px;
-                margin: 30px 0;
-                border-left: 5px solid #28a745;
-            }
-            
-            .payment-details h3 {
-                color: #495057;
-                margin-bottom: 15px;
-                font-size: 1.3rem;
-            }
-            
-            .detail-row {
+            .action-buttons {
                 display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 0;
-                border-bottom: 1px solid #e9ecef;
+                flex-direction: column;
+                gap: 15px;
+                margin: 30px 0;
             }
             
-            .detail-row:last-child {
-                border-bottom: none;
-                font-weight: bold;
-                color: #28a745;
-                font-size: 1.1rem;
-            }
-            
-            .detail-label {
-                color: #6c757d;
-                font-weight: 500;
-            }
-            
-            .detail-value {
-                color: #495057;
-                font-weight: 600;
-            }
-            
-            .download-btn {
+            .btn {
                 background: linear-gradient(135deg, #28a745, #20c997);
                 color: white;
                 border: none;
-                padding: 15px 40px;
+                padding: 15px 30px;
                 border-radius: 50px;
                 font-size: 1.1rem;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 text-decoration: none;
-                display: inline-block;
-                margin: 20px 10px;
+                display: block;
+                text-align: center;
                 box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
             }
             
-            .download-btn:hover {
+            .btn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
             }
             
-            .secondary-btn {
-                background: linear-gradient(135deg, #6c757d, #495057);
-                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            .btn-whatsapp {
+                background: linear-gradient(135deg, #25D366, #128C7E);
+                box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
             }
             
-            .secondary-btn:hover {
-                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            .btn-whatsapp:hover {
+                box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
             }
             
             .footer-text {
@@ -986,16 +954,8 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                     font-size: 2rem;
                 }
                 
-                .download-btn {
-                    display: block;
-                    margin: 10px 0;
+                .btn {
                     width: 100%;
-                }
-                
-                .detail-row {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    gap: 5px;
                 }
             }
         </style>
@@ -1030,6 +990,11 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                     button.disabled = false;
                 }, 2000);
             }
+            
+            function shareOnWhatsApp() {
+                // Placeholder for WhatsApp sharing functionality
+                alert('Share on WhatsApp functionality will be implemented soon.');
+            }
         </script>
         <div class="success-container">
             <div class="success-icon"></div>
@@ -1039,63 +1004,9 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 Thank you for your payment. Your transaction has been processed successfully.
             </p>
             
-            <div class="payment-details">
-                <h3>Payment Details</h3>
-                <div class="detail-row">
-                    <span class="detail-label">Quote ID:</span>
-                    <span class="detail-value">${quoteId || 'Not Available'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Payment ID:</span>
-                    <span class="detail-value">${pf_payment_id || m_payment_id || 'Not Available'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Item:</span>
-                    <span class="detail-value">${item_name || 'HDS Quote Payment'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Amount Paid:</span>
-                    <span class="detail-value">R ${(parseFloat(amount_gross) || parseFloat(amount_net) || 0).toFixed(2)}</span>
-                </div>
-            </div>
-            
-            ${quoteDetails ? `
-            <div class="payment-details">
-                <h3>Order Details</h3>
-                <div class="detail-row">
-                    <span class="detail-label">Customer Name:</span>
-                    <span class="detail-value">${quoteDetails.customer_name || quoteDetails.customerName || quoteDetails.customer_name || quoteDetails.customerName || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Customer Email:</span>
-                    <span class="detail-value">${quoteDetails.customer_email || quoteDetails.customerEmail || quoteDetails.customer_email || quoteDetails.customerEmail || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Customer Phone:</span>
-                    <span class="detail-value">${quoteDetails.customer_phone || quoteDetails.customerPhone || quoteDetails.customer_phone || quoteDetails.customerPhone || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Branch:</span>
-                    <span class="detail-value">${quoteDetails.trading_as || quoteDetails.tradingAs || quoteDetails.branchName || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Project Name:</span>
-                    <span class="detail-value">${quoteDetails.project_name || quoteDetails.projectName || quoteDetails.project_name || quoteDetails.projectName || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Total Amount:</span>
-                    <span class="detail-value">R ${(quoteDetails.total_amount || quoteDetails.totalAmount || 0).toFixed(2)}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Created At:</span>
-                    <span class="detail-value">${new Date(quoteDetails.created_at || quoteDetails.createdAt || Date.now()).toLocaleDateString()}</span>
-                </div>
-            </div>
-            ` : ''}
-            
             <div class="action-buttons">
-                ${quoteId ? `<button onclick="downloadInvoice('${quoteId}')" class="download-btn">Download Invoice</button>` : ''}
-                <a href="/cutlist-edit" class="download-btn secondary-btn">Request New Quote</a>
+                ${quoteId ? `<button onclick="downloadInvoice('${quoteId}')" class="btn">Download Invoice</button>` : ''}
+                <button onclick="shareOnWhatsApp()" class="btn btn-whatsapp">Share on WhatsApp</button>
             </div>
             
             <p class="footer-text">
