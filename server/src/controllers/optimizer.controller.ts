@@ -459,9 +459,26 @@ export const generateQuote = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate a unique quote ID
+    // Generate a unique quote ID with branch name
     const now = new Date();
-    const quoteId = `Q-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    
+    // Include branch name in quote ID if available
+    let quoteId;
+    if (branchData && branchData.trading_as) {
+      // Create branch abbreviation from trading_as (first 3 letters of each word, max 6 chars)
+      const branchAbbr = branchData.trading_as
+        .split(' ')
+        .map((word: string) => word.substring(0, 3).toUpperCase())
+        .join('')
+        .substring(0, 6);
+      quoteId = `Q-${dateStr}-${randomNum}-${branchAbbr}`;
+      console.log(`Generated quote ID with branch: ${quoteId} (Branch: ${branchData.trading_as})`);
+    } else {
+      quoteId = `Q-${dateStr}-${randomNum}`;
+      console.log(`Generated quote ID without branch: ${quoteId}`);
+    }
 
     // Calculate cutting fee (same as in PDF quote - R70 per board)
     const cuttingFeePerBoard = 70; // R70 per board

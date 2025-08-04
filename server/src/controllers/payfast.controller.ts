@@ -167,7 +167,7 @@ const generateSignature = (data: Record<string, any>, passphrase: string): strin
 // Generate payment form for a quote
 export const generatePaymentForm = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { quoteId, amount, customerName, projectName, customerEmail, branchName } = req.query;
+    const { quoteId, amount, customerName, projectName, customerEmail } = req.query;
     
     if (!quoteId || !amount) {
       res.status(400).json({ 
@@ -178,18 +178,16 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
 
     const config = getPayFastConfig();
     
-    // Use branch name from parameter or empty string
-    const effectiveBranchName = branchName?.toString() || '';
-    console.log('Using branch name for payment form:', effectiveBranchName);
-    
-    const paymentId = effectiveBranchName ? `QUOTE-${quoteId}-${effectiveBranchName.replace(/\s+/g, '-')}-${Date.now()}` : `QUOTE-${quoteId}-${Date.now()}`;
+    // Generate payment ID with quote ID (branch name is now included in quote ID itself)
+    const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
+    console.log('Generated payment ID:', paymentId);
     
     // Prepare payment data - ensure all values are strings and properly formatted
     const paymentData: Record<string, string> = {
       merchant_id: config.merchantId,
       merchant_key: config.merchantKey,
       amount: parseFloat(amount.toString()).toFixed(2),
-      item_name: effectiveBranchName ? `HDS Quote ${quoteId} - ${effectiveBranchName}` : `HDS Quote ${quoteId}`
+      item_name: `HDS Quote ${quoteId}`
     };
     
     // Add URLs only if we have a base URL configured
@@ -754,6 +752,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     
     // Try to extract from m_payment_id 
     // Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
+    // New format: QUOTE-Q-20250804-1234-HDSPRO-1754311399090 (with branch abbr)
     if (m_payment_id && typeof m_payment_id === 'string') {
       const parts = m_payment_id.split('-');
       if (parts.length >= 3 && parts[0] === 'QUOTE') {
@@ -761,19 +760,24 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
           // Format: "QUOTE-Q-20250804-4824-1754311399090" (without branch)
           // Extract "Q-20250804-4824" (parts 1, 2, 3)
           quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
-        } else if (parts.length > 5) {
-          // Format: "QUOTE-Q-20250804-4824-HDS-Products-1754311399090" (with branch)
-          // Extract "Q-20250804-4824" (parts 1, 2, 3)
-          // The timestamp is the last part, everything else in between is branch name
-          quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
+        } else if (parts.length === 6) {
+          // Format: "QUOTE-Q-20250804-4824-HDSPRO-1754311399090" (with branch abbr)
+          // Extract "Q-20250804-4824-HDSPRO" (parts 1, 2, 3, 4)
+          quoteId = `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}`;
+        } else if (parts.length > 6) {
+          // Format: "QUOTE-Q-20250804-4824-HDS-Products-1754311399090" (with multi-word branch)
+          // Extract quote ID by removing first part (QUOTE) and last part (timestamp)
+          const quoteParts = parts.slice(1, -1); // Remove 'QUOTE' and timestamp
+          quoteId = quoteParts.join('-');
         }
       }
     }
     
     // If not found, try to extract from item_name 
-    // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824 - BranchName"
+    // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824-HDSPRO - BranchName"
     if (!quoteId && item_name && typeof item_name === 'string') {
-      const match = item_name.match(/HDS Quote ([Q]-\d{8}-\d{4})/);
+      // Updated regex to handle both old format (Q-YYYYMMDD-XXXX) and new format (Q-YYYYMMDD-XXXX-BRANCH)
+      const match = item_name.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,6})?)/);
       if (match) {
         quoteId = match[1];
       }
