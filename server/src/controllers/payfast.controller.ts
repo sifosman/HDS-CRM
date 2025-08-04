@@ -1032,8 +1032,8 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
             </p>
             
             <div class="action-buttons">
-                ${quoteId ? `<button onclick="downloadInvoice('${quoteId}')" class="btn">Download Invoice</button>` : ''}
-                ${quoteId ? `<button onclick="shareOnWhatsApp('${quoteId}')" class="btn btn-whatsapp">Share on WhatsApp</button>` : ''}
+                ${quoteId ? '<button onclick="downloadInvoice(\'' + quoteId + '\')" class="btn">Download Invoice</button>' : ''}
+                ${quoteId ? '<button onclick="shareOnWhatsApp(\'' + quoteId + '\')" class="btn btn-whatsapp">Share on WhatsApp</button>' : ''}
             </div>
             
             <p class="footer-text">
