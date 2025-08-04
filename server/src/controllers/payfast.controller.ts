@@ -567,6 +567,12 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
               if (invoiceResult.success) {
                 console.log('Invoice created successfully:', invoiceResult.data?.invoiceNumber);
                 
+                // Update invoice status to paid
+                if (invoiceResult.data?.invoiceNumber) {
+                  await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
+                  console.log('Invoice status updated to paid');
+                }
+                
                 // Update quote status to approved
                 await SupabaseService.updateQuoteStatus(quoteDatabaseId, 'approved');
                 console.log('Quote status updated to approved');
@@ -977,23 +983,44 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 const link = document.createElement('a');
                 link.href = downloadUrl;
                 link.download = 'invoice-' + quoteId + '.pdf';
-                link.style.display = 'none';
-                
-                // Add to DOM and trigger download
                 document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
                 
-                // Clean up
-                setTimeout(() => {
-                    document.body.removeChild(link);
-                    button.textContent = originalText;
-                    button.disabled = false;
-                }, 2000);
+                // Reset button state
+                button.textContent = originalText;
+                button.disabled = false;
             }
             
-            function shareOnWhatsApp() {
-                // Placeholder for WhatsApp sharing functionality
-                alert('Share on WhatsApp functionality will be implemented soon.');
+            function shareOnWhatsApp(quoteId) {
+                const button = event.target;
+                const originalText = button.textContent;
+                
+                // Show loading state
+                button.textContent = 'Preparing...';
+                button.disabled = true;
+                
+                // Get the invoice PDF URL
+                const pdfUrl = window.location.origin + '/api/invoices/download/' + quoteId;
+                
+                // Create a thank you message from HDS stating that the invoice is ready
+                var thankYouMessage = 'Thank you for your payment! Your invoice (ID: ' + quoteId + ') is now ready.';
+                
+                // Always include the PDF link
+                thankYouMessage += ' You can view and download your invoice at: ' + pdfUrl + '\n\nWe appreciate your business and look forward to working with you.';
+                
+                // Encode the message for the WhatsApp URL
+                var encodedMessage = encodeURIComponent(thankYouMessage);
+                
+                // Create the WhatsApp URL with the encoded message
+                var whatsappUrl = 'https://wa.me/?text=' + encodedMessage;
+                
+                // Open the URL in a new window/tab
+                window.open(whatsappUrl, '_blank');
+                
+                // Reset button state
+                button.textContent = originalText;
+                button.disabled = false;
             }
         </script>
         <div class="success-container">
@@ -1006,7 +1033,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
             
             <div class="action-buttons">
                 ${quoteId ? `<button onclick="downloadInvoice('${quoteId}')" class="btn">Download Invoice</button>` : ''}
-                <button onclick="shareOnWhatsApp()" class="btn btn-whatsapp">Share on WhatsApp</button>
+                ${quoteId ? `<button onclick="shareOnWhatsApp('${quoteId}')" class="btn btn-whatsapp">Share on WhatsApp</button>` : ''}
             </div>
             
             <p class="footer-text">
