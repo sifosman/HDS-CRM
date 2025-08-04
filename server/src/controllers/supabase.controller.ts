@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import SupabaseService from '../services/supabase.service';
+import path from 'path';
 
 /**
  * Controller for handling Supabase database operations
@@ -208,6 +209,56 @@ const supabaseController = {
       // Mark invoice as paid if payment was successful
       const invoiceNumber = result.data.invoiceNumber;
       await SupabaseService.updateInvoiceStatus(invoiceNumber, 'paid');
+      
+      // NEW: Send email notification after successful payment
+      try {
+        // Import email service and get customer email
+        const EmailService = (await import('../services/email.service')).EmailService;
+        const emailService = new EmailService();
+        
+        // Get branch/customer email
+        const recipientEmail = await SupabaseService.getBestEmailForQuote(quoteNumber);
+        
+        if (recipientEmail) {
+          // Get quote details for email
+          const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteNumber);
+          
+          if (quoteResult.success && quoteResult.data) {
+            const quoteData = quoteResult.data;
+            const customerName = quoteData.customer_name || 'Customer';
+            const quoteNumberFromData = quoteData.quote_number || quoteNumber;
+            const amount = parseFloat(paymentDetails?.amount || '0');
+            
+            // Generate invoice PDF path
+            const invoicePath = path.join(__dirname, '../invoices', `invoice-${quoteNumberFromData}.pdf`);
+            
+            // Prepare optimization details
+            const optimizationDetails = {
+              totalBoards: quoteData.total_boards,
+              totalLength: quoteData.total_length,
+              wastage: quoteData.wastage_percentage,
+              cutlistUrl: quoteData.cutlist_url
+            };
+            
+            // Send email notification
+            await emailService.sendPaymentConfirmationEmail({
+              customerName,
+              customerEmail: recipientEmail,
+              quoteNumber: quoteNumberFromData,
+              amount,
+              invoicePath,
+              optimizationDetails
+            });
+            
+            console.log('Payment confirmation email sent successfully to:', recipientEmail);
+          }
+        } else {
+          console.warn('No email address found for quote:', quoteNumber);
+        }
+      } catch (emailError) {
+        console.error('Error sending payment confirmation email:', emailError);
+        // Don't fail the payment processing if email fails
+      }
       
       return res.status(200).json({
         success: true,

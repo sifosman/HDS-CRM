@@ -816,6 +816,35 @@ const SupabaseService = {
       console.error('Error in getBestEmailForQuote:', error);
       return null;
     }
+  },
+
+  /**
+   * Fetch quote by quote number
+   * @param quoteNumber The quote number of the quote to fetch
+   * @returns Promise with quote data
+   */
+  async fetchQuoteByNumber(quoteNumber: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('quote_number', quoteNumber)
+        .single();
+      
+      if (error) {
+        console.error(`Error fetching quote with number ${quoteNumber}:`, error);
+        return { success: false, error: error.message };
+      }
+      
+      if (!data) {
+        return { success: false, error: 'Quote not found' };
+      }
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error(`Error in fetchQuoteByNumber for ${quoteNumber}:`, error);
+      return { success: false, error: error.message };
+    }
   }
 };
 
