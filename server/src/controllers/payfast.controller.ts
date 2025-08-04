@@ -552,6 +552,30 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
               
               console.log('Quote number retrieved:', quoteNumber);
               
+              // Store payment session data for retrieval in success handler
+              try {
+                const SupabaseService = (await import('../services/supabase.service')).default;
+                const paymentSessionData = {
+                  m_payment_id: pfData.m_payment_id,
+                  pf_payment_id: pfData.pf_payment_id,
+                  payment_status: pfData.payment_status,
+                  item_name: pfData.item_name,
+                  amount_gross: pfData.amount_gross,
+                  amount_fee: pfData.amount_fee,
+                  amount_net: pfData.amount_net,
+                  quoteId: quoteNumber
+                };
+                
+                const storeResult = await SupabaseService.storePaymentSession(pfData.m_payment_id, paymentSessionData);
+                if (storeResult.success) {
+                  console.log('Payment session data stored successfully');
+                } else {
+                  console.error('Failed to store payment session data:', storeResult.error);
+                }
+              } catch (sessionError) {
+                console.error('Error storing payment session data:', sessionError);
+              }
+              
               // Prepare payment details for invoice creation
               const paymentDetails = {
                 method: 'PayFast',
@@ -723,9 +747,34 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     console.log('Request body:', req.body);
     console.log('Request method:', req.method);
     
-    // Extract payment information from both query parameters and request body
+    // First, try to get payment data from session storage (stored by notify handler)
+    let paymentData: Record<string, any> = {};
+    
+    // Extract m_payment_id from query or body to use as session key
+    const session_payment_id = req.query.m_payment_id || req.body.m_payment_id;
+    
+    if (session_payment_id) {
+      try {
+        const SupabaseService = (await import('../services/supabase.service')).default;
+        const sessionResult = await SupabaseService.getPaymentSession(session_payment_id as string);
+        
+        if (sessionResult.success) {
+          paymentData = sessionResult.data;
+          console.log('Retrieved payment data from session storage:', paymentData);
+        } else {
+          console.warn('Failed to retrieve payment session data:', sessionResult.error);
+        }
+      } catch (sessionError) {
+        console.error('Error retrieving payment session data:', sessionError);
+      }
+    }
+    
+    // Fallback to extracting payment information from query parameters and request body
     // PayFast can send data via GET (query) or POST (body)
-    const paymentData = { ...req.query, ...req.body };
+    if (Object.keys(paymentData).length === 0) {
+      paymentData = { ...req.query, ...req.body };
+      console.log('Using fallback payment data extraction');
+    }
     
     console.log('All available payment data keys:', Object.keys(paymentData));
     console.log('All payment data values:', paymentData);

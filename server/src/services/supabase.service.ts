@@ -405,6 +405,65 @@ const SupabaseService = {
   },
 
   /**
+   * Store payment session data
+   */
+  async storePaymentSession(paymentId: string, paymentData: any): Promise<any> {
+    try {
+      // Create a payment session record with a 1-hour expiry
+      const sessionData = {
+        payment_id: paymentId,
+        payment_data: paymentData,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour expiry
+      };
+
+      const { data, error } = await supabase
+        .from('payment_sessions')
+        .upsert([sessionData], { onConflict: 'payment_id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error storing payment session:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error in storePaymentSession:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Retrieve payment session data
+   */
+  async getPaymentSession(paymentId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('payment_sessions')
+        .select('payment_data')
+        .eq('payment_id', paymentId)
+        .gt('expires_at', new Date().toISOString()) // Only get non-expired sessions
+        .single();
+
+      if (error) {
+        console.error('Error retrieving payment session:', error);
+        return { success: false, error: error.message };
+      }
+
+      if (!data) {
+        return { success: false, error: 'Payment session not found or expired' };
+      }
+
+      return { success: true, data: data.payment_data };
+    } catch (error: any) {
+      console.error('Error in getPaymentSession:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Update invoice status
    */
   async updateInvoiceStatus(invoiceNumber: string, status: 'pending' | 'paid' | 'overdue' | 'cancelled'): Promise<any> {
