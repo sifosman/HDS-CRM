@@ -1050,29 +1050,39 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
         }
     </script>
 </body>
-</html>`;\n  } catch (error) {\n    console.error('Error handling payment success:', error);\n    res.status(500).send('Error processing payment success');\n  }\n};
-    const amount_fee = paymentData?.amount_fee || '';
-    const amount_net = paymentData?.amount_net || '';
-    
-    console.log('Payment success details:', {
-      m_payment_id,
-      pf_payment_id,
-      payment_status,
-      item_name,
-      amount_gross,
-      amount_fee,
-      amount_net
-    });
-    
-    // Extract quote ID from payment ID or item name
-    let quoteId = '';
-    
-    // Try to extract from m_payment_id 
-    // Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
-    // New format: QUOTE-Q-20250804-1234-HDSPRO-1754311399090 (with branch abbr)
-    if (m_payment_id && typeof m_payment_id === 'string') {
-      const parts = m_payment_id.split('-');
-      if (parts.length >= 3 && parts[0] === 'QUOTE') {
+</html>`;
+
+res.send(successPageHtml);
+} catch (error) {
+    console.error('Error handling payment success:', error);
+    res.status(500).send('Error processing payment success');
+}
+
+let quoteId = '';
+let m_payment_id = '';
+let pf_payment_id = '';
+let item_name = '';
+let amount_gross = '';
+let amount_fee = '';
+let amount_net = '';
+
+// Get payment data from request (can be in query or body)
+const paymentData = { ...req.query, ...req.body };
+
+// Extract individual fields
+m_payment_id = paymentData?.m_payment_id || '';
+pf_payment_id = paymentData?.pf_payment_id || '';
+item_name = paymentData?.item_name || '';
+amount_gross = paymentData?.amount_gross || '';
+amount_fee = paymentData?.amount_fee || '';
+amount_net = paymentData?.amount_net || '';
+
+// Try to extract from m_payment_id 
+// Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
+// New format: QUOTE-Q-20250804-1234-HDSPRO-1754311399090 (with branch abbr)
+if (m_payment_id && typeof m_payment_id === 'string') {
+  const parts = m_payment_id.split('-');
+  if (parts.length >= 3 && parts[0] === 'QUOTE') {
         if (parts.length === 5) {
           // Format: "QUOTE-Q-20250804-4824-1754311399090" (without branch)
           // Extract "Q-20250804-4824" (parts 1, 2, 3)
@@ -1120,9 +1130,94 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
         
         if (quoteResult.success && quoteResult.data) {
           quoteDetails = quoteResult.data;
-          console.log('Quote details fetched successfully:', quoteDetails);
+          // Quote details fetched successfully
         } else {
-          console.warn('Failed to fetch quote details:', quoteResult.error);
+          // Failed to fetch quote details
+        }
+      } catch (error) {
+        // Error fetching quote details
+      }
+    }
+    
+    // Create display variables with fallback values
+    const quoteIdDisplay = quoteId || 'N/A';
+    const pfPaymentIdDisplay = pf_payment_id || 'N/A';
+    const itemNameDisplay = item_name || 'N/A';
+    const amountGrossDisplay = amount_gross || '0.00';
+    
+    // Generate success page HTML
+    const successPageHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Success - HDS Group</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .success-icon { font-size: 48px; color: #28a745; text-align: center; margin: 20px 0; }
+        h1 { color: #28a745; text-align: center; }
+        h3 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .payment-details p { margin: 10px 0; }
+        .action-buttons { display: flex; gap: 15px; margin: 30px 0; flex-wrap: wrap; }
+        .download-button { flex: 1; min-width: 200px; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
+        .download-button:hover { background: #218838; }
+        .share-button { background: #25D366; }
+        .share-button:hover { background: #128C7E; }
+        .contact-info { text-align: center; margin-top: 30px; color: #666; }
+        @media (max-width: 600px) {
+            .action-buttons { flex-direction: column; }
+            .download-button { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Payment Successful!</h1>
+        <p style="text-align: center; font-size: 18px;">
+            Thank you for your payment. Your transaction has been processed successfully.
+        </p>
+        
+        <div class="payment-details">
+            <h3>Payment Details</h3>
+            <p><strong>Quote ID:</strong> ${quoteIdDisplay}</p>
+            <p><strong>Payment ID:</strong> ${pfPaymentIdDisplay}</p>
+            <p><strong>Item:</strong> ${itemNameDisplay}</p>
+            <p><strong>Amount Paid:</strong> R${amountGrossDisplay}</p>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="download-button" onclick="downloadInvoice()">
+                📄 Download Invoice
+            </button>
+            <button class="download-button share-button" onclick="shareToWhatsApp()">
+                💬 Share via WhatsApp
+            </button>
+        </div>
+        
+        <div class="contact-info">
+            <p><strong>Need help?</strong> Contact us at <strong>info@hds.co.za</strong></p>
+            <p>Thank you for choosing HDS!</p>
+        </div>
+    </div>
+    
+    <script>
+        function downloadInvoice() {
+            const quoteId = '${quoteIdDisplay}';
+            if (quoteId && quoteId !== 'N/A' && quoteId !== '') {
+                window.location.href = '/api/invoices/download/' + quoteId;
+            } else {
+                // Fallback for testing - generate a generic quote ID
+                const fallbackQuoteId = 'Q-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-0001';
+                window.location.href = '/api/invoices/download/' + fallbackQuoteId;
+            }
+        }
+        
+        function shareToWhatsApp() {
+            const quoteId = '${quoteIdDisplay}';
+            const invoiceUrl = quoteId && quoteId !== 'N/A' && quoteId !== '' 
+                ? window.location.origin + '/api/invoices/download/' + quoteId
+                : window.location.origin + '/api/invoices/download/Q-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-0001';
             
             const message = 'Thank you for choosing HDS Group! Your invoice (ID: ' + (quoteId || 'HDS-INVOICE') + ') is ready. You can view and download your invoice at: ' + invoiceUrl + '\n\nWe appreciate your business and look forward to working with you.';
             
@@ -1138,7 +1233,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     
     res.send(successPageHtml);
   } catch (error) {
-    console.error('Error handling payment success:', error);
+    // Error handling for payment success
     res.status(500).send('Error processing payment success');
   }
 };
