@@ -608,7 +608,7 @@ const SupabaseService = {
       const { data, error } = await supabase
         .from('quotes')
         .select('*')
-        .eq('quote_id', quoteId)
+        .eq('id', quoteId)
         .single();
       
       if (error) {

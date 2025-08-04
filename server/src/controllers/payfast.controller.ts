@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import https from 'https';
 import path from 'path';
+import { EmailService } from '../services/email.service';
 
 interface PayFastConfig {
   merchantId: string;
@@ -49,7 +50,7 @@ const getPayFastConfig = (): PayFastConfig => {
 };
 
 // Generate PayFast signature according to PayFast documentation
-const generateSignature = (data: Record<string, string>, passphrase: string): string => {
+const generateSignature = (data: Record<string, any>, passphrase: string): string => {
   console.log('🔐 Starting PayFast signature generation...');
   console.log('📋 Input data:', JSON.stringify(data, null, 2));
   console.log('🔑 Passphrase provided:', !!passphrase);
@@ -176,8 +177,6 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     }
 
     const config = getPayFastConfig();
-    const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
-    
     // NEW: Fetch quote details to get branch name
     let branchName = '';
     if (quoteId) {
@@ -196,6 +195,8 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
         console.error('Error fetching quote details for branch name:', error);
       }
     }
+    
+    const paymentId = branchName ? `QUOTE-${quoteId}-${branchName.replace(/\s+/g, '-')}-${Date.now()}` : `QUOTE-${quoteId}-${Date.now()}`;
     
     // Prepare payment data - ensure all values are strings and properly formatted
     const paymentData: Record<string, string> = {
@@ -543,19 +544,36 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
         if (pfData.payment_status === 'COMPLETE') {
           try {
             // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
-            let quoteId = '';
+            let quoteDatabaseId = '';
             if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
               const parts = pfData.m_payment_id.split('-');
               if (parts.length >= 2 && parts[0] === 'QUOTE') {
-                quoteId = parts[1];
+                quoteDatabaseId = parts[1];
               }
             }
             
-            if (quoteId) {
-              console.log('Creating invoice for successful payment, quote ID:', quoteId);
+            if (quoteDatabaseId) {
+              console.log('Creating invoice for successful payment, quote database ID:', quoteDatabaseId);
               
               // Import SupabaseService here to avoid circular dependencies
               const SupabaseService = (await import('../services/supabase.service')).default;
+              
+              // First, fetch the quote by database ID to get the quote number
+              const quoteResult = await SupabaseService.fetchQuoteById(quoteDatabaseId);
+              if (!quoteResult.success) {
+                console.error('Failed to fetch quote by database ID:', quoteResult.error);
+                res.status(400).send('Failed to fetch quote');
+                return;
+              }
+              
+              const quoteNumber = quoteResult.data.quote_number;
+              if (!quoteNumber) {
+                console.error('Quote number not found in quote data');
+                res.status(400).send('Quote number not found');
+                return;
+              }
+              
+              console.log('Quote number retrieved:', quoteNumber);
               
               // Prepare payment details for invoice creation
               const paymentDetails = {
@@ -566,39 +584,39 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                 status: 'paid'
               };
               
-              // Create invoice record
-              const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
+              // Create invoice record using the quote number
+              const invoiceResult = await SupabaseService.createInvoice(quoteNumber, paymentDetails);
               
               if (invoiceResult.success) {
                 console.log('Invoice created successfully:', invoiceResult.data?.invoiceNumber);
                 
                 // Update quote status to approved
-                await SupabaseService.updateQuoteStatus(quoteId, 'approved');
+                await SupabaseService.updateQuoteStatus(quoteDatabaseId, 'approved');
                 console.log('Quote status updated to approved');
                 
                 // NEW: Send email notification after successful payment
                 try {
-                  // Import email service and get customer email
-                  const EmailService = (await import('../services/email.service')).EmailService;
+                  // Get customer email from database
                   const emailService = new EmailService();
                   
                   // Get customer email from database
-                  const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
+                  const customerEmail = await SupabaseService.getBestEmailForQuote(quoteDatabaseId);
                   
                   // TEMPORARY: Also send to hardcoded test email
                   const testEmail = 'sifosman@gmail.com';
                   
                   if (customerEmail) {
                     // Get quote details for email
-                    const quoteData = await SupabaseService.fetchQuoteById(quoteId);
+                    const quoteData = await SupabaseService.fetchQuoteById(quoteDatabaseId);
                     
                     if (quoteData.success && quoteData.data) {
                       const customerName = quoteData.data.customer_name || 'Customer';
-                      const quoteNumber = quoteData.data.quote_number || quoteId;
+                      const quoteNumber = quoteData.data.quote_number || quoteDatabaseId;
                       const amount = parseFloat(pfData.amount_gross || '0');
                       
-                      // Generate invoice PDF path (assuming it's created during invoice creation)
-                      const invoicePath = path.join(__dirname, '../invoices', `invoice-${quoteNumber}.pdf`);
+                      // Note: In serverless environments like Vercel, we can't generate PDF files directly
+                      // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
+                      const invoicePath = '';
                       
                       // Prepare optimization details
                       const optimizationDetails = {
@@ -636,18 +654,19 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                       }
                     }
                   } else {
-                    console.warn('No email address found for quote:', quoteId);
+                    console.warn('No email address found for quote:', quoteDatabaseId);
                     
                     // TEMPORARY: Send to hardcoded test email even if no customer email
                     try {
-                      const quoteData = await SupabaseService.fetchQuoteById(quoteId);
+                      const quoteData = await SupabaseService.fetchQuoteById(quoteDatabaseId);
                       if (quoteData.success && quoteData.data) {
                         const customerName = quoteData.data.customer_name || 'Customer';
-                        const quoteNumber = quoteData.data.quote_number || quoteId;
+                        const quoteNumber = quoteData.data.quote_number || quoteDatabaseId;
                         const amount = parseFloat(pfData.amount_gross || '0');
                         
-                        // Generate invoice PDF path (assuming it's created during invoice creation)
-                        const invoicePath = path.join(__dirname, '../invoices', `invoice-${quoteNumber}.pdf`);
+                        // Note: In serverless environments like Vercel, we can't generate PDF files directly
+                        // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
+                        const invoicePath = '';
                         
                         // Prepare optimization details
                         const optimizationDetails = {
@@ -717,6 +736,8 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
   }
 };
 
+
+
 // Handle successful payment return from PayFast
 export const handlePaymentSuccess = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -733,6 +754,16 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       amount_fee,
       amount_net
     } = req.query;
+    
+    console.log('Payment success details:', {
+      m_payment_id,
+      pf_payment_id,
+      payment_status,
+      item_name,
+      amount_gross,
+      amount_fee,
+      amount_net
+    });
     
     // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
     let quoteId = '';
@@ -974,7 +1005,15 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Amount Paid:</span>
-                    <span class="detail-value">R ${amount_gross || '0.00'}</span>
+                    <span class="detail-value">R ${Number(amount_gross || 0).toFixed(2)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Transaction Fee:</span>
+                    <span class="detail-value">R ${Number(amount_fee || 0).toFixed(2)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Net Amount:</span>
+                    <span class="detail-value">R ${Number(amount_net || 0).toFixed(2)}</span>
                 </div>
             </div>
             
@@ -1013,7 +1052,7 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
             ` : ''}
             
             <div class="action-buttons">
-                ${quoteId ? `<a href="/api/invoices/download/${quoteId}" class="download-btn">Download Invoice</a>` : ''}
+                ${quoteId ? `<button onclick="downloadInvoice('${quoteId}')" class="download-btn">Download Invoice</button>` : ''}
                 <a href="/" class="download-btn secondary-btn">Return to Home</a>
             </div>
             
@@ -1180,6 +1219,33 @@ export const handlePaymentCancel = async (req: Request, res: Response): Promise<
                 <a href="/" class="action-btn secondary-btn">Return to Home</a>
             </div>
         </div>
+        
+        <script>
+            function downloadInvoice(quoteId) {
+                console.log('Downloading invoice for quote:', quoteId);
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.href = '/api/invoices/download/' + quoteId;
+                link.download = 'invoice-' + quoteId + '.pdf';
+                link.target = '_blank';
+                
+                // Show loading state
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Downloading...';
+                btn.disabled = true;
+                
+                // Start download
+                link.click();
+                
+                // Reset button after delay
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        </script>
     </body>
     </html>
     `;

@@ -54,22 +54,21 @@ export class EmailService {
 
   async sendPaymentConfirmationEmail(data: PaymentConfirmationData): Promise<void> {
     try {
-      // Verify file exists
-      if (!fs.existsSync(data.invoicePath)) {
-        throw new Error(`Invoice file not found: ${data.invoicePath}`);
-      }
-
-      const mailOptions = {
+      const mailOptions: any = {
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to: data.customerEmail,
         subject: `Payment Confirmed - Invoice ${data.quoteNumber}`,
-        html: this.generatePaymentConfirmationTemplate(data),
-        attachments: [{
+        html: this.generatePaymentConfirmationTemplate(data)
+      };
+
+      // Only add attachment if invoice path exists
+      if (data.invoicePath && fs.existsSync(data.invoicePath)) {
+        mailOptions.attachments = [{
           filename: `invoice-${data.quoteNumber}.pdf`,
           path: data.invoicePath,
           contentType: 'application/pdf'
-        }]
-      };
+        }];
+      }
 
       const result = await this.transporter.sendMail(mailOptions);
       console.log('Payment confirmation email sent:', result.messageId);
