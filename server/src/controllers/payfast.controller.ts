@@ -981,6 +981,36 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
         </style>
     </head>
     <body>
+        <script>
+            function downloadInvoice(quoteId) {
+                const button = event.target;
+                const originalText = button.textContent;
+                
+                // Show loading state
+                button.textContent = 'Downloading...';
+                button.disabled = true;
+                
+                // Create download URL
+                const downloadUrl = `/api/invoices/download/${quoteId}`;
+                
+                // Create temporary link
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = `invoice-${quoteId}.pdf`;
+                link.style.display = 'none';
+                
+                // Add to DOM and trigger download
+                document.body.appendChild(link);
+                link.click();
+                
+                // Clean up
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 2000);
+            }
+        </script>
         <div class="success-container">
             <div class="success-icon"></div>
             
@@ -1007,14 +1037,6 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                     <span class="detail-label">Amount Paid:</span>
                     <span class="detail-value">R ${Number(amount_gross || 0).toFixed(2)}</span>
                 </div>
-                <div class="detail-row">
-                    <span class="detail-label">Transaction Fee:</span>
-                    <span class="detail-value">R ${Number(amount_fee || 0).toFixed(2)}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Net Amount:</span>
-                    <span class="detail-value">R ${Number(amount_net || 0).toFixed(2)}</span>
-                </div>
             </div>
             
             ${quoteDetails ? `
@@ -1022,38 +1044,38 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 <h3>Order Details</h3>
                 <div class="detail-row">
                     <span class="detail-label">Customer Name:</span>
-                    <span class="detail-value">${quoteDetails.customer_name || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.customer_name || quoteDetails.customerName || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Customer Email:</span>
-                    <span class="detail-value">${quoteDetails.customer_email || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.customer_email || quoteDetails.customerEmail || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Customer Phone:</span>
-                    <span class="detail-value">${quoteDetails.customer_phone || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.customer_phone || quoteDetails.customerPhone || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Branch:</span>
-                    <span class="detail-value">${quoteDetails.trading_as || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.trading_as || quoteDetails.tradingAs || quoteDetails.branchName || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Project Name:</span>
-                    <span class="detail-value">${quoteDetails.project_name || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.project_name || quoteDetails.projectName || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Total Amount:</span>
-                    <span class="detail-value">R ${quoteDetails.total_amount?.toFixed(2) || 'N/A'}</span>
+                    <span class="detail-value">R ${quoteDetails.total_amount || quoteDetails.totalAmount ? (quoteDetails.total_amount || quoteDetails.totalAmount).toFixed(2) : 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Created At:</span>
-                    <span class="detail-value">${quoteDetails.created_at ? new Date(quoteDetails.created_at).toLocaleString() : 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.created_at || quoteDetails.createdAt ? new Date(quoteDetails.created_at || quoteDetails.createdAt).toLocaleString() : 'N/A'}</span>
                 </div>
             </div>
             ` : ''}
             
             <div class="action-buttons">
                 ${quoteId ? `<button onclick="downloadInvoice('${quoteId}')" class="download-btn">Download Invoice</button>` : ''}
-                <a href="/" class="download-btn secondary-btn">Return to Home</a>
+                <a href="/cutlist-edit" class="download-btn secondary-btn">Request New Quote</a>
             </div>
             
             <p class="footer-text">
