@@ -41,7 +41,7 @@ export class EmailService {
       fromName: process.env.FROM_NAME || 'HDS Group'
     };
 
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: this.config.host,
       port: this.config.port,
       secure: this.config.secure,
