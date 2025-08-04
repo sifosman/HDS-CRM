@@ -1044,15 +1044,15 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 <h3>Order Details</h3>
                 <div class="detail-row">
                     <span class="detail-label">Customer Name:</span>
-                    <span class="detail-value">${quoteDetails.customer_name || quoteDetails.customerName || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.customer_name || quoteDetails.customerName || quoteDetails.customer_name || quoteDetails.customerName || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Customer Email:</span>
-                    <span class="detail-value">${quoteDetails.customer_email || quoteDetails.customerEmail || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.customer_email || quoteDetails.customerEmail || quoteDetails.customer_email || quoteDetails.customerEmail || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Customer Phone:</span>
-                    <span class="detail-value">${quoteDetails.customer_phone || quoteDetails.customerPhone || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.customer_phone || quoteDetails.customerPhone || quoteDetails.customer_phone || quoteDetails.customerPhone || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Branch:</span>
@@ -1060,15 +1060,15 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Project Name:</span>
-                    <span class="detail-value">${quoteDetails.project_name || quoteDetails.projectName || 'N/A'}</span>
+                    <span class="detail-value">${quoteDetails.project_name || quoteDetails.projectName || quoteDetails.project_name || quoteDetails.projectName || 'N/A'}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Total Amount:</span>
-                    <span class="detail-value">R ${quoteDetails.total_amount || quoteDetails.totalAmount ? (quoteDetails.total_amount || quoteDetails.totalAmount).toFixed(2) : 'N/A'}</span>
+                    <span class="detail-value">R ${(quoteDetails.total_amount || quoteDetails.totalAmount || 0).toFixed(2)}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Created At:</span>
-                    <span class="detail-value">${quoteDetails.created_at || quoteDetails.createdAt ? new Date(quoteDetails.created_at || quoteDetails.createdAt).toLocaleString() : 'N/A'}</span>
+                    <span class="detail-value">${new Date(quoteDetails.created_at || quoteDetails.createdAt || Date.now()).toLocaleDateString()}</span>
                 </div>
             </div>
             ` : ''}
