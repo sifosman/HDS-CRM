@@ -19,7 +19,7 @@ import supabaseRoutes from './routes/supabase.routes';
 import { diagnosticRoutes } from './routes/diagnostic.routes';
 import payfastRoutes from './routes/payfast.routes';
 import invoiceRoutes from './routes/invoice.routes';
-import invoicePdfRoutes from './routes/invoice-pdf.routes.js';
+import invoicePdfRoutes from './routes/invoice-pdf.routes';
 import emailTestRoutes from './routes/email-test.routes';
 import emailTestHardcodedRoutes from './routes/email-test-hardcoded.routes';
 import testRoutes from './routes/test.routes';
