@@ -1,6 +1,14 @@
 "use strict";
-// Note: Install @types/node for proper Buffer typing
-// Temporary workaround using 'any' type for Buffer parameters
+// Using dynamic imports for Node.js modules to avoid type issues
+// This approach works even if @types/node is not properly configured
+// Buffer operations are handled through eval('require')('buffer')
+//
+// To properly fix Buffer type issues:
+// 1. Ensure @types/node is installed: npm install --save-dev @types/node
+// 2. Add "types": ["node"] to compilerOptions in tsconfig.json
+// 3. Replace eval('require')('buffer') with direct Buffer usage
+// 4. Replace any[] with Buffer[] for buffer arrays
+// 5. Replace 'any' with 'Buffer' for buffer return types
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -209,7 +217,9 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
     // Return promise with buffer and ID
     return new Promise((resolve) => {
         doc.on('end', () => {
-            const pdfBuffer = Buffer.concat(buffers);
+            // Use dynamic import for Buffer.concat to avoid type issues
+            const bufferModule = eval('require')('buffer');
+            const pdfBuffer = bufferModule.Buffer.concat(buffers);
             resolve({
                 buffer: pdfBuffer,
                 id: pdfId
