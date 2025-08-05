@@ -4,9 +4,13 @@
 -- First, let's find an existing cutlist ID to use
 -- SELECT id FROM cutlists LIMIT 1;
 
+-- Check if there are any existing quotes that we can update
+-- SELECT id, cutlist_id FROM quotes LIMIT 5;
+
 -- For testing purposes, let's update an existing quote with complete data
 -- Replace 'existing-quote-id' with an actual quote ID from your database
 -- You can find an existing quote ID with: SELECT id FROM quotes LIMIT 1;
+-- Make sure to keep the existing cutlist_id value
 
 UPDATE quotes SET 
   quote_number = 'Q-20250805-0001-HDSPRO',
@@ -23,11 +27,14 @@ UPDATE quotes SET
   expiry_date = NOW() + INTERVAL '30 days'
 WHERE id = 'existing-quote-id'; -- Replace with actual quote ID
 
--- If you don't have any existing quotes, you can create one first
+-- If you don't have any existing quotes, you'll need to first create a cutlist
+-- and then create a quote with all required fields
+
 -- First create a test cutlist (if needed)
 -- INSERT INTO cutlists (id, name, data) VALUES ('test-cutlist-001', 'Test Cutlist', '{}');
 
--- Then create a complete quote
+-- Then create a complete quote with ALL required fields including cutlist_id
+-- Replace 'existing-cutlist-id' with an actual cutlist ID from your database
 -- INSERT INTO quotes (
 --   filename, 
 --   cutlist_id, 
@@ -45,7 +52,7 @@ WHERE id = 'existing-quote-id'; -- Replace with actual quote ID
 --   expiry_date
 -- ) VALUES (
 --   'test-quote.pdf',
---   'test-cutlist-001', -- Replace with actual cutlist ID
+--   'existing-cutlist-id', -- This is REQUIRED and must reference an existing cutlist
 --   'Q-20250805-0001-HDSPRO',
 --   'Test Customer',
 --   '+27123456789',
@@ -72,6 +79,7 @@ SELECT
   tax,
   total,
   status,
+  cutlist_id,
   created_at
 FROM quotes 
 WHERE quote_number = 'Q-20250805-0001-HDSPRO';
