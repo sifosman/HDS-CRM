@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import SupabaseService from '../services/supabase.service';
 
 export class InvoicePdfController {
-  private supabaseService: SupabaseService;
+  private supabaseService: any;
 
   constructor() {
-    this.supabaseService = new SupabaseService();
+    this.supabaseService = SupabaseService;
   }
 
   /**
