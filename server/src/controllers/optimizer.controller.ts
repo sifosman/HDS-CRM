@@ -8,9 +8,9 @@ import {
   generatePdf,
   generateQuotePdf,
   generateIQExport,
-  importFromIQ,
-  generateAndUploadOptimizationPdf
+  importFromIQ
 } from '../services/optimizer.service';
+import { generateAndUploadOptimizationPdf } from '../services/pdf-upload.service';
 import SupabaseService from '../services/supabase.service';
 
 // Optimize cutting layout
