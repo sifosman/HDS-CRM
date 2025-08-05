@@ -5,17 +5,25 @@ import { supabase } from './config';
  */
 export async function saveCutlist(cutlistData: any): Promise<any> {
   try {
+    // Map the cutlist data to match the Supabase table schema
+    const cutlistRecord = {
+      id: cutlistData.id || undefined,
+      customer_name: cutlistData.customerName || cutlistData.customer_name || null,
+      project_name: cutlistData.projectName || cutlistData.project_name || null,
+      phone_number: cutlistData.phoneNumber || cutlistData.phone_number || null,
+      unit: cutlistData.unit || 'mm',
+      ocr_text: cutlistData.ocrText || cutlistData.ocr_text || null,
+      cut_pieces: cutlistData.cutPieces || cutlistData.cut_pieces || cutlistData.pieces || [],
+      stock_pieces: cutlistData.stockPieces || cutlistData.stock_pieces || [],
+      materials: cutlistData.materials || [],
+      is_confirmed: cutlistData.isConfirmed || cutlistData.is_confirmed || false,
+      created_at: cutlistData.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     const { data, error } = await supabase
       .from('cutlists')
-      .insert([{
-        id: cutlistData.id,
-        filename: cutlistData.filename,
-        pieces: cutlistData.pieces,
-        total_pieces: cutlistData.total_pieces,
-        materials_used: cutlistData.materials_used,
-        created_at: cutlistData.created_at || new Date().toISOString(),
-        status: cutlistData.status || 'pending'
-      }])
+      .insert([cutlistRecord])
       .select()
       .single();
     
