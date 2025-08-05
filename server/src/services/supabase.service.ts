@@ -859,7 +859,7 @@ const SupabaseService = {
    */
   async fetchQuoteByNumber(quoteNumber: string): Promise<any> {
     try {
-      // First try to fetch by quote_number column
+      // Try to fetch by quote_number column
       const { data, error } = await supabase
         .from('quotes')
         .select('*')
@@ -867,29 +867,6 @@ const SupabaseService = {
         .single();
       
       if (error) {
-        // If the error is about the column not existing, try to fetch by ID instead
-        if (error.message.includes('quote_number') || error.message.includes('column')) {
-          console.log('quote_number column not found, trying to fetch by ID');
-          
-          // Try to fetch by ID as a fallback
-          const { data: idData, error: idError } = await supabase
-            .from('quotes')
-            .select('*')
-            .eq('id', quoteNumber)
-            .single();
-          
-          if (idError) {
-            console.error(`Error fetching quote with ID ${quoteNumber}:`, idError);
-            return { success: false, error: idError.message };
-          }
-          
-          if (!idData) {
-            return { success: false, error: 'Quote not found' };
-          }
-          
-          return { success: true, data: idData };
-        }
-        
         console.error(`Error fetching quote with number ${quoteNumber}:`, error);
         return { success: false, error: error.message };
       }

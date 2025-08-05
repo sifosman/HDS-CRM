@@ -20,7 +20,7 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       console.log('Generating invoice for quote:', quoteId);
 
       // Get quote data from Supabase
-      const quoteResult = await SupabaseService.fetchQuoteById(quoteId);
+      const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteId);
       
       if (!quoteResult.success || !quoteResult.data) {
         res.status(404).json({ 
