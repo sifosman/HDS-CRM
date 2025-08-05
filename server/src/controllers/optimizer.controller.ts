@@ -5,11 +5,11 @@ import crypto from 'crypto';
 import {
   prepareOptimizationData,
   optimizeCuttingLayout,
-  generateAndUploadOptimizationPdf,
   generateQuotePdf,
   generateIQExport,
   importFromIQ
 } from '../services/optimizer.service';
+import { generateAndUploadOptimizationPdf } from '../services/pdf-upload.service';
 import SupabaseService from '../services/supabase.service';
 
 // Optimize cutting layout
