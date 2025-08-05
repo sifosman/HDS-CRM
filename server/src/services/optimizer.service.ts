@@ -1266,7 +1266,7 @@ const safeFixed = (value: any, digits = 2): string => {
 };
 
 // Generate a PDF for quotations
-export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: string }> => {
+export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promise<{ buffer: any, id: string }> => {
   const {
     quoteId,
     customerName,
@@ -1300,12 +1300,14 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   });
   
   // Add compact HDS branding header
+  const headerColor = isPaid ? '#28a745' : '#003366'; // Green for paid, blue for quote
   doc.rect(50, 50, doc.page.width - 100, 40)
-     .fillAndStroke('#003366', '#000000');
+     .fillAndStroke(headerColor, '#000000');
      
+  const headerText = isPaid ? 'HDS Group Invoice' : 'HDS Group Quotation';
   doc.fontSize(18)
      .fillColor('#FFFFFF')
-     .text('HDS Group Quotation', 50, 62, { align: 'center', width: doc.page.width - 100 });
+     .text(headerText, 50, 62, { align: 'center', width: doc.page.width - 100 });
   
   // Set default text color to solid black for all content
   doc.fillColor('#000000');
@@ -1685,37 +1687,82 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   doc.moveDown(2);
 
   // ===== ONLINE PAYMENT SECTION =====
-  // Add online payment option with PayFast
-  doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-  doc.text('Online Payment Option', 50, doc.y);
-  doc.font('Helvetica').fontSize(10).fillColor('#333333');
-  doc.moveDown(0.5);
+  // Add payment status section
+  if (isPaid) {
+    // Show PAID status
+    doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
+    doc.text('Payment Status', 50, doc.y);
+    doc.font('Helvetica').fontSize(10).fillColor('#333333');
+    doc.moveDown(0.5);
 
-  // Create payment button box - larger and more prominent
-  const paymentBoxStartY = doc.y;
-  const paymentBoxHeight = 120; // Increased height for better visibility
-  
-  // Check if we need a new page for the payment section
-  if (doc.y + paymentBoxHeight > doc.page.height - 50) {
-    doc.addPage();
+    const paymentBoxHeight = 80;
+    
+    // Check if we need a new page for the payment section
+    if (doc.y + paymentBoxHeight > doc.page.height - 50) {
+      doc.addPage();
+      doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
+      doc.text('Payment Status', 50, doc.y);
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
+      doc.moveDown(0.5);
+    }
+
+    const currentPaymentBoxY = doc.y;
+    
+    // Draw PAID status box with green styling
+    doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
+       .fillAndStroke('#e8f5e8', '#28a745');
+    
+    // Add inner border for professional look
+    doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
+       .stroke('#4caf50');
+    
+    // PAID status header
+    doc.fontSize(18).fillColor('#28a745').font('Helvetica-Bold');
+    doc.text('✓ PAYMENT RECEIVED', 60, currentPaymentBoxY + 18, { 
+      width: doc.page.width - 120,
+      align: 'center'
+    });
+    
+    doc.fontSize(11).fillColor('#555555').font('Helvetica');
+    doc.text(`Payment Date: ${new Date().toLocaleDateString()}`, 60, currentPaymentBoxY + 45, { 
+      width: doc.page.width - 120,
+      align: 'center'
+    });
+    
+    // Move past the payment box
+    doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
+  } else {
+    // Show payment option for unpaid quotes
     doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
     doc.text('Online Payment Option', 50, doc.y);
     doc.font('Helvetica').fontSize(10).fillColor('#333333');
     doc.moveDown(0.5);
-  }
 
-  const currentPaymentBoxY = doc.y;
-  
-  // Draw main payment box with professional green styling
-  doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
-     .fillAndStroke('#f0f8f0', '#2d7a2d');
-  
-  // Add inner border for professional look
-  doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
-     .stroke('#4a934a');
-  
-  // Payment box header with professional styling
-  doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
+    // Create payment button box - larger and more prominent
+    const paymentBoxStartY = doc.y;
+    const paymentBoxHeight = 120; // Increased height for better visibility
+    
+    // Check if we need a new page for the payment section
+    if (doc.y + paymentBoxHeight > doc.page.height - 50) {
+      doc.addPage();
+      doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+      doc.text('Online Payment Option', 50, doc.y);
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
+      doc.moveDown(0.5);
+    }
+
+    const currentPaymentBoxY = doc.y;
+    
+    // Draw main payment box with professional green styling
+    doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
+       .fillAndStroke('#f0f8f0', '#2d7a2d');
+    
+    // Add inner border for professional look
+    doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
+       .stroke('#4a934a');
+    
+    // Payment box header with professional styling
+    doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
   doc.text('SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, { 
     width: doc.page.width - 120,
     align: 'center'
@@ -1782,6 +1829,7 @@ export const generateQuotePdf = (quoteData: any): Promise<{ buffer: any, id: str
   // Move past the payment box
   doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
   doc.moveDown(1);
+  }
 
   // Add a generic footer to the last page
   // First make sure we're near the bottom of the page

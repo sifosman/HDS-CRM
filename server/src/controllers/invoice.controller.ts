@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { generateInvoicePdf } from '../services/optimizer.service';
+import { generateQuotePdf } from '../services/optimizer.service';
 import SupabaseService from '../services/supabase.service';
 
 /**
@@ -32,8 +32,22 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
 
       const quoteData = quoteResult.data;
       
-      // Generate invoice PDF
-      const invoiceResult = await generateInvoicePdf(quoteData);
+      // Convert quote data to the format expected by generateQuotePdf
+      const pdfData = {
+        quoteId: quoteData.quote_number,
+        customerName: quoteData.customer_name,
+        projectName: quoteData.project_name,
+        date: quoteData.created_at,
+        sections: [], // We'll use the quote_data for items
+        grandTotal: quoteData.total,
+        branchData: null, // Optional
+        bankingDetails: null, // Optional
+        edgingLength: 0,
+        edgingCost: 0
+      };
+      
+      // Generate invoice PDF using quote PDF with isPaid=true
+      const invoiceResult = await generateQuotePdf(pdfData, true);
       
       if (!invoiceResult || !invoiceResult.buffer) {
         res.status(500).json({ 
