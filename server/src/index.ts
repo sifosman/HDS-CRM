@@ -21,6 +21,7 @@ import payfastRoutes from './routes/payfast.routes';
 import invoiceRoutes from './routes/invoice.routes';
 import emailTestRoutes from './routes/email-test.routes';
 import emailTestHardcodedRoutes from './routes/email-test-hardcoded.routes';
+import testRoutes from './routes/test.routes';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/payfast', payfastRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/email', emailTestRoutes);
 app.use('/api/email-hardcoded', emailTestHardcodedRoutes);
+app.use('/api/test', testRoutes);
 
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {
