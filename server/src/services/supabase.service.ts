@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+// NOTE: To properly fix Buffer type errors, install @types/node package
+// For now, we'll use 'any' type for Buffer parameters
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -726,7 +728,7 @@ const SupabaseService = {
    * @param fileName The name for the uploaded file
    * @returns Promise with the public URL or an error
    */
-  async uploadQuotePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+  async uploadQuotePdf(fileBuffer: any, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
     try {
       const { error: uploadError } = await supabase.storage
         .from('hdsquotes') // Assumes a bucket named 'quotes'
@@ -808,7 +810,7 @@ async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): P
  * @param fileName The name for the uploaded file
  * @returns Promise with the public URL or an error
  */
-async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
     try {
       const { error: uploadError } = await supabase.storage
         .from('invoices') // Use the new invoices bucket
@@ -992,6 +994,68 @@ async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success:
       return { success: true, data };
     } catch (error: any) {
       console.error(`Error in fetchQuoteByNumber for ${quoteNumber}:`, error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Upload a PDF buffer to the Supabase cutlists bucket
+   * @param fileBuffer The PDF file buffer
+   * @param fileName The name for the uploaded file
+   * @returns Promise with the public URL or an error
+   */
+  async uploadCutlistPdf(fileBuffer: any, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('cutlists') // Use the cutlists bucket
+        .upload(fileName, fileBuffer, {
+          contentType: 'application/pdf',
+          upsert: true, // Overwrite if file exists
+        });
+
+      if (uploadError) {
+        console.error('Error uploading cutlist PDF to Supabase Storage:', uploadError);
+        return { success: false, error: uploadError.message };
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('cutlists')
+        .getPublicUrl(fileName);
+
+      if (!urlData.publicUrl) {
+        return { success: false, error: 'Could not retrieve public URL for cutlist PDF.' };
+      }
+
+      return { success: true, publicUrl: urlData.publicUrl };
+    } catch (error: any) {
+      console.error('Error in uploadCutlistPdf:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Update the cutlist PDF URL for a quote
+   * @param quoteNumber The quote number to update
+   * @param pdfUrl The new cutlist PDF URL
+   * @returns Promise with updated quote data
+   */
+  async updateCutlistPdfUrl(quoteNumber: string, pdfUrl: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('quotes')
+        .update({ cutlist_pdf_url: pdfUrl, updated_at: new Date().toISOString() })
+        .eq('quote_number', quoteNumber)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error(`Error updating cutlist PDF URL for quote ${quoteNumber}:`, error);
+        return { success: false, error: error.message };
+      }
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error(`Error in updateCutlistPdfUrl for ${quoteNumber}:`, error);
       return { success: false, error: error.message };
     }
   }

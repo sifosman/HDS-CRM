@@ -8,7 +8,8 @@ import {
   generatePdf,
   generateQuotePdf,
   generateIQExport,
-  importFromIQ
+  importFromIQ,
+  generateAndUploadOptimizationPdf
 } from '../services/optimizer.service';
 import SupabaseService from '../services/supabase.service';
 
@@ -38,8 +39,8 @@ export const optimizeCutting = async (req: Request, res: Response) => {
     // Run optimization
     const solution = optimizeCuttingLayout(stockPieces, cutPieces, width || 3, layout || 0);
 
-    // Generate PDF
-    const pdfId = generatePdf(solution, unit || 0, width || 3, layout || 0);
+    // Generate PDF and upload to Supabase
+    const pdfResult = await generateAndUploadOptimizationPdf(solution, unit || 0, width || 3, layout || 0);
 
     // Generate IQ export data
     const iqData = generateIQExport(solution, unit || 0, width || 3, layout || 0);
@@ -47,7 +48,10 @@ export const optimizeCutting = async (req: Request, res: Response) => {
     // Return result
     res.status(200).json({
       message: 'Optimization completed successfully',
-      pdfId,
+      pdfId: pdfResult.pdfId,
+      pdfUrl: pdfResult.publicUrl,
+      pdfUploadSuccess: pdfResult.success,
+      pdfError: pdfResult.error,
       solution,
       iqData
     });
