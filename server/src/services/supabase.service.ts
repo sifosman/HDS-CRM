@@ -691,48 +691,7 @@ const SupabaseService = {
     }
   },
 
-  /**
-   * Fetch quote by quote number
-   * @param quoteNumber The quote number to fetch
-   * @returns Promise with quote data
-   */
-  async fetchQuoteByNumber(quoteNumber: string): Promise<any> {
-    try {
-      console.log(`Fetching quote with number ${quoteNumber} from Supabase`);
-      
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('*')
-        .eq('quote_number', quoteNumber)
-        .single();
-      
-      if (error) {
-        console.error(`Error fetching quote with number ${quoteNumber}:`, error);
-        return { success: false, error: error.message };
-      }
-      
-      if (!data) {
-        console.log(`Quote with number ${quoteNumber} not found in Supabase`);
-        return { success: false, error: 'Quote not found' };
-      }
 
-      // Parse the quote_data JSON if it exists
-      if (data.quote_data && typeof data.quote_data === 'string') {
-        try {
-          data.quote_data = JSON.parse(data.quote_data);
-        } catch (parseError) {
-          console.warn('Could not parse quote_data JSON:', parseError);
-        }
-      }
-
-      console.log(`Quote found in Supabase:`, data);
-      
-      return { success: true, data };
-    } catch (error: any) {
-      console.error(`Error in fetchQuoteByNumber for ${quoteNumber}:`, error);
-      return { success: false, error: error.message };
-    }
-  },
 
   /**
    * Update the PDF URL for a quote

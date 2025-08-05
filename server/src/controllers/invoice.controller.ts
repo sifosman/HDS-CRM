@@ -79,10 +79,10 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
 
         const invoiceResult = await generateQuotePdf(basicInvoiceData, true);
         
-        if (invoiceResult.success) {
+        if (invoiceResult && invoiceResult.buffer) {
           res.setHeader('Content-Type', 'application/pdf');
           res.setHeader('Content-Disposition', `attachment; filename="${invoiceFilename}"`);
-          res.send(invoiceResult.pdfBuffer);
+          res.send(invoiceResult.buffer);
           return;
         }
 
