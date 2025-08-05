@@ -20,9 +20,8 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
 
       console.log('Downloading invoice for quote:', quoteId);
 
-      // Construct the expected PDF filename format
-      const pdfFilename = `${quoteId}-quote.pdf`;
-      const invoiceFilename = `${quoteId}-invoice.pdf`;
+      // The PDFs are saved with just the quote ID as filename
+      const pdfFilename = `${quoteId}`;
 
       // Try to get the quote PDF from storage first
       try {
@@ -32,31 +31,17 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
         const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Check if invoice PDF already exists
-        const { data: invoiceData, error: invoiceError } = await supabase
-          .storage
-          .from('hds_quotes')
-          .download(invoiceFilename);
-
-        if (invoiceData && !invoiceError) {
-          console.log('Found existing invoice PDF:', invoiceFilename);
-          res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="${invoiceFilename}"`);
-          res.send(Buffer.from(await invoiceData.arrayBuffer()));
-          return;
-        }
-
-        // Check if quote PDF exists
-        const { data: quoteData, error: quoteError } = await supabase
+        // Check if PDF exists in storage
+        const { data: pdfData, error: pdfError } = await supabase
           .storage
           .from('hds_quotes')
           .download(pdfFilename);
 
-        if (quoteData && !quoteError) {
-          console.log('Found quote PDF, returning as invoice:', pdfFilename);
+        if (pdfData && !pdfError) {
+          console.log('Found PDF in storage:', pdfFilename);
           res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="${invoiceFilename}"`);
-          res.send(Buffer.from(await quoteData.arrayBuffer()));
+          res.setHeader('Content-Disposition', `attachment; filename="${quoteId}.pdf"`);
+          res.send(Buffer.from(await pdfData.arrayBuffer()));
           return;
         }
 
@@ -81,7 +66,7 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
         
         if (invoiceResult && invoiceResult.buffer) {
           res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="${invoiceFilename}"`);
+          res.setHeader('Content-Disposition', `attachment; filename="${quoteId}.pdf"`);
           res.send(invoiceResult.buffer);
           return;
         }

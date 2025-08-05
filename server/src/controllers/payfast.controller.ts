@@ -822,24 +822,8 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       m_payment_id
     });
     
-    // NEW: Fetch quote details from database for better success page
-    let quoteDetails: any = null;
-    if (quoteId) {
-      try {
-        // Import SupabaseService here to avoid circular dependencies
-        const SupabaseService = (await import('../services/supabase.service')).default;
-        const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteId);
-        
-        if (quoteResult.success && quoteResult.data) {
-          quoteDetails = quoteResult.data;
-          console.log('Quote details fetched successfully:', quoteDetails);
-        } else {
-          console.warn('Failed to fetch quote details:', quoteResult.error);
-        }
-      } catch (error) {
-        console.error('Error fetching quote details:', error);
-      }
-    }
+    // Skip database lookup - quote details will be handled by invoice controller
+    // The success page only needs the quote ID for download functionality
     
     // Create simplified success page HTML with just success message and buttons
     const successPageHtml = `
