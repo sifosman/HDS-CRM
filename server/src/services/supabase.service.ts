@@ -751,8 +751,8 @@ const SupabaseService = {
       return { success: true, publicUrl: urlData.publicUrl };
 
     } catch (error: any) {
- */
-async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+   */
+  async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
     try {
       const { error: uploadError } = await supabase.storage
         .from('invoices') // Use the new invoices bucket
@@ -1023,92 +1023,142 @@ async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success:
           data: {
             ...invoiceResult.data,
             pdfUrl: pdfResult.publicUrl
-          }
-        };
-      } catch (error: any) {
-        console.error('Error in createInvoiceWithPdf:', error);
-        return { success: false, error: error.message };
-      }
-    },
-
-    /**
-     * Generate invoice PDF from quote data and upload to invoices bucket
-     */
-    generateAndUploadInvoicePdf: async function(quoteNumber: string, invoiceNumber: string) {
-      try {
-        const { generateInvoicePdf } = require('./optimizer.service');
-        
-        const quoteResult = await this.fetchQuoteByNumber(quoteNumber);
-        
-        if (!quoteResult.success || !quoteResult.data) {
-          return { success: false, error: 'Quote not found' };
-        }
-
-        const quote = quoteResult.data;
-
-        const pdfResult = await generateInvoicePdf(quote);
-        
-        if (!pdfResult.success || !pdfResult.buffer) {
-          return { success: false, error: pdfResult.error || 'Failed to generate PDF' };
-        }
-
-        const timestamp = Date.now();
-        const fileName = `invoice-${invoiceNumber}-${timestamp}.pdf`;
-
-        const uploadResult = await this.uploadInvoicePdf(pdfResult.buffer, fileName);
-        
-        if (!uploadResult.success) {
-          return { success: false, error: uploadResult.error };
-        }
-
-        return { success: true, publicUrl: uploadResult.publicUrl };
-      } catch (error) {
-        console.error('Error in generateAndUploadInvoicePdf:', error);
-        return { success: false, error: error.message };
-      }
-    },
-
-    /**
-     * Create invoice with PDF generation and upload
-     */
-    createInvoiceWithPdf: async function(quoteNumber: string, paymentDetails: any) {
-      try {
-        const invoiceResult = await this.createInvoice(quoteNumber, paymentDetails);
-        
-        if (!invoiceResult.success) {
-          return { success: false, error: invoiceResult.error };
-        }
-
-        const invoiceNumber = invoiceResult.data.invoiceNumber;
-        
-        const pdfResult = await this.generateAndUploadInvoicePdf(quoteNumber, invoiceNumber);
-        
-        if (!pdfResult.success) {
-          return { success: false, error: pdfResult.error };
-        }
-
-        const { error: updateError } = await supabase
-          .from('invoices')
-          .update({ pdf_url: pdfResult.publicUrl })
-          .eq('invoice_number', invoiceNumber);
-
-        if (updateError) {
-          console.error('Error updating invoice PDF URL:', updateError);
-        }
-
-        return {
-          success: true,
-          data: {
-            ...invoiceResult.data,
-            pdfUrl: pdfResult.publicUrl
-          }
-        };
-      } catch (error) {
-        console.error('Error in createInvoiceWithPdf:', error);
-        return { success: false, error: error.message };
-      }
-    }
   }
-};
+},
 
-export default SupabaseService;
+/**
+ * Upload invoice PDF to Supabase storage
+ * @param fileBuffer The PDF file buffer
+ * @param fileName The name for the uploaded file
+ * @returns Promise with the public URL or an error
+ */
+async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+  try {
+    const { error: uploadError } = await supabase.storage
+      .from('invoices') // Use the new invoices bucket
+      .upload(fileName, fileBuffer, {
+        contentType: 'application/pdf',
+        upsert: true, // Overwrite if file exists
+      });
+
+    if (uploadError) {
+      console.error('Error uploading invoice PDF to Supabase Storage:', uploadError);
+      return { success: false, error: uploadError.message };
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('invoices')
+      .getPublicUrl(fileName);
+
+    if (!urlData.publicUrl) {
+      return { success: false, error: 'Could not retrieve public URL for invoice PDF.' };
+    }
+
+    return { success: true, publicUrl: urlData.publicUrl };
+  } catch (error: any) {
+    console.error('Error in uploadInvoicePdf:', error);
+    return { success: false, error: error.message };
+  }
+},
+
+/**
+ * Generate invoice PDF from quote data and upload to invoices bucket
+ * @param quoteNumber The quote number to generate invoice for
+ * @param invoiceNumber The invoice number for the PDF filename
+ * @returns Promise with the public URL of the generated PDF
+ */
+async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+  try {
+    // Import the PDF generation function
+    const { generateInvoicePdf } = require('./optimizer.service');
+    
+    // Fetch the quote data
+    const quoteResult = await this.fetchQuoteByNumber(quoteNumber);
+    
+    if (!quoteResult.success || !quoteResult.data) {
+      return { success: false, error: 'Quote not found' };
+    }
+
+    const quote = quoteResult.data;
+
+    // Generate the PDF
+    const pdfResult = await generateInvoicePdf(quote);
+    
+    if (!pdfResult.success || !pdfResult.buffer) {
+      return { success: false, error: pdfResult.error || 'Failed to generate PDF' };
+    }
+
+    // Create filename with timestamp
+    const timestamp = Date.now();
+    const fileName = `invoice-${invoiceNumber}-${timestamp}.pdf`;
+
+    // Upload the PDF
+    const uploadResult = await this.uploadInvoicePdf(pdfResult.buffer, fileName);
+    
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error };
+    }
+
+    return { success: true, publicUrl: uploadResult.publicUrl };
+  } catch (error: any) {
+    console.error('Error in generateAndUploadInvoicePdf:', error);
+    return { success: false, error: error.message };
+  }
+},
+
+/**
+ * Create invoice with PDF generation and upload
+ * @param quoteNumber The quote number to create invoice for
+ * @param paymentDetails Payment details object
+ * @returns Promise with invoice data and PDF URL
+ */
+async createInvoiceWithPdf(quoteNumber: string, paymentDetails: any): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    // First create the invoice record
+    const invoiceResult = await this.createInvoice(quoteNumber, paymentDetails);
+    
+    if (!invoiceResult.success) {
+      return { success: false, error: invoiceResult.error };
+    }
+
+    const invoiceNumber = invoiceResult.data.invoiceNumber;
+    
+    // Generate and upload the PDF
+    const pdfResult = await this.generateAndUploadInvoicePdf(quoteNumber, invoiceNumber);
+    
+    if (!pdfResult.success) {
+      return { success: false, error: pdfResult.error };
+    }
+
+    // Update the invoice with the PDF URL
+    const { error: updateError } = await supabase
+      .from('invoices')
+      .update({ pdf_url: pdfResult.publicUrl })
+      .eq('invoice_number', invoiceNumber);
+
+    if (updateError) {
+      console.error('Error updating invoice PDF URL:', updateError);
+    }
+
+    return {
+      success: true,
+      data: {
+        ...invoiceResult.data,
+        pdfUrl: pdfResult.publicUrl
+      }
+    };
+  } catch (error: any) {
+    console.error('Error in createInvoiceWithPdf:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export default {
+  getCustomerEmailFromQuote,
+  getBranchEmailByQuote,
+  getBestEmailForQuote,
+  fetchQuoteByNumber,
+  uploadInvoicePdf,
+  generateAndUploadInvoicePdf,
+  createInvoiceWithPdf
+};
