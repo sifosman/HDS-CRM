@@ -7,10 +7,30 @@ const express_1 = __importDefault(require("express"));
 const payfast_controller_1 = require("../controllers/payfast.controller");
 const payfast_debug_controller_1 = require("../controllers/payfast-debug.controller");
 const router = express_1.default.Router();
+// Middleware to capture raw body for PayFast notifications
+const rawBodyMiddleware = (req, res, next) => {
+    if (req.originalUrl.endsWith('/notify')) {
+        // Capture raw body for signature validation
+        let rawBody = '';
+        req.on('data', (chunk) => {
+            rawBody += chunk.toString();
+        });
+        req.on('end', () => {
+            req.rawBody = rawBody;
+            next();
+        });
+    }
+    else {
+        next();
+    }
+};
+// Apply raw body middleware
+router.use(rawBodyMiddleware);
 // Generate payment form for a quote
 router.get('/pay', (req, res) => (0, payfast_controller_1.generatePaymentForm)(req, res));
-// Handle payment success return
+// Handle payment success return (both GET and POST)
 router.get('/success', (req, res) => (0, payfast_controller_1.handlePaymentSuccess)(req, res));
+router.post('/success', (req, res) => (0, payfast_controller_1.handlePaymentSuccess)(req, res));
 // Handle payment cancellation return
 router.get('/cancel', (req, res) => (0, payfast_controller_1.handlePaymentCancel)(req, res));
 // Handle PayFast ITN (Instant Transaction Notification)

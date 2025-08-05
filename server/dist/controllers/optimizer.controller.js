@@ -7,6 +7,7 @@ exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exp
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const optimizer_service_1 = require("../services/optimizer.service");
+const pdf_upload_service_1 = require("../services/pdf-upload.service");
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 // Optimize cutting layout
 const optimizeCutting = async (req, res) => {
@@ -28,14 +29,17 @@ const optimizeCutting = async (req, res) => {
         const { stockPieces, cutPieces } = (0, optimizer_service_1.prepareOptimizationData)(pieces, unit || 0);
         // Run optimization
         const solution = (0, optimizer_service_1.optimizeCuttingLayout)(stockPieces, cutPieces, width || 3, layout || 0);
-        // Generate PDF
-        const pdfId = (0, optimizer_service_1.generatePdf)(solution, unit || 0, width || 3, layout || 0);
+        // Generate PDF and upload to Supabase
+        const pdfResult = await (0, pdf_upload_service_1.generateAndUploadOptimizationPdf)(solution, unit || 0, width || 3, layout || 0);
         // Generate IQ export data
         const iqData = (0, optimizer_service_1.generateIQExport)(solution, unit || 0, width || 3, layout || 0);
         // Return result
         res.status(200).json({
             message: 'Optimization completed successfully',
-            pdfId,
+            pdfId: pdfResult.pdfId,
+            pdfUrl: pdfResult.publicUrl,
+            pdfUploadSuccess: pdfResult.success,
+            pdfError: pdfResult.error,
             solution,
             iqData
         });
@@ -132,7 +136,7 @@ const importIQData = async (req, res) => {
 exports.importIQData = importIQData;
 // Generate a complete quote with optimization, pricing, and PDF
 const generateQuote = async (req, res) => {
-    var _a;
+    var _a, _b, _c, _d;
     try {
         const { sections, customerName, projectName, phoneNumber, branchData } = req.body;
         // Validate input
@@ -390,9 +394,39 @@ const generateQuote = async (req, res) => {
                     edging: p.edging || null
                 })) }));
         }
-        // Generate a unique quote ID
+        // Generate a unique quote ID with branch name
         const now = new Date();
-        const quoteId = `Q-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        // Include branch name in quote ID if available
+        let quoteId;
+        if (branchData && branchData.trading_as) {
+            // Create branch abbreviation from trading_as (more descriptive)
+            let branchAbbr = '';
+            const words = branchData.trading_as.split(' ').filter((word) => word.length > 0);
+            if (words.length === 1) {
+                // Single word: take first 8 characters
+                branchAbbr = words[0].substring(0, 8).toUpperCase();
+            }
+            else if (words.length === 2) {
+                // Two words: take first 4 chars of each
+                branchAbbr = words[0].substring(0, 4).toUpperCase() + words[1].substring(0, 4).toUpperCase();
+            }
+            else {
+                // Multiple words: take first 3 chars of first 3 words
+                branchAbbr = words.slice(0, 3)
+                    .map((word) => word.substring(0, 3).toUpperCase())
+                    .join('');
+            }
+            // Ensure max length of 10 characters for readability
+            branchAbbr = branchAbbr.substring(0, 10);
+            quoteId = `Q-${dateStr}-${randomNum}-${branchAbbr}`;
+            console.log(`Generated quote ID with branch: ${quoteId} (Branch: ${branchData.trading_as})`);
+        }
+        else {
+            quoteId = `Q-${dateStr}-${randomNum}`;
+            console.log(`Generated quote ID without branch: ${quoteId}`);
+        }
         // Calculate cutting fee (same as in PDF quote - R70 per board)
         const cuttingFeePerBoard = 70; // R70 per board
         const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
@@ -439,6 +473,122 @@ const generateQuote = async (req, res) => {
         // Note: uploadQuotePdf takes fileBuffer first, then fileName
         const uploadResult = await supabase_service_1.default.uploadQuotePdf(pdfResult.buffer, pdfId);
         pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
+        // Generate a unique cutlist ID for this quote based on the quote ID
+        const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+        // Create cutlist record in database before creating quote to satisfy foreign key constraint
+        try {
+            console.log('Creating cutlist record with ID:', dynamicCutlistId);
+            // Prepare cutlist data
+            const cutlistData = {
+                id: dynamicCutlistId,
+                customer_name: customerName,
+                project_name: projectName,
+                cut_pieces: JSON.stringify(processedSections.map(section => ({
+                    material: section.material,
+                    pieces: section.pieces,
+                    optimization: section.optimization
+                }))),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            // Create cutlist record
+            const cutlistResult = await supabase_service_1.default.saveCutlist(cutlistData);
+            if (!cutlistResult.success) {
+                console.error('Failed to create cutlist record:', cutlistResult.error);
+                // Continue with quote creation but log the error
+            }
+            else {
+                console.log('Cutlist record created successfully:', cutlistResult.data);
+            }
+        }
+        catch (cutlistError) {
+            console.error('Error creating cutlist record:', cutlistError);
+            // Continue with quote creation - the cutlist might already exist
+        }
+        // Save quote to database with all required fields for PayFast integration
+        let quoteSaveData;
+        try {
+            quoteSaveData = {
+                filename: pdfId, // Use the PDF ID as the filename
+                cutlistId: dynamicCutlistId, // Use the generated cutlist ID
+                quoteNumber: quoteId, // Store the generated quote ID
+                customerName: customerName,
+                customerPhone: phoneNumber,
+                customerEmail: req.body.customerEmail || req.body.email || '',
+                projectName: projectName,
+                quoteData: {
+                    items: (pdfSections && Array.isArray(pdfSections)) ? pdfSections.map(section => ({
+                        description: `${section.material || 'Material'} - ${(section.pieces && section.pieces.length) || 0} pieces`,
+                        quantity: (section.pieces && Array.isArray(section.pieces))
+                            ? section.pieces.reduce((sum, piece) => sum + (piece.quantity || 1), 0)
+                            : 1,
+                        unitPrice: (section.totalCost || 0) / Math.max(1, (section.pieces && Array.isArray(section.pieces))
+                            ? section.pieces.reduce((sum, piece) => sum + (piece.quantity || 1), 0)
+                            : 1),
+                        total: section.totalCost || 0
+                    })) : [{
+                            description: 'Quote Items',
+                            quantity: 1,
+                            unitPrice: grandTotal,
+                            total: grandTotal
+                        }],
+                    totals: {
+                        subtotal: grandTotal,
+                        tax: grandTotal * 0.15, // 15% VAT
+                        finalTotal: grandTotal * 1.15
+                    }
+                },
+                subtotal: grandTotal,
+                tax: grandTotal * 0.15,
+                total: grandTotal * 1.15,
+                status: 'pending',
+                cutlistUrl: pdfUrl,
+                branchData: branchData
+            };
+        }
+        catch (dataError) {
+            console.error('Error creating quote save data:', dataError);
+            // Fallback to minimal quote data
+            quoteSaveData = {
+                filename: pdfId,
+                cutlistId: dynamicCutlistId, // Use the generated cutlist ID
+                quoteNumber: quoteId,
+                customerName: customerName || 'Unknown Customer',
+                projectName: projectName || 'Unknown Project',
+                quoteData: {
+                    items: [{
+                            description: 'Quote Items',
+                            quantity: 1,
+                            unitPrice: grandTotal,
+                            total: grandTotal
+                        }],
+                    totals: {
+                        subtotal: grandTotal,
+                        tax: grandTotal * 0.15,
+                        finalTotal: grandTotal * 1.15
+                    }
+                },
+                subtotal: grandTotal,
+                tax: grandTotal * 0.15,
+                total: grandTotal * 1.15,
+                status: 'pending'
+            };
+        }
+        console.log('Saving quote with data:', {
+            quoteNumber: quoteSaveData.quoteNumber,
+            customerName: quoteSaveData.customerName,
+            total: quoteSaveData.total,
+            hasCutlistId: !!quoteSaveData.cutlistId,
+            hasQuoteData: !!quoteSaveData.quoteData,
+            itemsCount: ((_c = (_b = quoteSaveData.quoteData) === null || _b === void 0 ? void 0 : _b.items) === null || _c === void 0 ? void 0 : _c.length) || 0
+        });
+        const quoteResult = await supabase_service_1.default.createQuote(quoteSaveData);
+        if (!quoteResult.success) {
+            console.error('Failed to save quote to database:', quoteResult.error);
+        }
+        else {
+            console.log('Quote saved to database successfully with ID:', (_d = quoteResult.data) === null || _d === void 0 ? void 0 : _d.id);
+        }
         // Return the processed data without returning the response object
         res.status(200).json({
             success: true,

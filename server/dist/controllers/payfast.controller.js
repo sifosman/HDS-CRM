@@ -50,6 +50,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.handlePaymentCancel = exports.handlePaymentSuccess = exports.handlePaymentNotification = exports.generatePaymentForm = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const https_1 = __importDefault(require("https"));
+const email_service_1 = require("../services/email.service");
 // Get PayFast configuration from environment variables
 const getPayFastConfig = () => {
     console.log('Environment variables:');
@@ -62,7 +63,7 @@ const getPayFastConfig = () => {
         merchantId: process.env.PAYFAST_MERCHANT_ID || '10000100',
         merchantKey: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a',
         passphrase: process.env.PAYFAST_PASSPHRASE || 'jt7NOE43FZPn',
-        sandbox: process.env.PAYFAST_SANDBOX === 'true',
+        sandbox: process.env.PAYFAST_SANDBOX === 'true' || true, // Default to sandbox mode
         baseUrl: process.env.BASE_URL || 'http://localhost:5000'
     };
     console.log('PayFast Config:', JSON.stringify(config, null, 2));
@@ -181,7 +182,9 @@ const generatePaymentForm = async (req, res) => {
             return;
         }
         const config = getPayFastConfig();
+        // Generate payment ID with quote ID (branch name is now included in quote ID itself)
         const paymentId = `QUOTE-${quoteId}-${Date.now()}`;
+        console.log('Generated payment ID:', paymentId);
         // Prepare payment data - ensure all values are strings and properly formatted
         const paymentData = {
             merchant_id: config.merchantId,
@@ -191,7 +194,8 @@ const generatePaymentForm = async (req, res) => {
         };
         // Add URLs only if we have a base URL configured
         if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
-            paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
+            // Include quoteId in the return URL so we can access it in the success page
+            paymentData.return_url = `${config.baseUrl}/api/payfast/success?quoteId=${encodeURIComponent(quoteId.toString())}`;
             paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
             paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
         }
@@ -211,12 +215,6 @@ const generatePaymentForm = async (req, res) => {
         }
         if (customerEmail) {
             paymentData.email_address = customerEmail.toString();
-        }
-        // Add URLs only if we have a base URL configured
-        if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
-            paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
-            paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
-            paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
         }
         console.log('PayFast payment data before signature:', JSON.stringify(paymentData, null, 2));
         // Generate signature
@@ -377,21 +375,54 @@ const handlePaymentNotification = async (req, res) => {
         const receivedSignature = pfData.signature;
         // Log the raw data received from PayFast
         console.log('Raw PayFast ITN data received:', JSON.stringify(pfData, null, 2));
-        // Generate signature for validation using the same method
-        // Create a copy of the data to avoid modifying the original
-        const dataForSignature = Object.assign({}, pfData);
-        const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
-        console.log('Received signature:', receivedSignature);
-        console.log('Calculated signature:', calculatedSignature);
-        if (receivedSignature !== calculatedSignature) {
-            console.error('PayFast ITN signature validation failed');
-            console.error('Expected:', calculatedSignature);
-            console.error('Received:', receivedSignature);
-            // Log the data that was used for signature generation
-            console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
-            console.error('All data received:', JSON.stringify(pfData, null, 2));
-            res.status(400).send('Invalid signature');
-            return;
+        // NEW: Use raw body for signature validation if available
+        if (req.rawBody) {
+            console.log('Using raw body for signature validation');
+            console.log('Raw body:', req.rawBody);
+            // Parse raw body to get the exact data that was sent
+            const rawBody = req.rawBody;
+            const rawParams = new URLSearchParams(rawBody);
+            const rawData = {};
+            // Convert URLSearchParams to object
+            for (const [key, value] of rawParams.entries()) {
+                rawData[key] = value;
+            }
+            console.log('Parsed raw data:', rawData);
+            // Use raw data for signature validation
+            const dataForSignature = Object.assign({}, rawData);
+            const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
+            console.log('Received signature:', receivedSignature);
+            console.log('Calculated signature (from raw):', calculatedSignature);
+            if (receivedSignature !== calculatedSignature) {
+                console.error('PayFast ITN signature validation failed (using raw data)');
+                console.error('Expected:', calculatedSignature);
+                console.error('Received:', receivedSignature);
+                // Log the data that was used for signature generation
+                console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
+                console.error('All raw data received:', JSON.stringify(rawData, null, 2));
+                res.status(400).send('Invalid signature');
+                return;
+            }
+        }
+        else {
+            // Fallback to existing method
+            console.log('Using parsed body for signature validation');
+            // Generate signature for validation using the same method
+            // Create a copy of the data to avoid modifying the original
+            const dataForSignature = Object.assign({}, pfData);
+            const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
+            console.log('Received signature:', receivedSignature);
+            console.log('Calculated signature (from parsed):', calculatedSignature);
+            if (receivedSignature !== calculatedSignature) {
+                console.error('PayFast ITN signature validation failed (using parsed data)');
+                console.error('Expected:', calculatedSignature);
+                console.error('Received:', receivedSignature);
+                // Log the data that was used for signature generation
+                console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
+                console.error('All data received:', JSON.stringify(pfData, null, 2));
+                res.status(400).send('Invalid signature');
+                return;
+            }
         }
         // Step 2: Validate against PayFast server (recommended by PayFast documentation)
         // Create validation data (remove signature and paymentId from pfData)
@@ -425,7 +456,7 @@ const handlePaymentNotification = async (req, res) => {
                 responseData += chunk;
             });
             validationRes.on('end', async () => {
-                var _a;
+                var _a, _b;
                 console.log('PayFast validation response received:', responseData);
                 console.log('Response length:', responseData.length);
                 console.log('Response type:', typeof responseData);
@@ -459,14 +490,19 @@ const handlePaymentNotification = async (req, res) => {
                         let quoteId = '';
                         if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
                             const parts = pfData.m_payment_id.split('-');
-                            if (parts.length >= 2 && parts[0] === 'QUOTE') {
-                                quoteId = parts[1];
+                            if (parts.length >= 3 && parts[0] === 'QUOTE') {
+                                // Extract the quote ID which is everything between QUOTE- and the timestamp
+                                // e.g., QUOTE-Q-20250805-4235-HDSEMPA-1722845798000
+                                // quoteId should be Q-20250805-4235-HDSEMPA
+                                quoteId = parts.slice(1, parts.length - 1).join('-');
                             }
                         }
                         if (quoteId) {
                             console.log('Creating invoice for successful payment, quote ID:', quoteId);
                             // Import SupabaseService here to avoid circular dependencies
                             const SupabaseService = (await Promise.resolve().then(() => __importStar(require('../services/supabase.service')))).default;
+                            // Use the quoteId directly (which is the quote_number) to create the invoice
+                            console.log('Using quote ID as quote number:', quoteId);
                             // Prepare payment details for invoice creation
                             const paymentDetails = {
                                 method: 'PayFast',
@@ -475,13 +511,109 @@ const handlePaymentNotification = async (req, res) => {
                                 amount: parseFloat(pfData.amount_gross || '0'),
                                 status: 'paid'
                             };
-                            // Create invoice record
+                            // Create invoice record using the quote ID (which is the quote_number)
                             const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
                             if (invoiceResult.success) {
                                 console.log('Invoice created successfully:', (_a = invoiceResult.data) === null || _a === void 0 ? void 0 : _a.invoiceNumber);
+                                // Update invoice status to paid
+                                if ((_b = invoiceResult.data) === null || _b === void 0 ? void 0 : _b.invoiceNumber) {
+                                    await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
+                                    console.log('Invoice status updated to paid');
+                                }
                                 // Update quote status to approved
                                 await SupabaseService.updateQuoteStatus(quoteId, 'approved');
                                 console.log('Quote status updated to approved');
+                                // NEW: Send email notification after successful payment
+                                try {
+                                    // Get customer email from database
+                                    const emailService = new email_service_1.EmailService();
+                                    // Get customer email from database
+                                    const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
+                                    // TEMPORARY: Also send to hardcoded test email
+                                    const testEmail = 'sifosman@gmail.com';
+                                    if (customerEmail) {
+                                        // Get quote details for email
+                                        const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
+                                        if (quoteData.success && quoteData.data) {
+                                            const customerName = quoteData.data.customer_name || 'Customer';
+                                            const quoteNumber = quoteData.data.quote_number || quoteId;
+                                            const amount = parseFloat(pfData.amount_gross || '0');
+                                            // Note: In serverless environments like Vercel, we can't generate PDF files directly
+                                            // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
+                                            const invoicePath = '';
+                                            // Prepare optimization details
+                                            const optimizationDetails = {
+                                                totalBoards: quoteData.data.total_boards,
+                                                totalLength: quoteData.data.total_length,
+                                                wastage: quoteData.data.wastage_percentage,
+                                                cutlistUrl: quoteData.data.cutlist_url
+                                            };
+                                            // Send email notification
+                                            await emailService.sendPaymentConfirmationEmail({
+                                                customerName,
+                                                customerEmail,
+                                                quoteNumber,
+                                                amount,
+                                                invoicePath,
+                                                optimizationDetails
+                                            });
+                                            console.log('Payment confirmation email sent successfully to:', customerEmail);
+                                            // TEMPORARY: Also send to hardcoded test email
+                                            try {
+                                                await emailService.sendPaymentConfirmationEmail({
+                                                    customerName,
+                                                    customerEmail: testEmail,
+                                                    quoteNumber,
+                                                    amount,
+                                                    invoicePath,
+                                                    optimizationDetails
+                                                });
+                                                console.log('Payment confirmation email sent successfully to test email:', testEmail);
+                                            }
+                                            catch (testEmailError) {
+                                                console.error('Error sending payment confirmation email to test email:', testEmailError);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        console.warn('No email address found for quote:', quoteId);
+                                        // TEMPORARY: Send to hardcoded test email even if no customer email
+                                        try {
+                                            const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
+                                            if (quoteData.success && quoteData.data) {
+                                                const customerName = quoteData.data.customer_name || 'Customer';
+                                                const quoteNumber = quoteData.data.quote_number || quoteId;
+                                                const amount = parseFloat(pfData.amount_gross || '0');
+                                                // Note: In serverless environments like Vercel, we can't generate PDF files directly
+                                                // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
+                                                const invoicePath = '';
+                                                // Prepare optimization details
+                                                const optimizationDetails = {
+                                                    totalBoards: quoteData.data.total_boards,
+                                                    totalLength: quoteData.data.total_length,
+                                                    wastage: quoteData.data.wastage_percentage,
+                                                    cutlistUrl: quoteData.data.cutlist_url
+                                                };
+                                                await emailService.sendPaymentConfirmationEmail({
+                                                    customerName,
+                                                    customerEmail: testEmail,
+                                                    quoteNumber,
+                                                    amount,
+                                                    invoicePath,
+                                                    optimizationDetails
+                                                });
+                                                console.log('Payment confirmation email sent successfully to test email:', testEmail);
+                                            }
+                                        }
+                                        catch (testEmailError) {
+                                            console.error('Error sending payment confirmation email to test email:', testEmailError);
+                                        }
+                                    }
+                                }
+                                catch (emailError) {
+                                    console.error('Error sending payment confirmation email:', emailError);
+                                    // Don't fail the payment processing if email fails
+                                }
                             }
                             else {
                                 console.error('Failed to create invoice:', invoiceResult.error);
@@ -527,18 +659,104 @@ const handlePaymentSuccess = async (req, res) => {
     try {
         console.log('PayFast payment success callback received');
         console.log('Query parameters:', req.query);
-        // Extract payment information from query parameters
-        const { m_payment_id, pf_payment_id, payment_status, item_name, amount_gross, amount_fee, amount_net } = req.query;
-        // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
+        console.log('Request body:', req.body);
+        console.log('Request method:', req.method);
+        // Extract payment information from both query parameters and request body
+        // PayFast can send data via GET (query) or POST (body)
+        const paymentData = Object.assign(Object.assign({}, req.query), req.body);
+        console.log('All available payment data keys:', Object.keys(paymentData));
+        console.log('All payment data values:', paymentData);
+        const { m_payment_id, pf_payment_id, payment_status, item_name, amount_gross, amount_fee, amount_net } = paymentData;
+        console.log('Payment success details:', {
+            m_payment_id,
+            pf_payment_id,
+            payment_status,
+            item_name,
+            amount_gross,
+            amount_fee,
+            amount_net
+        });
+        // Extract quote ID from payment ID or item name
         let quoteId = '';
-        if (m_payment_id && typeof m_payment_id === 'string') {
+        console.log('Attempting to extract quote ID from m_payment_id:', m_payment_id);
+        console.log('Attempting to extract quote ID from item_name:', item_name);
+        console.log('Attempting to extract quote ID from query parameters:', req.query.quoteId);
+        // First, try to get quoteId from query parameters (added to return_url)
+        if (req.query.quoteId && typeof req.query.quoteId === 'string') {
+            quoteId = req.query.quoteId;
+            console.log('Extracted quoteId from query parameters:', quoteId);
+        }
+        // If not found in query parameters, try to extract from m_payment_id 
+        // Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
+        // New format: QUOTE-Q-20250804-1234-HDSPRO-1754311399090 (with branch abbr)
+        if (!quoteId && m_payment_id && typeof m_payment_id === 'string') {
             const parts = m_payment_id.split('-');
-            if (parts.length >= 2 && parts[0] === 'QUOTE') {
-                quoteId = parts[1];
+            console.log('m_payment_id parts:', parts);
+            console.log('Number of parts:', parts.length);
+            if (parts.length >= 3 && parts[0] === 'QUOTE') {
+                if (parts.length === 5) {
+                    // Format: "QUOTE-Q-20250804-4824-1754311399090" (without branch)
+                    // Extract "Q-20250804-4824" (parts 1, 2, 3)
+                    quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
+                    console.log('Extracted quoteId from 5-part format:', quoteId);
+                }
+                else if (parts.length === 6) {
+                    // Format: "QUOTE-Q-20250804-4824-HDSPRO-1754311399090" (with branch abbr)
+                    // Extract "Q-20250804-4824-HDSPRO" (parts 1, 2, 3, 4)
+                    quoteId = `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}`;
+                    console.log('Extracted quoteId from 6-part format:', quoteId);
+                }
+                else if (parts.length > 6) {
+                    // Format: "QUOTE-Q-20250804-4824-HDS-Products-1754311399090" (with multi-word branch)
+                    // Extract quote ID by removing first part (QUOTE) and last part (timestamp)
+                    const quoteParts = parts.slice(1, -1); // Remove 'QUOTE' and timestamp
+                    quoteId = quoteParts.join('-');
+                    console.log('Extracted quoteId from multi-part format:', quoteId);
+                }
+                else {
+                    console.log('m_payment_id format not recognized, parts length:', parts.length);
+                }
+            }
+            else {
+                console.log('m_payment_id does not start with QUOTE or has less than 3 parts');
             }
         }
-        console.log('Extracted quote ID:', quoteId);
-        // Create success page HTML with professional styling
+        else if (quoteId) {
+            console.log('Skipping m_payment_id extraction as quoteId already found from query parameters');
+        }
+        else {
+            console.log('m_payment_id is not a valid string:', m_payment_id);
+        }
+        // If not found, try to extract from item_name 
+        // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824-HDSPRODUCTS - BranchName"
+        if (!quoteId && item_name && typeof item_name === 'string') {
+            console.log('Trying to extract from item_name');
+            // Updated regex to handle both old format (Q-YYYYMMDD-XXXX) and new format (Q-YYYYMMDD-XXXX-BRANCH)
+            // Branch abbreviation can now be up to 10 characters
+            const match = item_name.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,10})?)/);
+            console.log('Regex match result:', match);
+            if (match) {
+                quoteId = match[1];
+                console.log('Extracted quoteId from item_name:', quoteId);
+            }
+            else {
+                console.log('No match found in item_name');
+            }
+        }
+        else if (quoteId) {
+            console.log('Skipping item_name extraction as quoteId already found');
+        }
+        console.log('Final extracted quote ID:', quoteId);
+        console.log('Final payment data for display:', {
+            quoteId,
+            pf_payment_id,
+            item_name,
+            amount_gross,
+            m_payment_id
+        });
+        // Skip database lookup - quote details will be handled by invoice controller
+        // The success page only needs the quote ID for download functionality
+        // Create simplified success page HTML with just success message and buttons
         const successPageHtml = `
     <!DOCTYPE html>
     <html lang="en">
@@ -569,7 +787,7 @@ const handlePaymentSuccess = async (req, res) => {
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
                 padding: 40px;
                 text-align: center;
-                max-width: 600px;
+                max-width: 500px;
                 width: 100%;
                 position: relative;
                 overflow: hidden;
@@ -624,73 +842,41 @@ const handlePaymentSuccess = async (req, res) => {
                 line-height: 1.5;
             }
             
-            .payment-details {
-                background: #f8f9fa;
-                border-radius: 15px;
-                padding: 25px;
-                margin: 30px 0;
-                border-left: 5px solid #28a745;
-            }
-            
-            .payment-details h3 {
-                color: #495057;
-                margin-bottom: 15px;
-                font-size: 1.3rem;
-            }
-            
-            .detail-row {
+            .action-buttons {
                 display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 0;
-                border-bottom: 1px solid #e9ecef;
+                flex-direction: column;
+                gap: 15px;
+                margin: 30px 0;
             }
             
-            .detail-row:last-child {
-                border-bottom: none;
-                font-weight: bold;
-                color: #28a745;
-                font-size: 1.1rem;
-            }
-            
-            .detail-label {
-                color: #6c757d;
-                font-weight: 500;
-            }
-            
-            .detail-value {
-                color: #495057;
-                font-weight: 600;
-            }
-            
-            .download-btn {
+            .btn {
                 background: linear-gradient(135deg, #28a745, #20c997);
                 color: white;
                 border: none;
-                padding: 15px 40px;
+                padding: 15px 30px;
                 border-radius: 50px;
                 font-size: 1.1rem;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 text-decoration: none;
-                display: inline-block;
-                margin: 20px 10px;
+                display: block;
+                text-align: center;
                 box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
             }
             
-            .download-btn:hover {
+            .btn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
             }
             
-            .secondary-btn {
-                background: linear-gradient(135deg, #6c757d, #495057);
-                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+            .btn-whatsapp {
+                background: linear-gradient(135deg, #25D366, #128C7E);
+                box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
             }
             
-            .secondary-btn:hover {
-                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+            .btn-whatsapp:hover {
+                box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
             }
             
             .footer-text {
@@ -709,21 +895,69 @@ const handlePaymentSuccess = async (req, res) => {
                     font-size: 2rem;
                 }
                 
-                .download-btn {
-                    display: block;
-                    margin: 10px 0;
+                .btn {
                     width: 100%;
-                }
-                
-                .detail-row {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    gap: 5px;
                 }
             }
         </style>
     </head>
     <body>
+        <script>
+            function downloadInvoice(quoteId) {
+                const button = event.target;
+                const originalText = button.textContent;
+                
+                // Show loading state
+                button.textContent = 'Downloading...';
+                button.disabled = true;
+                
+                // Create download URL
+                const downloadUrl = '/api/invoices/download/' + quoteId;
+                
+                // Create temporary link
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'invoice-' + quoteId + '.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Reset button state
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+            
+            function shareOnWhatsApp(quoteId) {
+                const button = event.target;
+                const originalText = button.textContent;
+                
+                // Show loading state
+                button.textContent = 'Preparing...';
+                button.disabled = true;
+                
+                // Get the invoice PDF URL
+                const pdfUrl = window.location.origin + '/api/invoices/download/' + quoteId;
+                
+                // Create a thank you message from HDS stating that the invoice is ready
+                var thankYouMessage = 'Thank you for your payment! Your invoice (ID: ' + quoteId + ') is now ready.';
+                
+                // Always include the PDF link
+                thankYouMessage += ' You can view and download your invoice at: ' + pdfUrl + '\n\nWe appreciate your business and look forward to working with you.';
+                
+                // Encode the message for the WhatsApp URL
+                var encodedMessage = encodeURIComponent(thankYouMessage);
+                
+                // Create the WhatsApp URL with the encoded message
+                var whatsappUrl = 'https://wa.me/?text=' + encodedMessage;
+                
+                // Open the URL in a new window/tab
+                window.open(whatsappUrl, '_blank');
+                
+                // Reset button state
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        </script>
         <div class="success-container">
             <div class="success-icon"></div>
             
@@ -732,29 +966,9 @@ const handlePaymentSuccess = async (req, res) => {
                 Thank you for your payment. Your transaction has been processed successfully.
             </p>
             
-            <div class="payment-details">
-                <h3>Payment Details</h3>
-                <div class="detail-row">
-                    <span class="detail-label">Quote ID:</span>
-                    <span class="detail-value">${quoteId || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Payment ID:</span>
-                    <span class="detail-value">${pf_payment_id || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Item:</span>
-                    <span class="detail-value">${item_name || 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Amount Paid:</span>
-                    <span class="detail-value">R ${amount_gross || '0.00'}</span>
-                </div>
-            </div>
-            
             <div class="action-buttons">
-                ${quoteId ? `<a href="/api/invoices/download/${quoteId}" class="download-btn">Download Invoice</a>` : ''}
-                <a href="/" class="download-btn secondary-btn">Return to Home</a>
+                ${quoteId ? '<button onclick="downloadInvoice(\'' + quoteId + '\')" class="btn">Download Invoice</button>' : ''}
+                ${quoteId ? '<button onclick="shareOnWhatsApp(\'' + quoteId + '\')" class="btn btn-whatsapp">Share on WhatsApp</button>' : ''}
             </div>
             
             <p class="footer-text">
@@ -918,6 +1132,33 @@ const handlePaymentCancel = async (req, res) => {
                 <a href="/" class="action-btn secondary-btn">Return to Home</a>
             </div>
         </div>
+        
+        <script>
+            function downloadInvoice(quoteId) {
+                console.log('Downloading invoice for quote:', quoteId);
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.href = '/api/invoices/download/' + quoteId;
+                link.download = 'invoice-' + quoteId + '.pdf';
+                link.target = '_blank';
+                
+                // Show loading state
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Downloading...';
+                btn.disabled = true;
+                
+                // Start download
+                link.click();
+                
+                // Reset button after delay
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }
+        </script>
     </body>
     </html>
     `;

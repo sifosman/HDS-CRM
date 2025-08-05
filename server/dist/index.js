@@ -22,6 +22,10 @@ const supabase_routes_1 = __importDefault(require("./routes/supabase.routes"));
 const diagnostic_routes_1 = require("./routes/diagnostic.routes");
 const payfast_routes_1 = __importDefault(require("./routes/payfast.routes"));
 const invoice_routes_1 = __importDefault(require("./routes/invoice.routes"));
+const invoice_pdf_routes_1 = __importDefault(require("./routes/invoice-pdf.routes"));
+const email_test_routes_1 = __importDefault(require("./routes/email-test.routes"));
+const email_test_hardcoded_routes_1 = __importDefault(require("./routes/email-test-hardcoded.routes"));
+const test_routes_1 = __importDefault(require("./routes/test.routes"));
 // Load environment variables
 dotenv_1.default.config();
 // Create Express app
@@ -42,16 +46,20 @@ mongoose_1.default.connect(MONGODB_URI)
 app.use('/api/optimizer', optimizer_routes_1.default);
 app.use('/api/projects', project_routes_1.default);
 app.use('/api/botsailor', botsailor_routes_1.default);
+app.use('/api/iqretail', iqretail_routes_1.default);
 app.use('/api/ocr', ocr_routes_1.default);
 app.use('/api/cutlist', cutlist_routes_1.default);
 app.use('/api/n8n', n8n_routes_1.default);
-app.use('/api/webhook', webhook_direct_routes_1.default);
+app.use('/api/webhook-direct', webhook_direct_routes_1.default);
 app.use('/api/debug', debug_routes_1.default);
-app.use('/api/iqretail', iqretail_routes_1.default);
 app.use('/api/supabase', supabase_routes_1.default);
 app.use('/api/diagnostic', diagnostic_routes_1.diagnosticRoutes);
 app.use('/api/payfast', payfast_routes_1.default);
 app.use('/api/invoices', invoice_routes_1.default);
+app.use('/api/invoice-pdf', invoice_pdf_routes_1.default);
+app.use('/api/email', email_test_routes_1.default);
+app.use('/api/email-hardcoded', email_test_hardcoded_routes_1.default);
+app.use('/api/test', test_routes_1.default);
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {
     res.status(200).json({
@@ -91,7 +99,10 @@ app.get('/', (req, res) => {
             '/api/n8n/process',
             '/api/direct-test',
             '/api/direct-n8n',
-            '/api/payfast'
+            '/api/payfast',
+            '/api/invoice-pdf/generate/:quoteNumber',
+            '/api/invoice-pdf/:invoiceNumber',
+            '/api/invoice-pdf/regenerate/:invoiceNumber'
         ]
     });
 });

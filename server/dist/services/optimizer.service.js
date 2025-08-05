@@ -1,9 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateQuotePdf = exports.importFromIQ = exports.generateIQExport = exports.generateInvoicePdf = exports.generatePdf = exports.optimizeCuttingLayout = exports.prepareOptimizationData = void 0;
+exports.summaryStartX = exports.generatePdfWithBuffer = exports.generateAndUploadOptimizationPdf = exports.generateQuotePdf = exports.importFromIQ = exports.generateIQExport = exports.generateInvoicePdf = exports.generatePdf = exports.optimizeCuttingLayout = exports.prepareOptimizationData = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
 const buffer_1 = require("buffer");
@@ -1018,7 +1051,7 @@ const safeFixed = (value, digits = 2) => {
     return isFinite(num) ? num.toFixed(digits) : '-';
 };
 // Generate a PDF for quotations
-const generateQuotePdf = (quoteData) => {
+const generateQuotePdf = (quoteData, isPaid = false) => {
     const { quoteId, customerName, projectName, date, sections, grandTotal, branchData, bankingDetails, edgingLength, edgingCost } = quoteData;
     // Create PDF document
     const doc = new pdfkit_1.default({ size: 'A4', margin: 50 });
@@ -1035,11 +1068,13 @@ const generateQuotePdf = (quoteData) => {
         pdfBuffer = buffers.length === 1 ? buffers[0] : buffers;
     });
     // Add compact HDS branding header
+    const headerColor = isPaid ? '#28a745' : '#003366'; // Green for paid, blue for quote
     doc.rect(50, 50, doc.page.width - 100, 40)
-        .fillAndStroke('#003366', '#000000');
+        .fillAndStroke(headerColor, '#000000');
+    const headerText = isPaid ? 'HDS Group Invoice' : 'HDS Group Quotation';
     doc.fontSize(18)
         .fillColor('#FFFFFF')
-        .text('HDS Group Quotation', 50, 62, { align: 'center', width: doc.page.width - 100 });
+        .text(headerText, 50, 62, { align: 'center', width: doc.page.width - 100 });
     // Set default text color to solid black for all content
     doc.fillColor('#000000');
     // Add quote details in a professional container layout
@@ -1233,7 +1268,7 @@ const generateQuotePdf = (quoteData) => {
     doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
         .stroke('#000000'); // Only black border, no background fill
     // Make the grand total bold but consistent with other totals
-    doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold'); // Bold text but normal size
+    doc.fontSize(12).fillColor('#000000'); // Bold text but normal size
     doc.text('GRAND TOTAL:', 60, summaryY + 8); // Same positioning as other rows
     doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
     doc.font('Helvetica'); // Reset font
@@ -1351,86 +1386,125 @@ const generateQuotePdf = (quoteData) => {
     // Move down a bit
     doc.moveDown(2);
     // ===== ONLINE PAYMENT SECTION =====
-    // Add online payment option with PayFast
-    doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-    doc.text('Online Payment Option', 50, doc.y);
-    doc.font('Helvetica').fontSize(10).fillColor('#333333');
-    doc.moveDown(0.5);
-    // Create payment button box - larger and more prominent
-    const paymentBoxStartY = doc.y;
-    const paymentBoxHeight = 120; // Increased height for better visibility
-    // Check if we need a new page for the payment section
-    if (doc.y + paymentBoxHeight > doc.page.height - 50) {
-        doc.addPage();
+    // Add payment status section
+    if (isPaid) {
+        // Show PAID status
+        doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
+        doc.text('Payment Status', 50, doc.y);
+        doc.font('Helvetica').fontSize(10).fillColor('#333333');
+        doc.moveDown(0.5);
+        const paymentBoxHeight = 80;
+        // Check if we need a new page for the payment section
+        if (doc.y + paymentBoxHeight > doc.page.height - 50) {
+            doc.addPage();
+            doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
+            doc.text('Payment Status', 50, doc.y);
+            doc.font('Helvetica').fontSize(10).fillColor('#333333');
+            doc.moveDown(0.5);
+        }
+        const currentPaymentBoxY = doc.y;
+        // Draw PAID status box with green styling
+        doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
+            .fillAndStroke('#e8f5e8', '#28a745');
+        // Add inner border for professional look
+        doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
+            .stroke('#4caf50');
+        // PAID status header
+        doc.fontSize(18).fillColor('#28a745').font('Helvetica-Bold');
+        doc.text('✓ PAYMENT RECEIVED', 60, currentPaymentBoxY + 18, {
+            width: doc.page.width - 120,
+            align: 'center'
+        });
+        doc.fontSize(11).fillColor('#555555').font('Helvetica');
+        doc.text(`Payment Date: ${new Date().toLocaleDateString()}`, 60, currentPaymentBoxY + 45, {
+            width: doc.page.width - 120,
+            align: 'center'
+        });
+        // Move past the payment box
+        doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
+    }
+    else {
+        // Show payment option for unpaid quotes
         doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
         doc.text('Online Payment Option', 50, doc.y);
         doc.font('Helvetica').fontSize(10).fillColor('#333333');
         doc.moveDown(0.5);
+        // Create payment button box - larger and more prominent
+        const paymentBoxStartY = doc.y;
+        const paymentBoxHeight = 120; // Increased height for better visibility
+        // Check if we need a new page for the payment section
+        if (doc.y + paymentBoxHeight > doc.page.height - 50) {
+            doc.addPage();
+            doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+            doc.text('Online Payment Option', 50, doc.y);
+            doc.font('Helvetica').fontSize(10).fillColor('#333333');
+            doc.moveDown(0.5);
+        }
+        const currentPaymentBoxY = doc.y;
+        // Draw main payment box with professional green styling
+        doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
+            .fillAndStroke('#f0f8f0', '#2d7a2d');
+        // Add inner border for professional look
+        doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
+            .stroke('#4a934a');
+        // Payment box header with professional styling
+        doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
+        doc.text('SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, {
+            width: doc.page.width - 120,
+            align: 'center'
+        });
+        doc.fontSize(10).fillColor('#555555').font('Helvetica');
+        doc.text('Pay securely with PayFast. All major payment methods accepted.', 60, currentPaymentBoxY + 42, {
+            width: doc.page.width - 120,
+            align: 'center'
+        });
+        // Generate payment URL
+        const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+        const paymentUrl = `${baseUrl}/api/payfast/pay?quoteId=${pdfId}&amount=${finalTotal.toFixed(2)}&customerName=${encodeURIComponent(customerName || 'Customer')}&projectName=${encodeURIComponent(projectName || 'Project')}`;
+        // Create a prominent clickable button area
+        const buttonY = currentPaymentBoxY + 65;
+        const buttonHeight = 35;
+        const buttonWidth = 300;
+        const buttonX = (doc.page.width - buttonWidth) / 2; // Center the button
+        // Draw professional green button with gradient effect
+        doc.rect(buttonX, buttonY, buttonWidth, buttonHeight)
+            .fillAndStroke('#28a745', '#1e7e34');
+        // Add button highlight for 3D effect
+        doc.rect(buttonX + 1, buttonY + 1, buttonWidth - 2, 2)
+            .fillAndStroke('#4caf50', '#4caf50');
+        // Add subtle shadow
+        doc.rect(buttonX + 3, buttonY + 3, buttonWidth, buttonHeight)
+            .stroke('#d4d4d4');
+        // Button text - professional and clear
+        doc.fontSize(13).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text('PAY NOW SECURELY', buttonX, buttonY + 8, {
+            width: buttonWidth,
+            align: 'center',
+            link: paymentUrl
+        });
+        // Add amount display on button with currency symbol
+        doc.fontSize(14).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text(`R ${finalTotal.toFixed(2)}`, buttonX, buttonY + 22, {
+            width: buttonWidth,
+            align: 'center',
+            link: paymentUrl
+        });
+        // Add professional instruction text below button
+        doc.fontSize(9).fillColor('#666666').font('Helvetica');
+        doc.text('Click the button above to proceed to secure payment', 60, currentPaymentBoxY + 110, {
+            width: doc.page.width - 120,
+            align: 'center'
+        });
+        // Add security badge text
+        doc.fontSize(8).fillColor('#28a745').font('Helvetica-Bold');
+        doc.text('256-bit SSL Encryption • PCI DSS Compliant', 60, currentPaymentBoxY + 125, {
+            width: doc.page.width - 120,
+            align: 'center'
+        });
+        // Move past the payment box
+        doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
+        doc.moveDown(1);
     }
-    const currentPaymentBoxY = doc.y;
-    // Draw main payment box with professional green styling
-    doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
-        .fillAndStroke('#f0f8f0', '#2d7a2d');
-    // Add inner border for professional look
-    doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
-        .stroke('#4a934a');
-    // Payment box header with professional styling
-    doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
-    doc.text('SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, {
-        width: doc.page.width - 120,
-        align: 'center'
-    });
-    doc.fontSize(10).fillColor('#555555').font('Helvetica');
-    doc.text('Pay securely with PayFast. All major payment methods accepted.', 60, currentPaymentBoxY + 42, {
-        width: doc.page.width - 120,
-        align: 'center'
-    });
-    // Generate payment URL
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-    const paymentUrl = `${baseUrl}/api/payfast/pay?quoteId=${pdfId}&amount=${finalTotal.toFixed(2)}&customerName=${encodeURIComponent(customerName || 'Customer')}&projectName=${encodeURIComponent(projectName || 'Project')}`;
-    // Create a prominent clickable button area
-    const buttonY = currentPaymentBoxY + 65;
-    const buttonHeight = 35;
-    const buttonWidth = 300;
-    const buttonX = (doc.page.width - buttonWidth) / 2; // Center the button
-    // Draw professional green button with gradient effect
-    doc.rect(buttonX, buttonY, buttonWidth, buttonHeight)
-        .fillAndStroke('#28a745', '#1e7e34');
-    // Add button highlight for 3D effect
-    doc.rect(buttonX + 1, buttonY + 1, buttonWidth - 2, 2)
-        .fillAndStroke('#4caf50', '#4caf50');
-    // Add subtle shadow
-    doc.rect(buttonX + 3, buttonY + 3, buttonWidth, buttonHeight)
-        .stroke('#d4d4d4');
-    // Button text - professional and clear
-    doc.fontSize(13).fillColor('#ffffff').font('Helvetica-Bold');
-    doc.text('PAY NOW SECURELY', buttonX, buttonY + 8, {
-        width: buttonWidth,
-        align: 'center',
-        link: paymentUrl
-    });
-    // Add amount display on button with currency symbol
-    doc.fontSize(14).fillColor('#ffffff').font('Helvetica-Bold');
-    doc.text(`R ${finalTotal.toFixed(2)}`, buttonX, buttonY + 22, {
-        width: buttonWidth,
-        align: 'center',
-        link: paymentUrl
-    });
-    // Add professional instruction text below button
-    doc.fontSize(9).fillColor('#666666').font('Helvetica');
-    doc.text('Click the button above to proceed to secure payment', 60, currentPaymentBoxY + 110, {
-        width: doc.page.width - 120,
-        align: 'center'
-    });
-    // Add security badge text
-    doc.fontSize(8).fillColor('#28a745').font('Helvetica-Bold');
-    doc.text('256-bit SSL Encryption • PCI DSS Compliant', 60, currentPaymentBoxY + 125, {
-        width: doc.page.width - 120,
-        align: 'center'
-    });
-    // Move past the payment box
-    doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
-    doc.moveDown(1);
     // Add a generic footer to the last page
     // First make sure we're near the bottom of the page
     if (doc.y < doc.page.height - 100) {
@@ -1503,3 +1577,217 @@ const generateQuotePdf = (quoteData) => {
     });
 };
 exports.generateQuotePdf = generateQuotePdf;
+/**
+ * Generate PDF with optimization solution and upload to Supabase storage
+ * @param solution The optimization solution
+ * @param unit Unit of measurement (0 = mm, 1 = inches, 2 = feet)
+ * @param cutWidth Saw blade thickness
+ * @param layout Layout algorithm type
+ * @returns Promise with the public URL and ID of the uploaded PDF
+ */
+const generateAndUploadOptimizationPdf = async (solution, unit, cutWidth = 3, layout = 0) => {
+    try {
+        // Generate PDF buffer using existing generatePdfWithBuffer function
+        const pdfResult = await (0, exports.generatePdfWithBuffer)(solution, unit, cutWidth, layout);
+        // Create filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = optimization__.pdf;
+        // Import Supabase service dynamically to avoid circular dependencies
+        const SupabaseService = (await Promise.resolve().then(() => __importStar(require('./supabase.service')))).default;
+        // Upload to Supabase cutlists bucket
+        const uploadResult = await SupabaseService.uploadCutlistPdf(pdfResult.buffer, fileName);
+        if (uploadResult.success && uploadResult.publicUrl) {
+            return {
+                success: true,
+                publicUrl: uploadResult.publicUrl,
+                pdfId: pdfResult.id
+            };
+        }
+        else {
+            return {
+                success: false,
+                error: uploadResult.error || 'Failed to upload PDF to storage'
+            };
+        }
+    }
+    catch (error) {
+        console.error('Error generating and uploading optimization PDF:', error);
+        return {
+            success: false,
+            error: error.message || 'Unknown error occurred'
+        };
+    }
+};
+exports.generateAndUploadOptimizationPdf = generateAndUploadOptimizationPdf;
+/**
+ * Generate PDF with optimization solution and return buffer for cloud storage
+ * @param solution The optimization solution
+ * @param unit Unit of measurement (0 = mm, 1 = inches, 2 = feet)
+ * @param cutWidth Saw blade thickness
+ * @param layout Layout algorithm type
+ * @returns Promise with the buffer and ID of the generated PDF
+ */
+const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) => {
+    const pdfId = (0, uuid_1.v4)();
+    // Create PDF document
+    const doc = new pdfkit_1.default({ size: 'A4' });
+    // Collect PDF data in memory buffers instead of writing to disk
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    // Add title with a colored header box
+    doc.rect(50, 50, doc.page.width - 100, 60)
+        .fillAndStroke('#003366', '#000000');
+    doc.fontSize(24)
+        .fillColor('#FFFFFF')
+        .text('HDS Group Cutlist', 50, 65, { align: 'center', width: doc.page.width - 100 });
+    doc.fontSize(16)
+        .fillColor('#FFFFFF')
+        .text('2D CUTTING OPTIMIZER', 50, 95, { align: 'center', width: doc.page.width - 100 });
+    // Add date and time
+    const now = new Date();
+    const dateString = now.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+    const timeString = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    doc.fontSize(10)
+        .fillColor('#000000')
+        .text(Generated, 50, 120, { align: 'right', width: doc.page.width - 100 });
+    doc.moveDown(3);
+    // Add detailed summary information
+    const totalStockPieces = solution.stockPieces.length;
+    const totalCutPieces = solution.stockPieces.reduce((sum, sp) => sum + sp.cutPieces.length, 0);
+    // Calculate total edging required in mm
+    let totalEdging = 0;
+    solution.stockPieces.forEach((sp) => {
+        sp.cutPieces.forEach((cp) => {
+            // Count edges that need edging (L1, L2, W1, W2)
+            const edgingNeeded = [
+                cp.edgeL1 ? cp.length : 0,
+                cp.edgeL2 ? cp.length : 0,
+                cp.edgeW1 ? cp.width : 0,
+                cp.edgeW2 ? cp.width : 0
+            ].reduce((sum, val) => sum + val, 0);
+            totalEdging += edgingNeeded;
+        });
+    });
+    // Convert edging to meters and calculate cost
+    const EDGING_PRICE_PER_METER = 14; // R14 per meter
+    const totalEdgingMeters = totalEdging / 1000;
+    const edgingCost = totalEdgingMeters * EDGING_PRICE_PER_METER;
+    // Calculate total area and waste
+    let totalStockArea = 0;
+    let totalCutArea = 0;
+    solution.stockPieces.forEach(stockPiece => {
+        const stockArea = stockPiece.width * stockPiece.length;
+        totalStockArea += stockArea;
+        stockPiece.cutPieces.forEach(cutPiece => {
+            totalCutArea += cutPiece.width * cutPiece.length;
+        });
+    });
+    const wasteArea = totalStockArea - totalCutArea;
+    const wastePercentage = ((wasteArea / totalStockArea) * 100).toFixed(2);
+    // Create a detailed summary table
+    doc.fontSize(14).text('Optimization Summary', { underline: true });
+    doc.moveDown(0.5);
+    // Draw summary table
+    const summaryStartX = 50;
+    const summaryStartY = doc.y;
+    const summaryColWidths = [200, 100, 150];
+    const summaryRowHeight = 25;
+    // Draw table headers
+    doc.rect(summaryStartX, summaryStartY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .fillAndStroke('#e0e0e0', '#000000');
+    doc.fontSize(10).fillColor('#000000');
+    doc.text('Parameter', summaryStartX + 5, summaryStartY + 8, { width: summaryColWidths[0] });
+    doc.text('Value', summaryStartX + summaryColWidths[0] + 5, summaryStartY + 8, { width: summaryColWidths[1] });
+    doc.text('Details', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, summaryStartY + 8, { width: summaryColWidths[2] });
+    // Draw rows
+    let currentSummaryY = summaryStartY + summaryRowHeight;
+    // Row 1: Stock Pieces
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .stroke();
+    doc.text('Stock Pieces Used', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text($, { totalStockPieces }, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+    doc.text('Total sheets/panels', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+    currentSummaryY += summaryRowHeight;
+    // Row 2: Cut Pieces
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .stroke();
+    doc.text('Cut Pieces Placed', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text($, { totalCutPieces }, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+    doc.text('Total parts cut', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+    currentSummaryY += summaryRowHeight;
+    // Row 3: Total Stock Area
+    const unitLabel = unit === 0 ? 'mm�' : unit === 1 ? 'in�' : 'ft�';
+    const totalStockAreaConverted = convertUnit(totalStockArea, 0, unit).toFixed(2);
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .stroke();
+    doc.text('Total Stock Area', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text($, { totalStockAreaConverted }, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+    doc.text('Total material area', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+    currentSummaryY += summaryRowHeight;
+    // Row 4: Total Cut Area
+    const totalCutAreaConverted = convertUnit(totalCutArea, 0, unit).toFixed(2);
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .stroke();
+    doc.text('Total Cut Area', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text($, { totalCutAreaConverted }, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+    doc.text('Total used material', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+    currentSummaryY += summaryRowHeight;
+    // Row 5: Waste Area
+    const wasteAreaConverted = convertUnit(wasteArea, 0, unit).toFixed(2);
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .fillAndStroke('#fff0f0', '#000000');
+    doc.text('Waste Area', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text($, { wasteAreaConverted }, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+    doc.text($, { wastePercentage } % of, total, material, summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+    currentSummaryY += summaryRowHeight;
+    // Row 6: Edging Cost
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .stroke();
+    doc.text('Edging Cost', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text(R, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+    doc.text('Total edging cost', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+    currentSummaryY += summaryRowHeight;
+    // Row 7: Layout Type
+    doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+        .stroke();
+    doc.text('Layout Type', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+    doc.text($, { layout } === 0 ? 'Guillotine' : 'Nested');
+};
+exports.generatePdfWithBuffer = generatePdfWithBuffer;
++summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] };
+;
+doc.text('Cutting algorithm used', exports.summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+currentSummaryY += summaryRowHeight;
+// Row 8: Cut Width
+const cutWidthConverted = convertUnit(cutWidth, 0, unit).toFixed(2);
+const unitLabelSingle = unit === 0 ? 'mm' : unit === 1 ? 'in' : 'ft';
+doc.rect(exports.summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
+    .stroke();
+doc.text('Cut Width', exports.summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
+doc.text($, { cutWidthConverted }, exports.summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+doc.text('Saw blade thickness', exports.summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+doc.moveDown(3);
+// Draw each stock piece and its cut pieces (simplified version for buffer generation)
+solution.stockPieces.forEach((stockPiece, index) => {
+    // Add page for each stock piece except the first one
+    if (index > 0) {
+        doc.addPage();
+    }
+    // Stock piece title
+    doc.fontSize(16).fillColor('#003366');
+    doc.text(Case - Stock, Piece, { underline: true });
+    doc.moveDown(0.5);
+    // Stock piece details
+    const stockWidth = convertUnit(stockPiece.width, 0, unit).toFixed(1);
+    const stockLength = convertUnit(stockPiece.length, 0, unit).toFixed(1);
+    const stockArea = (parseFloat(stockWidth) * parseFloat(stockLength)).toFixed(2);
+    doc.fontSize(12).fillColor('#000000');
+    doc.text(Dimensions);
+});

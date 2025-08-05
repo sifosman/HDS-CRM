@@ -1,9 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
+const path_1 = __importDefault(require("path"));
 /**
  * Controller for handling Supabase database operations
  */
@@ -182,6 +216,50 @@ const supabaseController = {
             // Mark invoice as paid if payment was successful
             const invoiceNumber = result.data.invoiceNumber;
             await supabase_service_1.default.updateInvoiceStatus(invoiceNumber, 'paid');
+            // NEW: Send email notification after successful payment
+            try {
+                // Import email service and get customer email
+                const EmailService = (await Promise.resolve().then(() => __importStar(require('../services/email.service')))).EmailService;
+                const emailService = new EmailService();
+                // Get branch/customer email
+                const recipientEmail = await supabase_service_1.default.getBestEmailForQuote(quoteNumber);
+                if (recipientEmail) {
+                    // Get quote details for email
+                    const quoteResult = await supabase_service_1.default.fetchQuoteByNumber(quoteNumber);
+                    if (quoteResult.success && quoteResult.data) {
+                        const quoteData = quoteResult.data;
+                        const customerName = quoteData.customer_name || 'Customer';
+                        const quoteNumberFromData = quoteData.quote_number || quoteNumber;
+                        const amount = parseFloat((paymentDetails === null || paymentDetails === void 0 ? void 0 : paymentDetails.amount) || '0');
+                        // Generate invoice PDF path
+                        const invoicePath = path_1.default.join(__dirname, '../invoices', `invoice-${quoteNumberFromData}.pdf`);
+                        // Prepare optimization details
+                        const optimizationDetails = {
+                            totalBoards: quoteData.total_boards,
+                            totalLength: quoteData.total_length,
+                            wastage: quoteData.wastage_percentage,
+                            cutlistUrl: quoteData.cutlist_url
+                        };
+                        // Send email notification
+                        await emailService.sendPaymentConfirmationEmail({
+                            customerName,
+                            customerEmail: recipientEmail,
+                            quoteNumber: quoteNumberFromData,
+                            amount,
+                            invoicePath,
+                            optimizationDetails
+                        });
+                        console.log('Payment confirmation email sent successfully to:', recipientEmail);
+                    }
+                }
+                else {
+                    console.warn('No email address found for quote:', quoteNumber);
+                }
+            }
+            catch (emailError) {
+                console.error('Error sending payment confirmation email:', emailError);
+                // Don't fail the payment processing if email fails
+            }
             return res.status(200).json({
                 success: true,
                 message: 'Payment processed and invoice created successfully',
