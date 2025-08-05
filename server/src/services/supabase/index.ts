@@ -1,20 +1,16 @@
 // Supabase Service Modules
 // This file provides a centralized export for all Supabase operations
 
-// Core configuration and connection
-export { supabase, checkConnection } from './config';
-
-// Product and pricing operations
-export {
+// Import all functions explicitly
+import { supabase, checkConnection } from './config';
+import {
   getProductDetails,
   getProductPricing,
   getProductPricingByDescription,
   getMaterialOptions,
   getProductDescriptions
 } from './products.service';
-
-// Quote operations
-export {
+import {
   createQuote,
   updateQuoteStatus,
   fetchQuoteById,
@@ -22,34 +18,62 @@ export {
   updateQuotePdfUrl,
   getCustomerEmailFromQuote
 } from './quotes.service';
-
-// Invoice operations
-export {
+import {
   createInvoice,
   updateInvoiceStatus,
   generateAndUploadInvoicePdf,
   createInvoiceWithPdf
 } from './invoices.service';
-
-// Storage operations
-export {
+import {
   uploadQuotePdf,
   uploadInvoicePdf
 } from './storage.service';
-
-// Branch and banking operations
-export {
+import {
   getBranchByTradingAs,
   getBankingDetailsByBranch,
   getBranchEmailByQuote,
   getBestEmailForQuote
 } from './branches.service';
-
-// Cutlist operations
-export {
+import {
   saveCutlist,
   getCutlistById
 } from './cutlists.service';
+
+// Re-export all functions for named imports
+export {
+  // Core
+  supabase,
+  checkConnection,
+  // Products
+  getProductDetails,
+  getProductPricing,
+  getProductPricingByDescription,
+  getMaterialOptions,
+  getProductDescriptions,
+  // Quotes
+  createQuote,
+  updateQuoteStatus,
+  fetchQuoteById,
+  fetchQuoteByNumber,
+  updateQuotePdfUrl,
+  getCustomerEmailFromQuote,
+  // Invoices
+  createInvoice,
+  updateInvoiceStatus,
+  generateAndUploadInvoicePdf,
+  createInvoiceWithPdf,
+  // Storage
+  uploadQuotePdf,
+  uploadInvoicePdf,
+  // Branches
+  getBranchByTradingAs,
+  getBankingDetailsByBranch,
+  getBranchEmailByQuote,
+  getBestEmailForQuote,
+  // Cutlists
+  saveCutlist,
+  getCutlistById
+};
 
 // Legacy compatibility - Main service object for backward compatibility
 const SupabaseService = {

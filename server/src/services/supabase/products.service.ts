@@ -107,8 +107,8 @@ export async function getProductPricingByDescription(description: string, includ
     const result = {
       description: data.description,
       price: data.price,
-      unit: data.unit,
-      ...(includeSizes && { sizes: data.sizes })
+      sizes: includeSizes ? data.sizes : null,
+      unit: data.unit
     };
     
     return { success: true, data: result };
