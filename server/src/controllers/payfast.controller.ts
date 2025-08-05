@@ -522,36 +522,25 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
         if (pfData.payment_status === 'COMPLETE') {
           try {
             // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
-            let quoteDatabaseId = '';
+            let quoteId = '';
             if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
               const parts = pfData.m_payment_id.split('-');
-              if (parts.length >= 2 && parts[0] === 'QUOTE') {
-                quoteDatabaseId = parts[1];
+              if (parts.length >= 3 && parts[0] === 'QUOTE') {
+                // Extract the quote ID which is everything between QUOTE- and the timestamp
+                // e.g., QUOTE-Q-20250805-4235-HDSEMPA-1722845798000
+                // quoteId should be Q-20250805-4235-HDSEMPA
+                quoteId = parts.slice(1, parts.length - 1).join('-');
               }
             }
             
-            if (quoteDatabaseId) {
-              console.log('Creating invoice for successful payment, quote database ID:', quoteDatabaseId);
+            if (quoteId) {
+              console.log('Creating invoice for successful payment, quote ID:', quoteId);
               
               // Import SupabaseService here to avoid circular dependencies
               const SupabaseService = (await import('../services/supabase.service')).default;
               
-              // First, fetch the quote by database ID to get the quote number
-              const quoteResult = await SupabaseService.fetchQuoteById(quoteDatabaseId);
-              if (!quoteResult.success) {
-                console.error('Failed to fetch quote by database ID:', quoteResult.error);
-                res.status(400).send('Failed to fetch quote');
-                return;
-              }
-              
-              const quoteNumber = quoteResult.data.quote_number;
-              if (!quoteNumber) {
-                console.error('Quote number not found in quote data');
-                res.status(400).send('Quote number not found');
-                return;
-              }
-              
-              console.log('Quote number retrieved:', quoteNumber);
+              // Use the quoteId directly (which is the quote_number) to create the invoice
+              console.log('Using quote ID as quote number:', quoteId);
               
               // Prepare payment details for invoice creation
               const paymentDetails = {
@@ -562,8 +551,8 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                 status: 'paid'
               };
               
-              // Create invoice record using the quote number
-              const invoiceResult = await SupabaseService.createInvoice(quoteNumber, paymentDetails);
+              // Create invoice record using the quote ID (which is the quote_number)
+              const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
               
               if (invoiceResult.success) {
                 console.log('Invoice created successfully:', invoiceResult.data?.invoiceNumber);
@@ -575,7 +564,7 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                 }
                 
                 // Update quote status to approved
-                await SupabaseService.updateQuoteStatus(quoteDatabaseId, 'approved');
+                await SupabaseService.updateQuoteStatus(quoteId, 'approved');
                 console.log('Quote status updated to approved');
                 
                 // NEW: Send email notification after successful payment
@@ -584,18 +573,18 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                   const emailService = new EmailService();
                   
                   // Get customer email from database
-                  const customerEmail = await SupabaseService.getBestEmailForQuote(quoteDatabaseId);
+                  const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
                   
                   // TEMPORARY: Also send to hardcoded test email
                   const testEmail = 'sifosman@gmail.com';
                   
                   if (customerEmail) {
                     // Get quote details for email
-                    const quoteData = await SupabaseService.fetchQuoteById(quoteDatabaseId);
+                    const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
                     
                     if (quoteData.success && quoteData.data) {
                       const customerName = quoteData.data.customer_name || 'Customer';
-                      const quoteNumber = quoteData.data.quote_number || quoteDatabaseId;
+                      const quoteNumber = quoteData.data.quote_number || quoteId;
                       const amount = parseFloat(pfData.amount_gross || '0');
                       
                       // Note: In serverless environments like Vercel, we can't generate PDF files directly
@@ -638,14 +627,14 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                       }
                     }
                   } else {
-                    console.warn('No email address found for quote:', quoteDatabaseId);
+                    console.warn('No email address found for quote:', quoteId);
                     
                     // TEMPORARY: Send to hardcoded test email even if no customer email
                     try {
-                      const quoteData = await SupabaseService.fetchQuoteById(quoteDatabaseId);
+                      const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
                       if (quoteData.success && quoteData.data) {
                         const customerName = quoteData.data.customer_name || 'Customer';
-                        const quoteNumber = quoteData.data.quote_number || quoteDatabaseId;
+                        const quoteNumber = quoteData.data.quote_number || quoteId;
                         const amount = parseFloat(pfData.amount_gross || '0');
                         
                         // Note: In serverless environments like Vercel, we can't generate PDF files directly

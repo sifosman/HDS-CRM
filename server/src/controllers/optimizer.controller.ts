@@ -543,6 +543,20 @@ export const generateQuote = async (req: Request, res: Response) => {
     const uploadResult = await SupabaseService.uploadQuotePdf(pdfResult.buffer, pdfId);
     pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
 
+    // Save quote to database
+    const quoteSaveData = {
+      filename: pdfId, // Use the PDF ID as the filename
+      cutlistId: req.body.cutlistId || req.body.cutlist_id,
+      quoteNumber: quoteId // Store the generated quote ID
+    };
+    
+    const quoteResult = await SupabaseService.createQuote(quoteSaveData);
+    if (!quoteResult.success) {
+      console.error('Failed to save quote to database:', quoteResult.error);
+    } else {
+      console.log('Quote saved to database successfully');
+    }
+
     // Return the processed data without returning the response object
     res.status(200).json({
       success: true,
