@@ -759,41 +759,62 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     // Extract quote ID from payment ID or item name
     let quoteId = '';
     
+    console.log('Attempting to extract quote ID from m_payment_id:', m_payment_id);
+    console.log('Attempting to extract quote ID from item_name:', item_name);
+    
     // Try to extract from m_payment_id 
     // Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
     // New format: QUOTE-Q-20250804-1234-HDSPRO-1754311399090 (with branch abbr)
     if (m_payment_id && typeof m_payment_id === 'string') {
       const parts = m_payment_id.split('-');
+      console.log('m_payment_id parts:', parts);
+      console.log('Number of parts:', parts.length);
       if (parts.length >= 3 && parts[0] === 'QUOTE') {
         if (parts.length === 5) {
           // Format: "QUOTE-Q-20250804-4824-1754311399090" (without branch)
           // Extract "Q-20250804-4824" (parts 1, 2, 3)
           quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
+          console.log('Extracted quoteId from 5-part format:', quoteId);
         } else if (parts.length === 6) {
           // Format: "QUOTE-Q-20250804-4824-HDSPRO-1754311399090" (with branch abbr)
           // Extract "Q-20250804-4824-HDSPRO" (parts 1, 2, 3, 4)
           quoteId = `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}`;
+          console.log('Extracted quoteId from 6-part format:', quoteId);
         } else if (parts.length > 6) {
           // Format: "QUOTE-Q-20250804-4824-HDS-Products-1754311399090" (with multi-word branch)
           // Extract quote ID by removing first part (QUOTE) and last part (timestamp)
           const quoteParts = parts.slice(1, -1); // Remove 'QUOTE' and timestamp
           quoteId = quoteParts.join('-');
+          console.log('Extracted quoteId from multi-part format:', quoteId);
+        } else {
+          console.log('m_payment_id format not recognized, parts length:', parts.length);
         }
+      } else {
+        console.log('m_payment_id does not start with QUOTE or has less than 3 parts');
       }
+    } else {
+      console.log('m_payment_id is not a valid string:', m_payment_id);
     }
     
     // If not found, try to extract from item_name 
     // Format can be: "HDS Quote Q-20250804-4824" OR "HDS Quote Q-20250804-4824-HDSPRODUCTS - BranchName"
     if (!quoteId && item_name && typeof item_name === 'string') {
+      console.log('Trying to extract from item_name');
       // Updated regex to handle both old format (Q-YYYYMMDD-XXXX) and new format (Q-YYYYMMDD-XXXX-BRANCH)
       // Branch abbreviation can now be up to 10 characters
       const match = item_name.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,10})?)/);
+      console.log('Regex match result:', match);
       if (match) {
         quoteId = match[1];
+        console.log('Extracted quoteId from item_name:', quoteId);
+      } else {
+        console.log('No match found in item_name');
       }
+    } else if (quoteId) {
+      console.log('Skipping item_name extraction as quoteId already found');
     }
     
-    console.log('Extracted quote ID:', quoteId);
+    console.log('Final extracted quote ID:', quoteId);
     console.log('Final payment data for display:', {
       quoteId,
       pf_payment_id,
