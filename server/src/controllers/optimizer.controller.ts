@@ -5,12 +5,11 @@ import crypto from 'crypto';
 import {
   prepareOptimizationData,
   optimizeCuttingLayout,
-  generatePdf,
+  generateAndUploadOptimizationPdf,
   generateQuotePdf,
   generateIQExport,
   importFromIQ
 } from '../services/optimizer.service';
-import { generateAndUploadOptimizationPdf } from '../services/pdf-upload.service';
 import SupabaseService from '../services/supabase.service';
 
 // Optimize cutting layout
@@ -42,6 +41,13 @@ export const optimizeCutting = async (req: Request, res: Response) => {
     // Generate PDF and upload to Supabase
     const pdfResult = await generateAndUploadOptimizationPdf(solution, unit || 0, width || 3, layout || 0);
 
+    if (!pdfResult.success) {
+      return res.status(500).json({ 
+        message: 'Error generating PDF', 
+        error: pdfResult.error 
+      });
+    }
+
     // Generate IQ export data
     const iqData = generateIQExport(solution, unit || 0, width || 3, layout || 0);
 
@@ -50,8 +56,6 @@ export const optimizeCutting = async (req: Request, res: Response) => {
       message: 'Optimization completed successfully',
       pdfId: pdfResult.pdfId,
       pdfUrl: pdfResult.publicUrl,
-      pdfUploadSuccess: pdfResult.success,
-      pdfError: pdfResult.error,
       solution,
       iqData
     });
@@ -134,8 +138,15 @@ export const importIQData = async (req: Request, res: Response) => {
     // Run optimization
     const solution = optimizeCuttingLayout(stockPieces, cutPieces, width, layout);
 
-    // Generate PDF
-    const pdfId = generatePdf(solution, unit, width, layout);
+    // Generate PDF and upload to Supabase
+    const pdfResult = await generateAndUploadOptimizationPdf(solution, unit, width, layout);
+
+    if (!pdfResult.success) {
+      return res.status(500).json({ 
+        message: 'Error generating PDF', 
+        error: pdfResult.error 
+      });
+    }
 
     // Generate IQ export data for confirmation
     const exportData = generateIQExport(solution, unit, width, layout);
@@ -143,7 +154,8 @@ export const importIQData = async (req: Request, res: Response) => {
     // Return result
     res.status(200).json({
       message: 'IQ data imported and processed successfully',
-      pdfId,
+      pdfId: pdfResult.pdfId,
+      pdfUrl: pdfResult.publicUrl,
       solution,
       iqData: exportData,
       importedPieces: pieces

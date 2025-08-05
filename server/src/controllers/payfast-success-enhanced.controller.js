@@ -79,16 +79,17 @@ class PayFastSuccessEnhancedController {
 
       console.log('✅ Invoice created successfully');
       console.log('📄 Invoice Number:', invoiceResult.data.invoiceNumber);
-      console.log('🔗 PDF URL:', invoiceResult.data.pdfUrl);
+      console.log('🔗 Invoice PDF URL:', invoiceResult.data.pdfUrl);
+      console.log('🔗 Cutlist PDF URL:', quote.cutlist_pdf_url);
 
-      // Prepare success response
+      // Prepare success response - use cutlist PDF URL instead of invoice PDF URL
       const responseData = {
         success: true,
         message: 'Payment processed successfully',
         paymentId: paymentDetails.reference,
         quoteNumber: quoteNumber,
         invoiceNumber: invoiceResult.data.invoiceNumber,
-        pdfUrl: invoiceResult.data.pdfUrl,
+        pdfUrl: quote.cutlist_pdf_url || invoiceResult.data.pdfUrl, // Use cutlist PDF if available, fallback to invoice PDF
         customerName: quote.customer_name,
         customerEmail: quote.customer_email,
         projectName: quote.project_name,
