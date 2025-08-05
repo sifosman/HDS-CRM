@@ -192,7 +192,8 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     
     // Add URLs only if we have a base URL configured
     if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
-      paymentData.return_url = `${config.baseUrl}/api/payfast/success`;
+      // Include quoteId in the return URL so we can access it in the success page
+      paymentData.return_url = `${config.baseUrl}/api/payfast/success?quoteId=${encodeURIComponent(quoteId)}`;
       paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
       paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
     }
@@ -761,11 +762,18 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     
     console.log('Attempting to extract quote ID from m_payment_id:', m_payment_id);
     console.log('Attempting to extract quote ID from item_name:', item_name);
+    console.log('Attempting to extract quote ID from query parameters:', req.query.quoteId);
     
-    // Try to extract from m_payment_id 
+    // First, try to get quoteId from query parameters (added to return_url)
+    if (req.query.quoteId && typeof req.query.quoteId === 'string') {
+      quoteId = req.query.quoteId;
+      console.log('Extracted quoteId from query parameters:', quoteId);
+    }
+    
+    // If not found in query parameters, try to extract from m_payment_id 
     // Format can be: QUOTE-{quoteId}-{timestamp} OR QUOTE-{quoteId}-{branchName}-{timestamp}
     // New format: QUOTE-Q-20250804-1234-HDSPRO-1754311399090 (with branch abbr)
-    if (m_payment_id && typeof m_payment_id === 'string') {
+    if (!quoteId && m_payment_id && typeof m_payment_id === 'string') {
       const parts = m_payment_id.split('-');
       console.log('m_payment_id parts:', parts);
       console.log('Number of parts:', parts.length);
@@ -792,6 +800,8 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
       } else {
         console.log('m_payment_id does not start with QUOTE or has less than 3 parts');
       }
+    } else if (quoteId) {
+      console.log('Skipping m_payment_id extraction as quoteId already found from query parameters');
     } else {
       console.log('m_payment_id is not a valid string:', m_payment_id);
     }
