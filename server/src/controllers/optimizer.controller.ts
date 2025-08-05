@@ -544,40 +544,81 @@ export const generateQuote = async (req: Request, res: Response) => {
     pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
 
     // Save quote to database with all required fields for PayFast integration
-    const quoteSaveData = {
-      filename: pdfId, // Use the PDF ID as the filename
-      cutlistId: req.body.cutlistId || req.body.cutlist_id || 'default-cutlist-001', // Provide fallback
-      quoteNumber: quoteId, // Store the generated quote ID
-      customerName: customerName,
-      customerPhone: phoneNumber,
-      customerEmail: req.body.customerEmail || req.body.email || '',
-      projectName: projectName,
-      quoteData: {
-        items: pdfSections.map(section => ({
-          description: `${section.material} - ${section.pieces.length} pieces`,
-          quantity: section.pieces.reduce((sum: number, piece: any) => sum + (piece.quantity || 1), 0),
-          unitPrice: section.totalCost / section.pieces.reduce((sum: number, piece: any) => sum + (piece.quantity || 1), 0),
-          total: section.totalCost
-        })),
-        totals: {
-          subtotal: grandTotal,
-          tax: grandTotal * 0.15, // 15% VAT
-          finalTotal: grandTotal * 1.15
-        }
-      },
-      subtotal: grandTotal,
-      tax: grandTotal * 0.15,
-      total: grandTotal * 1.15,
-      status: 'pending',
-      cutlistUrl: pdfUrl,
-      branchData: branchData
-    };
+    let quoteSaveData: any;
+    try {
+      quoteSaveData = {
+        filename: pdfId, // Use the PDF ID as the filename
+        cutlistId: req.body.cutlistId || req.body.cutlist_id || 'default-cutlist-001', // Provide fallback
+        quoteNumber: quoteId, // Store the generated quote ID
+        customerName: customerName,
+        customerPhone: phoneNumber,
+        customerEmail: req.body.customerEmail || req.body.email || '',
+        projectName: projectName,
+        quoteData: {
+          items: (pdfSections && Array.isArray(pdfSections)) ? pdfSections.map(section => ({
+            description: `${section.material || 'Material'} - ${(section.pieces && section.pieces.length) || 0} pieces`,
+            quantity: (section.pieces && Array.isArray(section.pieces)) 
+              ? section.pieces.reduce((sum: number, piece: any) => sum + (piece.quantity || 1), 0)
+              : 1,
+            unitPrice: (section.totalCost || 0) / Math.max(1, (section.pieces && Array.isArray(section.pieces)) 
+              ? section.pieces.reduce((sum: number, piece: any) => sum + (piece.quantity || 1), 0)
+              : 1),
+            total: section.totalCost || 0
+          })) : [{
+            description: 'Quote Items',
+            quantity: 1,
+            unitPrice: grandTotal,
+            total: grandTotal
+          }],
+          totals: {
+            subtotal: grandTotal,
+            tax: grandTotal * 0.15, // 15% VAT
+            finalTotal: grandTotal * 1.15
+          }
+        },
+        subtotal: grandTotal,
+        tax: grandTotal * 0.15,
+        total: grandTotal * 1.15,
+        status: 'pending',
+        cutlistUrl: pdfUrl,
+        branchData: branchData
+      };
+    } catch (dataError) {
+      console.error('Error creating quote save data:', dataError);
+      // Fallback to minimal quote data
+      quoteSaveData = {
+        filename: pdfId,
+        cutlistId: 'default-cutlist-001',
+        quoteNumber: quoteId,
+        customerName: customerName || 'Unknown Customer',
+        projectName: projectName || 'Unknown Project',
+        quoteData: {
+          items: [{
+            description: 'Quote Items',
+            quantity: 1,
+            unitPrice: grandTotal,
+            total: grandTotal
+          }],
+          totals: {
+            subtotal: grandTotal,
+            tax: grandTotal * 0.15,
+            finalTotal: grandTotal * 1.15
+          }
+        },
+        subtotal: grandTotal,
+        tax: grandTotal * 0.15,
+        total: grandTotal * 1.15,
+        status: 'pending'
+      };
+    }
     
     console.log('Saving quote with data:', {
       quoteNumber: quoteSaveData.quoteNumber,
       customerName: quoteSaveData.customerName,
       total: quoteSaveData.total,
-      hasCutlistId: !!quoteSaveData.cutlistId
+      hasCutlistId: !!quoteSaveData.cutlistId,
+      hasQuoteData: !!quoteSaveData.quoteData,
+      itemsCount: quoteSaveData.quoteData?.items?.length || 0
     });
     
     const quoteResult = await SupabaseService.createQuote(quoteSaveData);
