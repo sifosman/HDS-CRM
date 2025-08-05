@@ -193,7 +193,7 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     // Add URLs only if we have a base URL configured
     if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
       // Include quoteId in the return URL so we can access it in the success page
-      paymentData.return_url = `${config.baseUrl}/api/payfast/success?quoteId=${encodeURIComponent(quoteId)}`;
+      paymentData.return_url = `${config.baseUrl}/api/payfast/success?quoteId=${encodeURIComponent(quoteId.toString())}`;
       paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
       paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
     }
