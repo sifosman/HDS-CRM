@@ -543,12 +543,48 @@ export const generateQuote = async (req: Request, res: Response) => {
     const uploadResult = await SupabaseService.uploadQuotePdf(pdfResult.buffer, pdfId);
     pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
 
+    // Generate a unique cutlist ID for this quote based on the quote ID
+    const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    
+    // Create cutlist record in database before creating quote to satisfy foreign key constraint
+    try {
+      console.log('Creating cutlist record with ID:', dynamicCutlistId);
+      
+      // Prepare cutlist data
+      const cutlistData = {
+        id: dynamicCutlistId,
+        customer_name: customerName,
+        project_name: projectName,
+        cut_pieces: JSON.stringify(processedSections.map(section => ({
+          material: section.material,
+          pieces: section.pieces,
+          optimization: section.optimization
+        }))),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Create cutlist record
+      const cutlistResult = await SupabaseService.saveCutlist(cutlistData);
+      
+      if (!cutlistResult.success) {
+        console.error('Failed to create cutlist record:', cutlistResult.error);
+        // Continue with quote creation but log the error
+      } else {
+        console.log('Cutlist record created successfully:', cutlistResult.data);
+      }
+    } catch (cutlistError) {
+      console.error('Error creating cutlist record:', cutlistError);
+      // Continue with quote creation - the cutlist might already exist
+    }
+
     // Save quote to database with all required fields for PayFast integration
     let quoteSaveData: any;
+    
     try {
       quoteSaveData = {
         filename: pdfId, // Use the PDF ID as the filename
-        cutlistId: req.body.cutlistId || req.body.cutlist_id || 'default-cutlist-001', // Provide fallback
+        cutlistId: dynamicCutlistId, // Use the generated cutlist ID
         quoteNumber: quoteId, // Store the generated quote ID
         customerName: customerName,
         customerPhone: phoneNumber,
@@ -588,7 +624,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       // Fallback to minimal quote data
       quoteSaveData = {
         filename: pdfId,
-        cutlistId: 'default-cutlist-001',
+        cutlistId: dynamicCutlistId, // Use the generated cutlist ID
         quoteNumber: quoteId,
         customerName: customerName || 'Unknown Customer',
         projectName: projectName || 'Unknown Project',
