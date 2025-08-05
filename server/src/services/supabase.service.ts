@@ -767,9 +767,43 @@ async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): P
     
     if (!quoteResult.success || !quoteResult.data) {
       return { success: false, error: 'Quote not found' };
-   * @returns Promise with the public URL or an error
-   */
-  async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+    }
+
+    const quote = quoteResult.data;
+
+    // Generate the PDF
+    const pdfResult = await generateInvoicePdf(quote);
+    
+    if (!pdfResult.success || !pdfResult.buffer) {
+      return { success: false, error: pdfResult.error || 'Failed to generate PDF' };
+    }
+
+    // Create filename with timestamp
+    const timestamp = Date.now();
+    const fileName = `invoice-${invoiceNumber}-${timestamp}.pdf`;
+
+    // Upload the PDF
+    const uploadResult = await this.uploadInvoicePdf(pdfResult.buffer, fileName);
+    
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error };
+    }
+
+    return { success: true, publicUrl: uploadResult.publicUrl };
+
+  } catch (error: any) {
+    console.error('Error in generateAndUploadInvoicePdf:', error);
+    return { success: false, error: error.message };
+  }
+},
+
+/**
+ * Upload a PDF buffer to the Supabase invoices bucket
+ * @param fileBuffer The PDF file buffer
+ * @param fileName The name for the uploaded file
+ * @returns Promise with the public URL or an error
+ */
+async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
     try {
       const { error: uploadError } = await supabase.storage
         .from('invoices') // Use the new invoices bucket
