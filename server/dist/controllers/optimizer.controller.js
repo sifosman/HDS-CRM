@@ -7,7 +7,6 @@ exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exp
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const optimizer_service_1 = require("../services/optimizer.service");
-const pdf_upload_service_1 = require("../services/pdf-upload.service");
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 // Optimize cutting layout
 const optimizeCutting = async (req, res) => {
@@ -30,7 +29,13 @@ const optimizeCutting = async (req, res) => {
         // Run optimization
         const solution = (0, optimizer_service_1.optimizeCuttingLayout)(stockPieces, cutPieces, width || 3, layout || 0);
         // Generate PDF and upload to Supabase
-        const pdfResult = await (0, pdf_upload_service_1.generateAndUploadOptimizationPdf)(solution, unit || 0, width || 3, layout || 0);
+        const pdfResult = await (0, optimizer_service_1.generateAndUploadOptimizationPdf)(solution, unit || 0, width || 3, layout || 0);
+        if (!pdfResult.success) {
+            return res.status(500).json({
+                message: 'Error generating PDF',
+                error: pdfResult.error
+            });
+        }
         // Generate IQ export data
         const iqData = (0, optimizer_service_1.generateIQExport)(solution, unit || 0, width || 3, layout || 0);
         // Return result
@@ -38,8 +43,6 @@ const optimizeCutting = async (req, res) => {
             message: 'Optimization completed successfully',
             pdfId: pdfResult.pdfId,
             pdfUrl: pdfResult.publicUrl,
-            pdfUploadSuccess: pdfResult.success,
-            pdfError: pdfResult.error,
             solution,
             iqData
         });
@@ -112,14 +115,21 @@ const importIQData = async (req, res) => {
         const { stockPieces, cutPieces } = (0, optimizer_service_1.prepareOptimizationData)(pieces, unit);
         // Run optimization
         const solution = (0, optimizer_service_1.optimizeCuttingLayout)(stockPieces, cutPieces, width, layout);
-        // Generate PDF
-        const pdfId = (0, optimizer_service_1.generatePdf)(solution, unit, width, layout);
+        // Generate PDF and upload to Supabase
+        const pdfResult = await (0, optimizer_service_1.generateAndUploadOptimizationPdf)(solution, unit, width, layout);
+        if (!pdfResult.success) {
+            return res.status(500).json({
+                message: 'Error generating PDF',
+                error: pdfResult.error
+            });
+        }
         // Generate IQ export data for confirmation
         const exportData = (0, optimizer_service_1.generateIQExport)(solution, unit, width, layout);
         // Return result
         res.status(200).json({
             message: 'IQ data imported and processed successfully',
-            pdfId,
+            pdfId: pdfResult.pdfId,
+            pdfUrl: pdfResult.publicUrl,
             solution,
             iqData: exportData,
             importedPieces: pieces
@@ -266,6 +276,20 @@ const generateQuote = async (req, res) => {
                 solutionStockPiecesCount: ((_a = solution.stockPieces) === null || _a === void 0 ? void 0 : _a.length) || 0,
                 solutionStockPieces: JSON.stringify(solution.stockPieces)
             });
+            // Generate and upload cutlist PDF to cutlists bucket
+            try {
+                console.log('Generating cutlist PDF');
+                const cutlistPdfResult = await (0, optimizer_service_1.generateAndUploadOptimizationPdf)(solution, unit, cutWidth, layout);
+                if (cutlistPdfResult.success && cutlistPdfResult.publicUrl) {
+                    console.log('Cutlist PDF generated and uploaded successfully:', cutlistPdfResult.publicUrl);
+                }
+                else {
+                    console.error('Failed to generate or upload cutlist PDF:', cutlistPdfResult.error);
+                }
+            }
+            catch (pdfError) {
+                console.error('Error generating cutlist PDF:', pdfError);
+            }
             // 8. Calculate boards needed and wastage statistics
             const boardsNeeded = solution.stockPieces.length;
             totalBoardsUsed += boardsNeeded; // Add to total boards for cutting fee

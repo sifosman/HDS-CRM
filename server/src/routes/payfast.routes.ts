@@ -1,11 +1,13 @@
 import express, { Request, Response, NextFunction } from 'express';
 import {
   generatePaymentForm,
-  handlePaymentSuccess,
   handlePaymentCancel,
   handlePaymentNotification
 } from '../controllers/payfast.controller';
 import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
+
+// Import the enhanced PayFast success controller
+const payFastSuccessEnhancedController = require('../controllers/payfast-success-enhanced.controller.js');
 
 const router = express.Router();
 
@@ -33,8 +35,8 @@ router.use(rawBodyMiddleware);
 router.get('/pay', (req: Request, res: Response) => generatePaymentForm(req, res));
 
 // Handle payment success return (both GET and POST)
-router.get('/success', (req: Request, res: Response) => handlePaymentSuccess(req, res));
-router.post('/success', (req: Request, res: Response) => handlePaymentSuccess(req, res));
+router.get('/success', (req: Request, res: Response) => payFastSuccessEnhancedController.handlePaymentSuccess(req, res));
+router.post('/success', (req: Request, res: Response) => payFastSuccessEnhancedController.handlePaymentSuccess(req, res));
 
 // Handle payment cancellation return
 router.get('/cancel', (req: Request, res: Response) => handlePaymentCancel(req, res));

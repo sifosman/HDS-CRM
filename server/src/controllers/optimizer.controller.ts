@@ -7,9 +7,9 @@ import {
   optimizeCuttingLayout,
   generateQuotePdf,
   generateIQExport,
-  importFromIQ
+  importFromIQ,
+  generateAndUploadOptimizationPdf
 } from '../services/optimizer.service';
-import { generateAndUploadOptimizationPdf } from '../services/pdf-upload.service';
 import SupabaseService from '../services/supabase.service';
 
 // Optimize cutting layout
@@ -326,6 +326,19 @@ export const generateQuote = async (req: Request, res: Response) => {
         solutionStockPiecesCount: solution.stockPieces?.length || 0,
         solutionStockPieces: JSON.stringify(solution.stockPieces)
       });
+      
+      // Generate and upload cutlist PDF to cutlists bucket
+      try {
+        console.log('Generating cutlist PDF');
+        const cutlistPdfResult = await generateAndUploadOptimizationPdf(solution, unit, cutWidth, layout);
+        if (cutlistPdfResult.success && cutlistPdfResult.publicUrl) {
+          console.log('Cutlist PDF generated and uploaded successfully:', cutlistPdfResult.publicUrl);
+        } else {
+          console.error('Failed to generate or upload cutlist PDF:', cutlistPdfResult.error);
+        }
+      } catch (pdfError) {
+        console.error('Error generating cutlist PDF:', pdfError);
+      }
       
       // 8. Calculate boards needed and wastage statistics
       const boardsNeeded = solution.stockPieces.length;

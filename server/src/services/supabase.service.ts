@@ -766,35 +766,52 @@ const SupabaseService = {
  */
 async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
   try {
+    console.log('Starting invoice PDF generation for quote:', quoteNumber, 'invoice:', invoiceNumber);
+    
     // Import the PDF generation function
     const { generateInvoicePdf } = require('./optimizer.service');
     
     // Fetch the quote data
+    console.log('Fetching quote data for:', quoteNumber);
     const quoteResult = await this.fetchQuoteByNumber(quoteNumber);
     
     if (!quoteResult.success || !quoteResult.data) {
+      console.error('Quote not found for:', quoteNumber);
       return { success: false, error: 'Quote not found' };
     }
 
     const quote = quoteResult.data;
+    console.log('Quote data fetched successfully:', {
+      quoteNumber: quote.quote_number,
+      customerName: quote.customer_name,
+      total: quote.total
+    });
 
     // Generate the PDF
+    console.log('Generating invoice PDF');
     const pdfResult = await generateInvoicePdf(quote);
     
     if (!pdfResult.success || !pdfResult.buffer) {
+      console.error('Failed to generate PDF:', pdfResult.error || 'Unknown error');
       return { success: false, error: pdfResult.error || 'Failed to generate PDF' };
     }
+    
+    console.log('PDF generated successfully, buffer size:', pdfResult.buffer.length);
 
     // Create filename with timestamp
     const timestamp = Date.now();
     const fileName = `invoice-${invoiceNumber}-${timestamp}.pdf`;
+    console.log('Uploading invoice PDF with filename:', fileName);
 
     // Upload the PDF
     const uploadResult = await this.uploadInvoicePdf(pdfResult.buffer, fileName);
     
     if (!uploadResult.success) {
+      console.error('Failed to upload PDF:', uploadResult.error);
       return { success: false, error: uploadResult.error };
     }
+    
+    console.log('Invoice PDF uploaded successfully:', uploadResult.publicUrl);
 
     return { success: true, publicUrl: uploadResult.publicUrl };
 
@@ -811,57 +828,147 @@ async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): P
  * @returns Promise with the public URL or an error
  */
 async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('invoices') // Use the new invoices bucket
-        .upload(fileName, fileBuffer, {
-          contentType: 'application/pdf',
-          upsert: true, // Overwrite if file exists
-        });
+  try {
+    console.log('Uploading invoice PDF to Supabase Storage:', {
+      fileName: fileName,
+      fileSize: fileBuffer.length,
+      bucket: 'invoices'
+    });
+    
+    const { error: uploadError } = await supabase.storage
+      .from('invoices') // Use the new invoices bucket
+      .upload(fileName, fileBuffer, {
+        contentType: 'application/pdf',
+        upsert: true, // Overwrite if file exists
+      });
 
-      if (uploadError) {
-        console.error('Error uploading invoice PDF to Supabase Storage:', uploadError);
-        return { success: false, error: uploadError.message };
-      }
-
-      const { data: urlData } = supabase.storage
-        .from('invoices')
-        .getPublicUrl(fileName);
-
-      if (!urlData.publicUrl) {
-        return { success: false, error: 'Could not retrieve public URL for invoice PDF.' };
-      }
-
-      return { success: true, publicUrl: urlData.publicUrl };
-    } catch (error: any) {
-      console.error('Error in uploadInvoicePdf:', error);
-      return { success: false, error: error.message };
+    if (uploadError) {
+      console.error('Error uploading invoice PDF to Supabase Storage:', uploadError);
+      return { success: false, error: uploadError.message };
     }
-  },
+    
+    console.log('Invoice PDF uploaded successfully to Supabase Storage');
+
+    // Get the public URL for the uploaded file
+    const { data: urlData } = supabase.storage
+      .from('invoices')
+      .getPublicUrl(fileName);
+        
+    console.log('Retrieved public URL for invoice PDF:', urlData?.publicUrl);
+
+    if (!urlData?.publicUrl) {
+      console.error('Could not retrieve public URL for invoice PDF');
+      return { success: false, error: 'Could not retrieve public URL for invoice PDF.' };
+    }
+
+    return { success: true, publicUrl: urlData.publicUrl };
+  } catch (error: any) {
+    console.error('Error in uploadInvoicePdf:', error);
+    return { success: false, error: error.message };
+  }
 
   /**
-   * Get branch by trading_as value from branches table
+   * Fetch invoice by quote ID
+   * @param quoteId The quote ID to find the invoice for
+   * @returns Promise with invoice data
    */
-  getBranchByTradingAs: async (tradingAs: string): Promise<any> => {
+  async fetchInvoiceByQuoteId(quoteId: string): Promise<any> {
     try {
       const { data, error } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('trading_as', tradingAs)
+        .from('invoices')
+        .select('invoice_number, quote_number')
+        .eq('quote_number', quoteId)
         .single();
+
       if (error) {
-        console.error(`Error fetching branch with trading_as ${tradingAs}:`, error);
+        console.error(`Error fetching invoice for quote ${quoteId}:`, error);
         return { success: false, error: error.message };
       }
+
       if (!data) {
-        return { success: false, error: 'Branch not found' };
+        return { success: false, error: 'Invoice not found for quote' };
       }
+
       return { success: true, data };
     } catch (error: any) {
-      console.error(`Error in getBranchByTradingAs for ${tradingAs}:`, error);
+      console.error(`Error in fetchInvoiceByQuoteId for ${quoteId}:`, error);
       return { success: false, error: error.message };
     }
-  },
+  }
+
+  /**
+   * List invoice PDFs in the invoices bucket by invoice number
+   * @param invoiceNumber The invoice number to search for
+   * @returns Promise with list of matching files
+   */
+  async listInvoicePdfs(invoiceNumber: string): Promise<any> {
+    try {
+      const { data: files, error } = await supabase
+        .storage
+        .from('invoices')
+        .list('', {
+          search: `invoice-${invoiceNumber}-`
+        });
+
+      if (error) {
+        console.error(`Error listing invoice PDFs for ${invoiceNumber}:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: files };
+    } catch (error: any) {
+      console.error(`Error in listInvoicePdfs for ${invoiceNumber}:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Download an invoice PDF from the invoices bucket
+   * @param invoiceNumber The invoice number to download
+   * @returns Promise with the PDF data
+   */
+  async downloadInvoicePdf(invoiceNumber: string): Promise<any> {
+    try {
+      // First, list files to find the most recent one
+      const listResult = await this.listInvoicePdfs(invoiceNumber);
+      
+      if (!listResult.success || !listResult.data || listResult.data.length === 0) {
+        return { success: false, error: 'No invoice PDF found' };
+      }
+
+      // Sort by name to get the most recent one (assuming timestamp is in the filename)
+      const files = listResult.data;
+      files.sort((a: any, b: any) => b.name.localeCompare(a.name));
+      const latestFile = files[0];
+      
+      console.log('Found invoice PDF:', latestFile.name);
+      
+      // Download the PDF
+      const { data: pdfData, error: pdfError } = await supabase
+        .storage
+        .from('invoices')
+        .download(latestFile.name);
+
+      if (pdfError) {
+        console.error('Error downloading PDF:', pdfError);
+        return { success: false, error: pdfError.message };
+      }
+
+      if (pdfData) {
+        console.log('Successfully downloaded PDF from storage:', latestFile.name);
+        return { 
+          success: true, 
+          data: Buffer.from(await pdfData.arrayBuffer()),
+          fileName: latestFile.name
+        };
+      }
+
+      return { success: false, error: 'No PDF data received' };
+    } catch (error: any) {
+      console.error('Error in downloadInvoicePdf:', error);
+      return { success: false, error: error.message };
+    }
+  }
 
   /**
    * Get banking details by fx_branch (match to trading_as of selected branch)
@@ -885,7 +992,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
       console.error(`Error in getBankingDetailsByBranch for ${fxBranch}:`, error);
       return { success: false, error: error.message };
     }
-  },
+  }
 
   /**
    * Get customer email from quote

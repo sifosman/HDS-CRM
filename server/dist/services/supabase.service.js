@@ -672,27 +672,41 @@ const SupabaseService = {
      */
     async generateAndUploadInvoicePdf(quoteNumber, invoiceNumber) {
         try {
+            console.log('Starting invoice PDF generation for quote:', quoteNumber, 'invoice:', invoiceNumber);
             // Import the PDF generation function
             const { generateInvoicePdf } = require('./optimizer.service');
             // Fetch the quote data
+            console.log('Fetching quote data for:', quoteNumber);
             const quoteResult = await this.fetchQuoteByNumber(quoteNumber);
             if (!quoteResult.success || !quoteResult.data) {
+                console.error('Quote not found for:', quoteNumber);
                 return { success: false, error: 'Quote not found' };
             }
             const quote = quoteResult.data;
+            console.log('Quote data fetched successfully:', {
+                quoteNumber: quote.quote_number,
+                customerName: quote.customer_name,
+                total: quote.total
+            });
             // Generate the PDF
+            console.log('Generating invoice PDF');
             const pdfResult = await generateInvoicePdf(quote);
             if (!pdfResult.success || !pdfResult.buffer) {
+                console.error('Failed to generate PDF:', pdfResult.error || 'Unknown error');
                 return { success: false, error: pdfResult.error || 'Failed to generate PDF' };
             }
+            console.log('PDF generated successfully, buffer size:', pdfResult.buffer.length);
             // Create filename with timestamp
             const timestamp = Date.now();
             const fileName = `invoice-${invoiceNumber}-${timestamp}.pdf`;
+            console.log('Uploading invoice PDF with filename:', fileName);
             // Upload the PDF
             const uploadResult = await this.uploadInvoicePdf(pdfResult.buffer, fileName);
             if (!uploadResult.success) {
+                console.error('Failed to upload PDF:', uploadResult.error);
                 return { success: false, error: uploadResult.error };
             }
+            console.log('Invoice PDF uploaded successfully:', uploadResult.publicUrl);
             return { success: true, publicUrl: uploadResult.publicUrl };
         }
         catch (error) {
@@ -708,6 +722,11 @@ const SupabaseService = {
      */
     async uploadInvoicePdf(fileBuffer, fileName) {
         try {
+            console.log('Uploading invoice PDF to Supabase Storage:', {
+                fileName: fileName,
+                fileSize: fileBuffer.length,
+                bucket: 'invoices'
+            });
             const { error: uploadError } = await supabase.storage
                 .from('invoices') // Use the new invoices bucket
                 .upload(fileName, fileBuffer, {
@@ -718,10 +737,13 @@ const SupabaseService = {
                 console.error('Error uploading invoice PDF to Supabase Storage:', uploadError);
                 return { success: false, error: uploadError.message };
             }
+            console.log('Invoice PDF uploaded successfully to Supabase Storage');
             const { data: urlData } = supabase.storage
                 .from('invoices')
                 .getPublicUrl(fileName);
+            console.log('Retrieved public URL for invoice PDF:', urlData.publicUrl);
             if (!urlData.publicUrl) {
+                console.error('Could not retrieve public URL for invoice PDF');
                 return { success: false, error: 'Could not retrieve public URL for invoice PDF.' };
             }
             return { success: true, publicUrl: urlData.publicUrl };

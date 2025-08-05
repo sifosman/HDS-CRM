@@ -561,6 +561,19 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                 if (invoiceResult.data?.invoiceNumber) {
                   await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
                   console.log('Invoice status updated to paid');
+                  
+                  // Generate and upload invoice PDF
+                  try {
+                    console.log('Starting invoice PDF generation for quote:', quoteId, 'invoice number:', invoiceResult.data.invoiceNumber);
+                    const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
+                    if (pdfResult.success && pdfResult.publicUrl) {
+                      console.log('Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
+                    } else {
+                      console.error('Failed to generate or upload invoice PDF:', pdfResult.error);
+                    }
+                  } catch (pdfError) {
+                    console.error('Error generating/uploading invoice PDF:', pdfError);
+                  }
                 }
                 
                 // Update quote status to approved
@@ -972,30 +985,6 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
     </head>
     <body>
         <script>
-            function downloadInvoice(quoteId) {
-                const button = event.target;
-                const originalText = button.textContent;
-                
-                // Show loading state
-                button.textContent = 'Downloading...';
-                button.disabled = true;
-                
-                // Create download URL
-                const downloadUrl = '/api/invoices/download/' + quoteId;
-                
-                // Create temporary link
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = 'invoice-' + quoteId + '.pdf';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Reset button state
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-            
             function shareOnWhatsApp(quoteId) {
                 const button = event.target;
                 const originalText = button.textContent;
@@ -1036,8 +1025,9 @@ export const handlePaymentSuccess = async (req: Request, res: Response): Promise
             </p>
             
             <div class="action-buttons">
-                ${quoteId ? '<button onclick="downloadInvoice(\'' + quoteId + '\')" class="btn">Download Invoice</button>' : ''}
-                ${quoteId ? '<button onclick="shareOnWhatsApp(\'' + quoteId + '\')" class="btn btn-whatsapp">Share on WhatsApp</button>' : ''}
+                ${quoteId ? '<a href="/api/invoices/download/' + quoteId + '" class="btn" target="_blank" rel="noopener">📥 Download Invoice</a>' : ''}
+                ${quoteId ? '<a href="/api/invoices/download/' + quoteId + '" class="btn btn-secondary" target="_blank" rel="noopener">📄 Download PDF</a>' : ''}
+                ${quoteId ? '<button onclick="shareOnWhatsApp(\'' + quoteId + '\')" class="btn btn-whatsapp">💬 Share on WhatsApp</button>' : ''}
             </div>
             
             <p class="footer-text">

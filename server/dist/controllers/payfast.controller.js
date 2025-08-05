@@ -519,6 +519,19 @@ const handlePaymentNotification = async (req, res) => {
                                 if ((_b = invoiceResult.data) === null || _b === void 0 ? void 0 : _b.invoiceNumber) {
                                     await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
                                     console.log('Invoice status updated to paid');
+                                    // Generate and upload invoice PDF
+                                    try {
+                                        const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
+                                        if (pdfResult.success && pdfResult.publicUrl) {
+                                            console.log('Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
+                                        }
+                                        else {
+                                            console.error('Failed to generate or upload invoice PDF:', pdfResult.error);
+                                        }
+                                    }
+                                    catch (pdfError) {
+                                        console.error('Error generating/uploading invoice PDF:', pdfError);
+                                    }
                                 }
                                 // Update quote status to approved
                                 await SupabaseService.updateQuoteStatus(quoteId, 'approved');

@@ -21,12 +21,7 @@ class PayFastSuccessEnhancedController {
       // Combine payment data from both GET and POST
       const paymentData = { ...req.query, ...req.body };
       
-      if (!paymentData.m_payment_id && !paymentData['m_payment_id']) {
-        return res.status(400).json({
-          success: false,
-          error: 'Missing payment data'
-        });
-      }
+      console.log('💳 PayFast Payment Success Data:', paymentData);
 
       // Extract quote number from payment data
       const quoteNumber = this.extractQuoteNumber(paymentData);
@@ -61,14 +56,11 @@ class PayFastSuccessEnhancedController {
         payment_id: paymentData.m_payment_id || paymentData['m_payment_id']
       };
 
-      console.log('💳 Creating invoice with PDF...');
+      console.log('💳 Creating invoice...');
 
-      // Create invoice with PDF generation
-      const invoiceResult = await SupabaseService.createInvoiceWithPdf(
-        quoteNumber,
-        paymentDetails
-      );
-
+      // Create invoice record using the quote ID (which is the quote_number)
+      const invoiceResult = await SupabaseService.createInvoice(quoteNumber, paymentDetails);
+      
       if (!invoiceResult.success) {
         console.error('❌ Invoice creation failed:', invoiceResult.error);
         return res.status(500).json({
@@ -77,19 +69,39 @@ class PayFastSuccessEnhancedController {
         });
       }
 
-      console.log('✅ Invoice created successfully');
-      console.log('📄 Invoice Number:', invoiceResult.data.invoiceNumber);
-      console.log('🔗 Invoice PDF URL:', invoiceResult.data.pdfUrl);
-      console.log('🔗 Cutlist PDF URL:', quote.cutlist_pdf_url);
+      console.log('✅ Invoice created successfully:', invoiceResult.data?.invoiceNumber);
+      
+      // Update invoice status to paid
+      if (invoiceResult.data?.invoiceNumber) {
+        await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
+        console.log('Invoice status updated to paid');
+        
+        // Generate and upload invoice PDF
+        try {
+          console.log('Starting invoice PDF generation for quote:', quoteNumber, 'invoice number:', invoiceResult.data.invoiceNumber);
+          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteNumber, invoiceResult.data.invoiceNumber);
+          if (pdfResult.success && pdfResult.publicUrl) {
+            console.log('Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
+          } else {
+            console.error('Failed to generate or upload invoice PDF:', pdfResult.error);
+          }
+        } catch (pdfError) {
+          console.error('Error generating/uploading invoice PDF:', pdfError);
+        }
+      }
 
-      // Prepare success response - use cutlist PDF URL instead of invoice PDF URL
+      // Update quote status to approved
+      await SupabaseService.updateQuoteStatus(quoteNumber, 'approved');
+      console.log('Quote status updated to approved');
+
+      // Prepare success response
       const responseData = {
         success: true,
         message: 'Payment processed successfully',
         paymentId: paymentDetails.reference,
         quoteNumber: quoteNumber,
         invoiceNumber: invoiceResult.data.invoiceNumber,
-        pdfUrl: quote.cutlist_pdf_url || invoiceResult.data.pdfUrl, // Use cutlist PDF if available, fallback to invoice PDF
+        pdfUrl: `/api/invoices/download/${quoteNumber}`, // Use the correct download endpoint for invoice PDF
         customerName: quote.customer_name,
         customerEmail: quote.customer_email,
         projectName: quote.project_name,
@@ -124,8 +136,13 @@ class PayFastSuccessEnhancedController {
       if (paymentId) {
         const parts = paymentId.split('-');
         if (parts.length >= 4 && parts[0] === 'QUOTE') {
-          // Format: QUOTE-Q-YYYYMMDD-NNNN-...
-          return `${parts[1]}-${parts[2]}-${parts[3]}`;
+          // Handle different formats:
+          // 1. QUOTE-Q-YYYYMMDD-NNNN-1754311399090 (without branch)
+          // 2. QUOTE-Q-YYYYMMDD-NNNN-BRANCH-1754311399090 (with branch)
+          if (parts.length >= 4) {
+            // Extract Q-YYYYMMDD-NNNN
+            return `${parts[1]}-${parts[2]}-${parts[3]}`;
+          }
         }
       }
 
@@ -274,7 +291,7 @@ class PayFastSuccessEnhancedController {
             <a href="${data.pdfUrl}" class="btn btn-primary" target="_blank" rel="noopener">
                 📄 Download Invoice
             </a>
-            <a href="/api/invoices/download/${data.invoiceNumber}" class="btn btn-secondary" target="_blank">
+            <a href="${data.pdfUrl}" class="btn btn-secondary" target="_blank">
                 📥 Download PDF
             </a>
             <a href="https://wa.me/?text=My%20invoice%20${data.invoiceNumber}%20is%20ready%20for%20download%20at%20${encodeURIComponent(data.pdfUrl)}" 
