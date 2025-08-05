@@ -543,18 +543,48 @@ export const generateQuote = async (req: Request, res: Response) => {
     const uploadResult = await SupabaseService.uploadQuotePdf(pdfResult.buffer, pdfId);
     pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
 
-    // Save quote to database
+    // Save quote to database with all required fields for PayFast integration
     const quoteSaveData = {
       filename: pdfId, // Use the PDF ID as the filename
-      cutlistId: req.body.cutlistId || req.body.cutlist_id,
-      quoteNumber: quoteId // Store the generated quote ID
+      cutlistId: req.body.cutlistId || req.body.cutlist_id || 'default-cutlist-001', // Provide fallback
+      quoteNumber: quoteId, // Store the generated quote ID
+      customerName: customerName,
+      customerPhone: phoneNumber,
+      customerEmail: req.body.customerEmail || req.body.email || '',
+      projectName: projectName,
+      quoteData: {
+        items: pdfSections.map(section => ({
+          description: `${section.material} - ${section.pieces.length} pieces`,
+          quantity: section.pieces.reduce((sum: number, piece: any) => sum + (piece.quantity || 1), 0),
+          unitPrice: section.totalCost / section.pieces.reduce((sum: number, piece: any) => sum + (piece.quantity || 1), 0),
+          total: section.totalCost
+        })),
+        totals: {
+          subtotal: grandTotal,
+          tax: grandTotal * 0.15, // 15% VAT
+          finalTotal: grandTotal * 1.15
+        }
+      },
+      subtotal: grandTotal,
+      tax: grandTotal * 0.15,
+      total: grandTotal * 1.15,
+      status: 'pending',
+      cutlistUrl: pdfUrl,
+      branchData: branchData
     };
+    
+    console.log('Saving quote with data:', {
+      quoteNumber: quoteSaveData.quoteNumber,
+      customerName: quoteSaveData.customerName,
+      total: quoteSaveData.total,
+      hasCutlistId: !!quoteSaveData.cutlistId
+    });
     
     const quoteResult = await SupabaseService.createQuote(quoteSaveData);
     if (!quoteResult.success) {
       console.error('Failed to save quote to database:', quoteResult.error);
     } else {
-      console.log('Quote saved to database successfully');
+      console.log('Quote saved to database successfully with ID:', quoteResult.data?.id);
     }
 
     // Return the processed data without returning the response object
