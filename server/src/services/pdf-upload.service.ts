@@ -1,5 +1,4 @@
-// Note: Install @types/node for proper Buffer typing
-// Temporary workaround using 'any' type for Buffer parameters
+// After installing @types/node, remove this declaration and use proper Buffer type
 
 interface CutPiece {
   width: number;
@@ -24,8 +23,9 @@ interface Solution {
 const { v4: uuidv4 } = eval('require')('uuid');
 const PDFDocument = eval('require')('pdfkit');
 
-// Buffer type workaround
-declare const Buffer: any;
+// Buffer type - will be properly typed after installing @types/node
+// For now, we'll keep this as a placeholder
+type BufferType = any;
 
 // Helper function to convert units (copied from optimizer.service)
 const convertUnit = (value: number, fromUnit: number, toUnit: number): number => {
@@ -118,7 +118,7 @@ export const generatePdfWithBuffer = async (
   const doc = new PDFDocument({ size: 'A4' });
   
   // Collect PDF data in memory buffers instead of writing to disk
-  const buffers: any[] = [];
+  const buffers: BufferType[] = [];
   doc.on('data', buffers.push.bind(buffers));
   
   // Add title with a colored header box
@@ -233,9 +233,11 @@ export const generatePdfWithBuffer = async (
   doc.end();
   
   // Return promise with buffer and ID
-  return new Promise<{ buffer: any, id: string }>((resolve) => {
+  return new Promise<{ buffer: BufferType, id: string }>((resolve) => {
     doc.on('end', () => {
-      const pdfBuffer = Buffer.concat(buffers);
+      // After installing @types/node, replace this with: const pdfBuffer = Buffer.concat(buffers);
+      const bufferConcat = eval('require')('buffer').Buffer.concat;
+      const pdfBuffer = bufferConcat(buffers);
       resolve({
         buffer: pdfBuffer,
         id: pdfId
