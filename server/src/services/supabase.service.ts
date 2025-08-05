@@ -748,8 +748,13 @@ const SupabaseService = {
         return { success: false, error: 'Could not retrieve public URL for PDF.' };
       }
 
-  }
-},
+      return { success: true, publicUrl: urlData.publicUrl };
+
+    } catch (error: any) {
+      console.error('Error in uploadQuotePdf:', error);
+      return { success: false, error: error.message };
+    }
+  },
 
 /**
  * Generate invoice PDF from quote data and upload to invoices bucket
