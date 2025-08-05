@@ -748,9 +748,52 @@ const SupabaseService = {
         return { success: false, error: 'Could not retrieve public URL for PDF.' };
       }
 
+  }
+},
+
+/**
+ * Generate invoice PDF from quote data and upload to invoices bucket
+ * @param quoteNumber The quote number to generate invoice for
+ * @param invoiceNumber The invoice number for the PDF filename
+ * @returns Promise with the public URL of the generated PDF
+ */
+async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+  try {
+    // Import the PDF generation function
+    const { generateInvoicePdf } = require('./optimizer.service');
+    
+    // Fetch the quote data
+    const quoteResult = await this.fetchQuoteByNumber(quoteNumber);
+    
+    if (!quoteResult.success || !quoteResult.data) {
+      return { success: false, error: 'Quote not found' };
+   * @returns Promise with the public URL or an error
+   */
+  async uploadInvoicePdf(fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('invoices') // Use the new invoices bucket
+        .upload(fileName, fileBuffer, {
+          contentType: 'application/pdf',
+          upsert: true, // Overwrite if file exists
+        });
+
+      if (uploadError) {
+        console.error('Error uploading invoice PDF to Supabase Storage:', uploadError);
+        return { success: false, error: uploadError.message };
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('invoices')
+        .getPublicUrl(fileName);
+
+      if (!urlData.publicUrl) {
+        return { success: false, error: 'Could not retrieve public URL for invoice PDF.' };
+      }
+
       return { success: true, publicUrl: urlData.publicUrl };
     } catch (error: any) {
-      console.error('Error in uploadQuotePdf:', error);
+      console.error('Error in uploadInvoicePdf:', error);
       return { success: false, error: error.message };
     }
   },

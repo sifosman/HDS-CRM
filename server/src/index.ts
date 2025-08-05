@@ -19,6 +19,7 @@ import supabaseRoutes from './routes/supabase.routes';
 import { diagnosticRoutes } from './routes/diagnostic.routes';
 import payfastRoutes from './routes/payfast.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import invoicePdfRoutes from './routes/invoice-pdf.routes.js';
 import emailTestRoutes from './routes/email-test.routes';
 import emailTestHardcodedRoutes from './routes/email-test-hardcoded.routes';
 import testRoutes from './routes/test.routes';
@@ -48,6 +49,7 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/optimizer', optimizerRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/botsailor', botsailorRoutes);
+app.use('/api/iqretail', iqretailRoutes);
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/cutlist', cutlistRoutes);
 app.use('/api/n8n', n8nRoutes);
@@ -57,6 +59,7 @@ app.use('/api/supabase', supabaseRoutes);
 app.use('/api/diagnostic', diagnosticRoutes);
 app.use('/api/payfast', payfastRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/invoice-pdf', invoicePdfRoutes);
 app.use('/api/email', emailTestRoutes);
 app.use('/api/email-hardcoded', emailTestHardcodedRoutes);
 app.use('/api/test', testRoutes);
@@ -101,7 +104,10 @@ app.get('/', (req, res) => {
       '/api/n8n/process',
       '/api/direct-test',
       '/api/direct-n8n',
-      '/api/payfast'
+      '/api/payfast',
+      '/api/invoice-pdf/generate/:quoteNumber',
+      '/api/invoice-pdf/:invoiceNumber',
+      '/api/invoice-pdf/regenerate/:invoiceNumber'
     ]
   });
 });
