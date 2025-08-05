@@ -1,4 +1,13 @@
-// After installing @types/node, remove this declaration and use proper Buffer type
+// Using dynamic imports for Node.js modules to avoid type issues
+// This approach works even if @types/node is not properly configured
+// Buffer operations are handled through eval('require')('buffer')
+//
+// To properly fix Buffer type issues:
+// 1. Ensure @types/node is installed: npm install --save-dev @types/node
+// 2. Add "types": ["node"] to compilerOptions in tsconfig.json
+// 3. Replace eval('require')('buffer') with direct Buffer usage
+// 4. Replace any[] with Buffer[] for buffer arrays
+// 5. Replace 'any' with 'Buffer' for buffer return types
 
 interface CutPiece {
   width: number;
@@ -22,10 +31,6 @@ interface Solution {
 // Note: These require statements work in Node.js environment
 const { v4: uuidv4 } = eval('require')('uuid');
 const PDFDocument = eval('require')('pdfkit');
-
-// Buffer type - will be properly typed after installing @types/node
-// For now, we'll keep this as a placeholder
-type BufferType = any;
 
 // Helper function to convert units (copied from optimizer.service)
 const convertUnit = (value: number, fromUnit: number, toUnit: number): number => {
@@ -118,7 +123,7 @@ export const generatePdfWithBuffer = async (
   const doc = new PDFDocument({ size: 'A4' });
   
   // Collect PDF data in memory buffers instead of writing to disk
-  const buffers: BufferType[] = [];
+  const buffers: any[] = [];
   doc.on('data', buffers.push.bind(buffers));
   
   // Add title with a colored header box
@@ -233,11 +238,11 @@ export const generatePdfWithBuffer = async (
   doc.end();
   
   // Return promise with buffer and ID
-  return new Promise<{ buffer: BufferType, id: string }>((resolve) => {
+  return new Promise<{ buffer: any, id: string }>((resolve) => {
     doc.on('end', () => {
-      // After installing @types/node, replace this with: const pdfBuffer = Buffer.concat(buffers);
-      const bufferConcat = eval('require')('buffer').Buffer.concat;
-      const pdfBuffer = bufferConcat(buffers);
+      // Use dynamic import for Buffer.concat to avoid type issues
+      const bufferModule = eval('require')('buffer');
+      const pdfBuffer = bufferModule.Buffer.concat(buffers);
       resolve({
         buffer: pdfBuffer,
         id: pdfId
