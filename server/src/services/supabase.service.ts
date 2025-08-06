@@ -872,7 +872,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
    * @param quoteId The quote ID to find the invoice for
    * @returns Promise with invoice data
    */
-  fetchInvoiceByQuoteId: async (quoteId: string): Promise<any> => {
+  async fetchInvoiceByQuoteId(quoteId: string): Promise<any> {
     try {
       const { data, error } = await supabase
         .from('invoices')
@@ -894,14 +894,14 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
       console.error(`Error in fetchInvoiceByQuoteId for ${quoteId}:`, error);
       return { success: false, error: error.message };
     }
-  }
+  },
 
   /**
    * List invoice PDFs in the invoices bucket by invoice number
    * @param invoiceNumber The invoice number to search for
    * @returns Promise with list of matching files
    */
-  listInvoicePdfs: async (invoiceNumber: string): Promise<any> => {
+  async listInvoicePdfs(invoiceNumber: string): Promise<any> {
     try {
       const { data: files, error } = await supabase
         .storage
@@ -920,14 +920,14 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
       console.error(`Error in listInvoicePdfs for ${invoiceNumber}:`, error);
       return { success: false, error: error.message };
     }
-  }
+  },
 
   /**
    * Download an invoice PDF from the invoices bucket
    * @param invoiceNumber The invoice number to download
    * @returns Promise with the PDF data
    */
-  downloadInvoicePdf: async (invoiceNumber: string): Promise<any> => {
+  async downloadInvoicePdf(invoiceNumber: string): Promise<any> {
     try {
       // First, list files to find the most recent one
       const listResult = await this.listInvoicePdfs(invoiceNumber);
@@ -968,12 +968,12 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
       console.error('Error in downloadInvoicePdf:', error);
       return { success: false, error: error.message };
     }
-  }
+  },
 
   /**
    * Get banking details by fx_branch (match to trading_as of selected branch)
    */
-  getBankingDetailsByBranch: async (fxBranch: string): Promise<any> => {
+  async getBankingDetailsByBranch(fxBranch: string): Promise<any> {
     try {
       const { data, error } = await supabase
         .from('banking_details')
@@ -992,12 +992,12 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
       console.error(`Error in getBankingDetailsByBranch for ${fxBranch}:`, error);
       return { success: false, error: error.message };
     }
-  }
+  },
 
   /**
    * Get customer email from quote
    */
-  getCustomerEmailFromQuote: async (quoteId: string): Promise<string | null> => {
+  async getCustomerEmailFromQuote(quoteId: string): Promise<string | null> {
     try {
       const { data, error } = await supabase
         .from('quotes')
@@ -1020,7 +1020,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
   /**
    * Get branch email from branch_details table
    */
-  getBranchEmailByQuote: async (quoteId: string): Promise<string | null> => {
+  async getBranchEmailByQuote(quoteId: string): Promise<string | null> {
     try {
       // First, get the quote to find the branch/trading name
       const { data: quoteData, error: quoteError } = await supabase
@@ -1058,7 +1058,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
   /**
    * Get the best email address for a quote (priority: branch email, then customer email)
    */
-  getBestEmailForQuote: async (quoteId: string): Promise<string | null> => {
+  async getBestEmailForQuote(quoteId: string): Promise<string | null> {
     try {
       // Try branch email first
       const branchEmail = await SupabaseService.getBranchEmailByQuote(quoteId);
@@ -1080,7 +1080,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
    * @param quoteNumber The quote number of the quote to fetch
    * @returns Promise with quote data
    */
-  fetchQuoteByNumber: async (quoteNumber: string): Promise<any> => {
+  async fetchQuoteByNumber(quoteNumber: string): Promise<any> {
     try {
       // Try to fetch by quote_number column
       const { data, error } = await supabase
@@ -1111,7 +1111,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
    * @param fileName The name for the uploaded file
    * @returns Promise with the public URL or an error
    */
-  uploadCutlistPdf: async (fileBuffer: any, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> => {
+  async uploadCutlistPdf(fileBuffer: any, fileName: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
     try {
       const { error: uploadError } = await supabase.storage
         .from('cutlists') // Use the cutlists bucket
@@ -1146,7 +1146,7 @@ async uploadInvoicePdf(fileBuffer: any, fileName: string): Promise<{ success: bo
    * @param pdfUrl The new cutlist PDF URL
    * @returns Promise with updated quote data
    */
-  updateCutlistPdfUrl: async (quoteNumber: string, pdfUrl: string): Promise<any> => {
+  async updateCutlistPdfUrl(quoteNumber: string, pdfUrl: string): Promise<any> {
     try {
       const { data, error } = await supabase
         .from('quotes')
