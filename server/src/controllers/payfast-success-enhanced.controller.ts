@@ -12,7 +12,7 @@ class PayFastSuccessEnhancedController {
   /**
    * Handle PayFast payment success with invoice PDF generation
    */
-  async handlePaymentSuccess(req: Request, res: Response): Promise<void> {
+  async handlePaymentSuccess(req: Request, res: Response): Promise<Response> {
     try {
       console.log('🚀 PayFast Success Handler Started');
       console.log('📋 Request Method:', req.method);
