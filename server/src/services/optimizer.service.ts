@@ -878,21 +878,14 @@ export const generatePdf = (solution: Solution, unit: number, cutWidth: number =
     doc.text(`R ${edgingCost.toFixed(2)}`, startX + infoColWidths[0] + 5, (infoCurrentY + rowHeight) + 8, { width: infoColWidths[1] });
   });
 
-  // Add footer to each page
-  const totalPages = solution.stockPieces.length;
-
-  for (let i = 0; i < totalPages; i++) {
-    doc.switchToPage(i);
-
-    // Add footer with date and page numbers
-    doc.fontSize(8).fillColor('#666666');
-    doc.text(
-      `HDS Group Cutlist - Generated on ${dateString} - Page ${i + 1} of ${totalPages}`,
-      50,
-      doc.page.height - 50,
-      { align: 'center', width: doc.page.width - 100 }
-    );
-  }
+  // Add a simple footer to the last page
+  doc.fontSize(8).fillColor('#666666');
+  doc.text(
+    `HDS Group Cutlist - Generated on ${dateString}`,
+    50,
+    doc.page.height - 50,
+    { align: 'center', width: doc.page.width - 100 }
+  );
 
   // Finalize PDF
   doc.end();
@@ -1873,22 +1866,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
         }
       }
       
-      // Try to return to a valid page after page numbering
-      try {
-        // Check if the buffer range has changed
-        const finalRange = doc.bufferedPageRange();
-        console.log('Final bufferedPageRange():', JSON.stringify(finalRange));
-        
-        // Find the last valid page
-        const finalStartIdx = finalRange.start || 0;
-        const finalLastPageIdx = finalStartIdx + finalRange.count - 1;
-        
-        console.log(`Returning to last page: ${finalLastPageIdx}`);
-        doc.switchToPage(finalLastPageIdx);
-      } catch (finalPageError) {
-        console.error('Error returning to last page:', finalPageError);
-        // The document might still be valid even if we can't switch pages
-      }
+      // Skip page switching - PDFKit doesn't support switchToPage after content
     }
   } catch (error) {
     // Log the error but allow PDF generation to continue
@@ -1983,6 +1961,9 @@ export const generatePdfWithBuffer = async (
   // Collect PDF data in memory buffers instead of writing to disk
   const buffers: any[] = [];
   doc.on('data', buffers.push.bind(buffers));
+  
+  // Ensure we start fresh without any page switching
+  doc.font('Helvetica');
   
   // Add title with a colored header box
   doc.rect(50, 50, doc.page.width - 100, 60)
