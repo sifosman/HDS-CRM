@@ -12,7 +12,7 @@ class PayFastSuccessEnhancedController {
   /**
    * Handle PayFast payment success with invoice PDF generation
    */
-  async handlePaymentSuccess(req: Request, res: Response): Promise<Response> {
+  async handlePaymentSuccess(req: Request, res: Response): Promise<void> {
     try {
       console.log('🚀 PayFast Success Handler Started');
       console.log('📋 Request Method:', req.method);
@@ -115,7 +115,8 @@ class PayFastSuccessEnhancedController {
         return res.json(responseData);
       } else {
         // For browser requests, render success page
-        return this.renderSuccessPage(res, responseData);
+        this.renderSuccessPage(res, responseData);
+        return;
       }
 
     } catch (error: any) {
@@ -174,7 +175,7 @@ class PayFastSuccessEnhancedController {
   /**
    * Render enhanced success page with invoice download
    */
-  async renderSuccessPage(res: Response, data: any) {
+  async renderSuccessPage(res: Response, data: any): Promise<void> {
     const html = `
 <!DOCTYPE html>
 <html lang="en">
