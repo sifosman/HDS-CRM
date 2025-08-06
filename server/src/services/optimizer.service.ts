@@ -1912,8 +1912,6 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   });
 };
 
-
-
 /**
  * Generate PDF with optimization solution and upload to Supabase storage
  * @param solution The optimization solution
@@ -2012,7 +2010,7 @@ export const generatePdfWithBuffer = async (
 
   doc.fontSize(10)
      .fillColor('#000000')
-     .text(`Generated: ${new Date().toLocaleDateString()}`, 50, 120, { align: 'right', width: doc.page.width - 100 });
+     .text('Generated: ' + new Date().toLocaleDateString(), 50, 120, { align: 'right', width: doc.page.width - 100 });
 
   doc.moveDown(3);
 
@@ -2102,7 +2100,7 @@ export const generatePdfWithBuffer = async (
   doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
      .stroke();
   doc.text('Total Stock Area', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
-  doc.text(`${totalStockAreaConverted}`, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+  doc.text(totalStockAreaConverted.toString(), summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
   doc.text('Total material area', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
   currentSummaryY += summaryRowHeight;
 
@@ -2112,7 +2110,7 @@ export const generatePdfWithBuffer = async (
   doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
      .stroke();
   doc.text('Total Cut Area', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
-  doc.text(`${totalCutAreaConverted}`, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+  doc.text(totalCutAreaConverted.toString(), summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
   doc.text('Total used material', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
   currentSummaryY += summaryRowHeight;
 
@@ -2122,8 +2120,8 @@ export const generatePdfWithBuffer = async (
   doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
      .fillAndStroke('#fff0f0', '#000000');
   doc.text('Waste Area', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
-  doc.text(`${wasteAreaConverted}`, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
-  doc.text(`${wastePercentage}% of total material`, summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
+  doc.text(wasteAreaConverted.toString(), summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+  doc.text(wastePercentage + '% of total material', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
   currentSummaryY += summaryRowHeight;
 
   // Row 6: Edging Cost
@@ -2138,7 +2136,7 @@ export const generatePdfWithBuffer = async (
   doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
      .stroke();
   doc.text('Layout Type', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
-  doc.text(`${layout === 0 ? 'Guillotine' : 'Nested'}`, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+  doc.text((layout === 0 ? 'Guillotine' : 'Nested'), summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
   doc.text('Cutting algorithm used', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
   currentSummaryY += summaryRowHeight;
 
@@ -2149,7 +2147,7 @@ export const generatePdfWithBuffer = async (
   doc.rect(summaryStartX, currentSummaryY, summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2], summaryRowHeight)
      .stroke();
   doc.text('Cut Width', summaryStartX + 5, currentSummaryY + 8, { width: summaryColWidths[0] });
-  doc.text(`${cutWidthConverted}`, summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
+  doc.text(cutWidthConverted.toString(), summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
   doc.text('Saw blade thickness', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
 
   doc.moveDown(3);
@@ -2163,7 +2161,7 @@ export const generatePdfWithBuffer = async (
 
     // Stock piece title
     doc.fontSize(16).fillColor('#003366');
-    doc.text(`Case - Stock Piece`, { underline: true });
+    doc.text('Case - Stock Piece', { underline: true });
     doc.moveDown(0.5);
 
     // Stock piece details
@@ -2172,8 +2170,8 @@ export const generatePdfWithBuffer = async (
     const stockArea = (parseFloat(stockWidth) * parseFloat(stockLength)).toFixed(2);
 
     doc.fontSize(12).fillColor('#000000');
-    doc.text(`Dimensions: ${stockWidth} × ${stockLength}`);
-    doc.text(`Area: ${stockArea}`);
+    doc.text('Dimensions: ' + stockWidth + ' × ' + stockLength);
+    doc.text('Area: ' + stockArea);
     doc.moveDown(1);
 
     // Cut pieces table
@@ -2185,7 +2183,7 @@ export const generatePdfWithBuffer = async (
     stockPiece.cutPieces.forEach((cutPiece, pieceIndex) => {
       const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
       const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
-      doc.text(`${cutPiece.externalId}: ${cutWidth}  ${cutLength} ${unitLabelSingle}`);
+      doc.text(cutPiece.externalId + ': ' + cutWidth + '  ' + cutLength + ' ' + unitLabelSingle);
     });
 
     doc.moveDown(2);
