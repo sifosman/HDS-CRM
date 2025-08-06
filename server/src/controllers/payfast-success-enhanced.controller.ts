@@ -19,32 +19,93 @@ class PayFastSuccessEnhancedController {
       console.log('📋 Request Body:', req.body);
       console.log('📋 Request Query:', req.query);
 
-      // Combine payment data from both GET and POST
-      const paymentData = { ...req.query, ...req.body };
+      // Get quoteId from query parameter
+      const quoteId = req.query.quoteId as string;
       
-      console.log('💳 PayFast Payment Success Data:', paymentData);
-
-      // Extract quote number from payment data
-      const quoteNumber = this.extractQuoteNumber(paymentData);
-      
-      if (!quoteNumber) {
-        res.status(400).json({
-          success: false,
-          error: 'Could not extract quote number from payment data'
-        });
+      if (!quoteId) {
+        // Simple success page without quote data
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Payment Successful - HDS</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+              .container { max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+              .success-icon { font-size: 60px; color: #4CAF50; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 10px; }
+              p { color: #666; margin-bottom: 30px; }
+              .btn { display: inline-block; padding: 12px 24px; margin: 10px; border: none; border-radius: 5px; text-decoration: none; font-size: 16px; cursor: pointer; }
+              .btn-primary { background: #1976D2; color: white; }
+              .btn-secondary { background: #25D366; color: white; }
+              .btn:hover { opacity: 0.9; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="success-icon">✅</div>
+              <h1>Payment Successful!</h1>
+              <p>Thank you for your payment. Your order has been confirmed.</p>
+              
+              <a href="/api/invoices/download/${quoteId || 'latest'}" class="btn btn-primary" download>
+                Download Invoice
+              </a>
+              
+              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds.co.za/invoice/${quoteId || 'latest'}" 
+                 class="btn btn-secondary" target="_blank">
+                Share on WhatsApp
+              </a>
+            </div>
+          </body>
+          </html>
+        `);
         return;
       }
 
-      console.log('📋 Extracted Quote Number:', quoteNumber);
+      console.log('📋 Quote ID:', quoteId);
 
       // Fetch quote details
-      const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteNumber);
+      const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteId);
       
       if (!quoteResult.success) {
-        res.status(404).json({
-          success: false,
-          error: 'Quote not found'
-        });
+        // Show success page even if quote not found
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Payment Successful - HDS</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+              .container { max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+              .success-icon { font-size: 60px; color: #4CAF50; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 10px; }
+              p { color: #666; margin-bottom: 30px; }
+              .btn { display: inline-block; padding: 12px 24px; margin: 10px; border: none; border-radius: 5px; text-decoration: none; font-size: 16px; cursor: pointer; }
+              .btn-primary { background: #1976D2; color: white; }
+              .btn-secondary { background: #25D366; color: white; }
+              .btn:hover { opacity: 0.9; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="success-icon">✅</div>
+              <h1>Payment Successful!</h1>
+              <p>Thank you for your payment. Your order has been confirmed.</p>
+              
+              <a href="/api/invoices/download/${quoteId}" class="btn btn-primary" download>
+                Download Invoice
+              </a>
+              
+              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds.co.za/invoice/${quoteId}" 
+                 class="btn btn-secondary" target="_blank">
+                Share on WhatsApp
+              </a>
+            </div>
+          </body>
+          </html>
+        `);
         return;
       }
 
@@ -53,59 +114,46 @@ class PayFastSuccessEnhancedController {
       // Create payment details object
       const paymentDetails = {
         method: 'PayFast',
-        reference: paymentData.pf_payment_id || paymentData['pf_payment_id'],
+        reference: req.query.pf_payment_id || req.body.pf_payment_id,
         date: new Date().toISOString(),
-        amount: paymentData.amount_gross || paymentData['amount_gross'],
-        payment_id: paymentData.m_payment_id || paymentData['m_payment_id']
+        amount: req.query.amount_gross || req.body.amount_gross,
+        payment_id: req.query.m_payment_id || req.body.m_payment_id
       };
 
       console.log('💳 Creating invoice...');
 
-      // Create invoice record using the quote ID (which is the quote_number)
-      const invoiceResult = await SupabaseService.createInvoice(quoteNumber, paymentDetails);
+      // Create invoice record
+      const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
       
-      if (!invoiceResult.success) {
-        console.error('❌ Invoice creation failed:', invoiceResult.error);
-        res.status(500).json({
-          success: false,
-          error: 'Failed to create invoice: ' + invoiceResult.error
-        });
-        return;
-      }
-
-      console.log('✅ Invoice created successfully:', invoiceResult.data?.invoiceNumber);
-      
-      // Update invoice status to paid
-      if (invoiceResult.data?.invoiceNumber) {
+      if (invoiceResult.success && invoiceResult.data?.invoiceNumber) {
+        console.log('✅ Invoice created:', invoiceResult.data.invoiceNumber);
+        
+        // Update invoice status to paid
         await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
-        console.log('Invoice status updated to paid');
         
         // Generate and upload invoice PDF
         try {
-          console.log('Starting invoice PDF generation for quote:', quoteNumber, 'invoice number:', invoiceResult.data.invoiceNumber);
-          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteNumber, invoiceResult.data.invoiceNumber);
+          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
           if (pdfResult.success && pdfResult.publicUrl) {
-            console.log('Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
-          } else {
-            console.error('Failed to generate or upload invoice PDF:', pdfResult.error);
+            console.log('✅ Invoice PDF uploaded:', pdfResult.publicUrl);
           }
         } catch (pdfError) {
-          console.error('Error generating/uploading invoice PDF:', pdfError);
+          console.error('PDF generation error:', pdfError);
         }
       }
 
       // Update quote status to approved
-      await SupabaseService.updateQuoteStatus(quoteNumber, 'approved');
-      console.log('Quote status updated to approved');
+      await SupabaseService.updateQuoteStatus(quoteId, 'approved');
+      console.log('✅ Quote status updated to approved');
 
       // Prepare success response
       const responseData = {
         success: true,
         message: 'Payment processed successfully',
         paymentId: paymentDetails.reference,
-        quoteNumber: quoteNumber,
+        quoteNumber: quoteId,
         invoiceNumber: invoiceResult.data.invoiceNumber,
-        pdfUrl: `/api/invoices/download/${quoteNumber}`, // Use the correct download endpoint for invoice PDF
+        pdfUrl: `/api/invoices/download/${quoteId}`,
         customerName: quote.customer_name,
         customerEmail: quote.customer_email,
         projectName: quote.project_name,
@@ -118,8 +166,43 @@ class PayFastSuccessEnhancedController {
         res.json(responseData);
         return;
       } else {
-        // For browser requests, render success page
-        this.renderSuccessPage(res, responseData);
+        // For browser requests, render simple success page
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Payment Successful - HDS</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+              .container { max-width: 600px; margin: 50px auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+              .success-icon { font-size: 60px; color: #4CAF50; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 10px; }
+              p { color: #666; margin-bottom: 30px; }
+              .btn { display: inline-block; padding: 12px 24px; margin: 10px; border: none; border-radius: 5px; text-decoration: none; font-size: 16px; cursor: pointer; }
+              .btn-primary { background: #1976D2; color: white; }
+              .btn-secondary { background: #25D366; color: white; }
+              .btn:hover { opacity: 0.9; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="success-icon">✅</div>
+              <h1>Payment Successful!</h1>
+              <p>Thank you for your payment. Your order has been confirmed.</p>
+              
+              <a href="/api/invoices/download/${quoteId}" class="btn btn-primary" download>
+                Download Invoice
+              </a>
+              
+              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds.co.za/invoice/${quoteId}" 
+                 class="btn btn-secondary" target="_blank">
+                Share on WhatsApp
+              </a>
+            </div>
+          </body>
+          </html>
+        `);
         return;
       }
 
