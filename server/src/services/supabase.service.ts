@@ -1091,6 +1091,35 @@ const SupabaseService = {
       console.error(`Error in updateCutlistPdfUrl for ${quoteNumber}:`, error);
       return { success: false, error: error.message };
     }
+  },
+
+  /**
+   * Fetch invoice by quote ID
+   * @param quoteId The quote ID to find the associated invoice for
+   * @returns Promise with invoice data
+   */
+  async fetchInvoiceByQuoteId(quoteId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .single();
+      
+      if (error) {
+        console.error(`Error fetching invoice with quote ID ${quoteId}:`, error);
+        return { success: false, error: error.message };
+      }
+      
+      if (!data) {
+        return { success: false, error: 'Invoice not found' };
+      }
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error(`Error in fetchInvoiceByQuoteId for ${quoteId}:`, error);
+      return { success: false, error: error.message };
+    }
   }
 };
 
