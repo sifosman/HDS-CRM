@@ -28,10 +28,11 @@ class PayFastSuccessEnhancedController {
       const quoteNumber = this.extractQuoteNumber(paymentData);
       
       if (!quoteNumber) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Could not extract quote number from payment data'
         });
+        return;
       }
 
       console.log('📋 Extracted Quote Number:', quoteNumber);
@@ -40,10 +41,11 @@ class PayFastSuccessEnhancedController {
       const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteNumber);
       
       if (!quoteResult.success) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: 'Quote not found'
         });
+        return;
       }
 
       const quote = quoteResult.data;
@@ -64,10 +66,11 @@ class PayFastSuccessEnhancedController {
       
       if (!invoiceResult.success) {
         console.error('❌ Invoice creation failed:', invoiceResult.error);
-        return res.status(500).json({
+        res.status(500).json({
           success: false,
           error: 'Failed to create invoice: ' + invoiceResult.error
         });
+        return;
       }
 
       console.log('✅ Invoice created successfully:', invoiceResult.data?.invoiceNumber);
@@ -112,7 +115,8 @@ class PayFastSuccessEnhancedController {
 
       // Send response based on request type
       if (req.xhr || req.headers.accept?.includes('json')) {
-        return res.json(responseData);
+        res.json(responseData);
+        return;
       } else {
         // For browser requests, render success page
         this.renderSuccessPage(res, responseData);
@@ -121,10 +125,11 @@ class PayFastSuccessEnhancedController {
 
     } catch (error: any) {
       console.error('❌ PayFast success handler error:', error);
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         error: 'Internal server error: ' + error.message
       });
+      return;
     }
   }
 
