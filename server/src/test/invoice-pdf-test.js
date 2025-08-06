@@ -1,5 +1,5 @@
 // Test script to verify invoice PDF generation and upload functionality
-import SupabaseService from '../services/supabase.service.js';
+import SupabaseService from '../services/supabase.service';
 
 async function testInvoicePdfGeneration() {
   console.log('🧪 Testing Invoice PDF Generation and Upload...\n');

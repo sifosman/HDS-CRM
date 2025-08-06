@@ -202,14 +202,14 @@ function quickTest() {
   
   // Check if services exist
   try {
-    require('../services/supabase.service.js');
+    require('../services/supabase.service');
     console.log('   SupabaseService: ✅ Available');
   } catch (e) {
     console.log('   SupabaseService: ❌ Not found');
   }
   
   try {
-    require('../services/optimizer.service.js');
+    require('../services/optimizer.service');
     console.log('   OptimizerService: ✅ Available');
   } catch (e) {
     console.log('   OptimizerService: ❌ Not found');

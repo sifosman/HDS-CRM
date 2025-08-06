@@ -3,8 +3,8 @@
  * Tests the complete flow from payment success to invoice PDF generation
  */
 
-import SupabaseService from '../services/supabase.service.js';
-import { generateInvoicePdf } from '../services/optimizer.service.js';
+import SupabaseService from '../services/supabase.service';
+import { generateInvoicePdf } from '../services/optimizer.service';
 
 // Test configuration
 const TEST_CONFIG = {

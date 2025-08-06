@@ -1,5 +1,5 @@
 import express from 'express';
-import InvoicePdfController from '../controllers/invoice-pdf.controller.js';
+import InvoicePdfController from '../controllers/invoice-pdf.controller';
 
 const router = express.Router();
 

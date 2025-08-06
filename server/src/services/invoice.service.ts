@@ -50,7 +50,7 @@ class InvoiceService {
   async generateAndUploadInvoicePdf(quoteNumber: string, invoiceNumber: string): Promise<{ success: boolean; error?: string; publicUrl?: string }> {
     try {
       // Import the PDF generation function dynamically
-      const { generateInvoicePdf } = await import('./optimizer.service.js');
+      const { generateInvoicePdf } = await import('./optimizer.service');
       
       // Fetch the quote data
       const quoteResult = await this.fetchQuoteByNumber(quoteNumber);

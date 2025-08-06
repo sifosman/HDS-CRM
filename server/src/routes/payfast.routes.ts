@@ -35,8 +35,8 @@ router.use(rawBodyMiddleware);
 router.get('/pay', generatePaymentForm);
 
 // Handle payment success return (both GET and POST)
-router.get('/success', payFastSuccessEnhancedController.handlePaymentSuccess);
-router.post('/success', payFastSuccessEnhancedController.handlePaymentSuccess);
+router.get('/success', (req: Request, res: Response) => payFastSuccessEnhancedController.handlePaymentSuccess(req, res));
+router.post('/success', (req: Request, res: Response) => payFastSuccessEnhancedController.handlePaymentSuccess(req, res));
 
 // Handle payment cancellation return
 router.get('/cancel', handlePaymentCancel);
