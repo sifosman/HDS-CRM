@@ -32,20 +32,20 @@ const rawBodyMiddleware = (req: Request, res: Response, next: NextFunction) => {
 router.use(rawBodyMiddleware);
 
 // Generate payment form for a quote
-router.get('/pay', (req: Request, res: Response) => generatePaymentForm(req, res));
+router.get('/pay', generatePaymentForm);
 
 // Handle payment success return (both GET and POST)
-router.get('/success', (req: Request, res: Response) => payFastSuccessEnhancedController.handlePaymentSuccess(req, res));
-router.post('/success', (req: Request, res: Response) => payFastSuccessEnhancedController.handlePaymentSuccess(req, res));
+router.get('/success', payFastSuccessEnhancedController.handlePaymentSuccess);
+router.post('/success', payFastSuccessEnhancedController.handlePaymentSuccess);
 
 // Handle payment cancellation return
-router.get('/cancel', (req: Request, res: Response) => handlePaymentCancel(req, res));
+router.get('/cancel', handlePaymentCancel);
 
 // Handle PayFast ITN (Instant Transaction Notification)
-router.post('/notify', (req: Request, res: Response) => handlePaymentNotification(req, res));
+router.post('/notify', handlePaymentNotification);
 
 // Debug endpoint to test signature generation
-router.get('/debug', (req: Request, res: Response) => debugPayFastSignature(req, res));
+router.get('/debug', debugPayFastSignature);
 
 // Test endpoint for signature verification
 router.get('/test-signature', (req: Request, res: Response) => {
