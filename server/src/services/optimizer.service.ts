@@ -527,20 +527,10 @@ export const generatePdf = (solution: Solution, unit: number, cutWidth: number =
 
   doc.moveDown(3);
 
-  // Draw each stock piece and its cut pieces
+  // Draw layout diagrams
+  
+  // Draw each stock piece layout
   solution.stockPieces.forEach((stockPiece, index) => {
-    // Add page for each stock piece except the first one
-    if (index > 0) {
-      doc.addPage();
-    }
-
-    // Stock piece title with colored box
-    const unitLabel = unit === 0 ? 'mm' : unit === 1 ? 'in' : 'ft';
-
-    // Create a colored header for the stock piece
-    const stockTitleX = 50;
-    const stockTitleY = doc.y + 10;
-    const stockTitleWidth = doc.page.width - 100;
     const stockTitleHeight = 30;
 
     doc.rect(stockTitleX, stockTitleY, stockTitleWidth, stockTitleHeight)
@@ -974,7 +964,7 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
       doc.text('123 Business Street', 50, doc.y + 5);
       doc.text('Cape Town, 8000', 50, doc.y + 5);
       doc.text('Tel: +27 21 123 4567', 50, doc.y + 5);
-      doc.text('Email: info@hds.co.za', 50, doc.y + 5);
+      doc.text('Email: info@hds-nine.vercel.app', 50, doc.y + 5);
       
       // Invoice details (right side)
       const rightColumnX = doc.page.width - 250;
@@ -2512,19 +2502,35 @@ export const generatePdfWithBuffer = async (
   });
 
   // Add footer to each page
-  const totalPages = solution.stockPieces.length;
+  const totalPages = doc.bufferedPageRange().count; // Get actual page count from the PDF
 
-  for (let i = 0; i < totalPages; i++) {
-    doc.switchToPage(i);
+  // Only try to add footers if there are pages in the document
+  if (totalPages > 0) {
+    // Get the current page range
+    const pageRange = doc.bufferedPageRange();
+    const startPage = pageRange.start;
+    const endPage = startPage + pageRange.count - 1;
 
-    // Add footer with date and page numbers
-    doc.fontSize(8).fillColor('#666666');
-    doc.text(
-      `HDS Group Cutlist - Generated on ${dateString} - Page ${i + 1} of ${totalPages}`,
-      50,
-      doc.page.height - 50,
-      { align: 'center', width: doc.page.width - 100 }
-    );
+    console.log(`Adding footers to pages ${startPage} to ${endPage}`);
+    
+    // Only iterate through pages that exist
+    for (let i = startPage; i <= endPage; i++) {
+      try {
+        doc.switchToPage(i);
+
+        // Add footer with date and page numbers
+        doc.fontSize(8).fillColor('#666666');
+        doc.text(
+          `HDS Group Cutlist - Generated on ${dateString} - Page ${i + 1 - startPage} of ${totalPages}`,
+          50,
+          doc.page.height - 50,
+          { align: 'center', width: doc.page.width - 100 }
+        );
+      } catch (error) {
+        console.error(`Error adding footer to page ${i}:`, error);
+        // Continue with next page if there's an error
+      }
+    }
   }
   
   // Finalize PDF

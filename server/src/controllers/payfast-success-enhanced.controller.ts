@@ -52,7 +52,7 @@ class PayFastSuccessEnhancedController {
                 Download Invoice
               </a>
               
-              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds.co.za/invoice/${quoteId || 'latest'}" 
+              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds-nine.vercel.app/invoice/${quoteId || 'latest'}" 
                  class="btn btn-secondary" target="_blank">
                 Share on WhatsApp
               </a>
@@ -98,7 +98,7 @@ class PayFastSuccessEnhancedController {
                 Download Invoice
               </a>
               
-              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds.co.za/invoice/${quoteId}" 
+              <a href="https://wa.me/?text=Payment%20confirmed!%20Your%20invoice%20is%20ready.%20Download%20from:%20https://hds-nine.vercel.app/invoice/${quoteId}" 
                  class="btn btn-secondary" target="_blank">
                 Share on WhatsApp
               </a>
