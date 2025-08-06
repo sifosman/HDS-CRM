@@ -2510,7 +2510,7 @@ export const generatePdfWithBuffer = async (
       doc.page.height - 50,
       { align: 'center', width: doc.page.width - 100 }
     );
-  });
+  }
   
   // Finalize PDF
   doc.end();
