@@ -1,16 +1,27 @@
 import express from 'express';
-import { InvoicePdfController } from '../controllers/invoice-pdf.controller';
+import InvoicePdfController from '../controllers/invoice-pdf.controller';
 
 const router = express.Router();
-const invoicePdfController = new InvoicePdfController();
 
-// POST /api/invoices/generate-pdf - Generate invoice PDF from quote data
-router.post('/generate-pdf', (req, res) => invoicePdfController.generateInvoicePdf(req, res));
+/**
+ * @route   POST /api/invoices/generate/:quoteNumber
+ * @desc    Generate invoice PDF for a quote
+ * @access  Public
+ */
+router.post('/generate/:quoteNumber', InvoicePdfController.generateInvoicePdf);
 
-// GET /api/invoices/:invoiceNumber - Get invoice details including PDF URL
-router.get('/:invoiceNumber', (req, res) => invoicePdfController.getInvoice(req, res));
+/**
+ * @route   GET /api/invoices/:invoiceNumber
+ * @desc    Get invoice details including PDF URL
+ * @access  Public
+ */
+router.get('/:invoiceNumber', InvoicePdfController.getInvoiceDetails);
 
-// POST /api/invoices/regenerate-pdf/:invoiceNumber - Regenerate invoice PDF
-router.post('/regenerate-pdf/:invoiceNumber', (req, res) => invoicePdfController.regenerateInvoicePdf(req, res));
+/**
+ * @route   POST /api/invoices/regenerate/:invoiceNumber
+ * @desc    Regenerate invoice PDF
+ * @access  Public
+ */
+router.post('/regenerate/:invoiceNumber', InvoicePdfController.regenerateInvoicePdf);
 
 export default router;

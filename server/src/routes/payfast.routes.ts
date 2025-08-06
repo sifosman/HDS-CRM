@@ -7,7 +7,7 @@ import {
 import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
 
 // Import the enhanced PayFast success controller
-const payFastSuccessEnhancedController = require('../controllers/payfast-success-enhanced.controller.js');
+import payFastSuccessEnhancedController from '../controllers/payfast-success-enhanced.controller';
 
 const router = express.Router();
 
