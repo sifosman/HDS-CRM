@@ -1103,7 +1103,9 @@ const SupabaseService = {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('quote_id', quoteId)
+        .eq('quote_number', quoteId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
       
       if (error) {
@@ -1118,6 +1120,40 @@ const SupabaseService = {
       return { success: true, data };
     } catch (error: any) {
       console.error(`Error in fetchInvoiceByQuoteId for ${quoteId}:`, error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Update invoice payment details
+   * @param invoiceNumber The invoice number to update
+   * @param paymentDetails The payment details to update
+   * @returns Promise with update result
+   */
+  async updateInvoicePaymentDetails(invoiceNumber: string, paymentDetails: any): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({
+          payment_method: paymentDetails.method,
+          payment_reference: paymentDetails.reference,
+          payment_date: paymentDetails.date,
+          amount_paid: paymentDetails.amount,
+          payment_id: paymentDetails.payment_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('invoice_number', invoiceNumber)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating invoice payment details:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error in updateInvoicePaymentDetails:', error);
       return { success: false, error: error.message };
     }
   }
