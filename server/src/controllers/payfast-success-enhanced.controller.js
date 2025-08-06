@@ -139,9 +139,16 @@ class PayFastSuccessEnhancedController {
           // Handle different formats:
           // 1. QUOTE-Q-YYYYMMDD-NNNN-1754311399090 (without branch)
           // 2. QUOTE-Q-YYYYMMDD-NNNN-BRANCH-1754311399090 (with branch)
+          // 3. QUOTE-Q-YYYYMMDD-NNNN-BRANCHNAME-1754311399090 (with branch name)
           if (parts.length >= 4) {
-            // Extract Q-YYYYMMDD-NNNN
-            return `${parts[1]}-${parts[2]}-${parts[3]}`;
+            // For format 1: QUOTE-Q-YYYYMMDD-NNNN-timestamp
+            if (parts.length === 5) {
+              return `${parts[1]}-${parts[2]}-${parts[3]}`;
+            }
+            // For format 2 & 3: QUOTE-Q-YYYYMMDD-NNNN-BRANCH-timestamp or QUOTE-Q-YYYYMMDD-NNNN-BRANCHNAME-timestamp
+            if (parts.length >= 6) {
+              return `${parts[1]}-${parts[2]}-${parts[3]}`;
+            }
           }
         }
       }
@@ -149,7 +156,8 @@ class PayFastSuccessEnhancedController {
       // Try item_name as fallback
       const itemName = paymentData.item_name || paymentData['item_name'];
       if (itemName) {
-        const match = itemName.match(/HDS Quote (Q-\d{8}-\d{4})/);
+        // Updated regex to handle both old and new formats with branch names
+        const match = itemName.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,6})?)/);
         if (match) {
           return match[1];
         }
@@ -207,22 +215,6 @@ class PayFastSuccessEnhancedController {
             color: #666;
             margin-bottom: 30px;
         }
-        .details {
-            text-align: left;
-            margin: 20px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 5px;
-        }
-        .detail-item {
-            margin: 10px 0;
-            display: flex;
-            justify-content: space-between;
-        }
-        .detail-label {
-            font-weight: bold;
-            color: #555;
-        }
         .action-buttons {
             margin: 30px 0;
         }
@@ -242,13 +234,6 @@ class PayFastSuccessEnhancedController {
         .btn-primary:hover {
             background: #0056b3;
         }
-        .btn-secondary {
-            background: #28a745;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #1e7e34;
-        }
         .btn-whatsapp {
             background: #25D366;
             color: white;
@@ -264,35 +249,9 @@ class PayFastSuccessEnhancedController {
         <h1 class="success-title">Payment Successful!</h1>
         <p class="success-message">Thank you for your payment. Your invoice has been generated and is ready for download.</p>
         
-        <div class="details">
-            <div class="detail-item">
-                <span class="detail-label">Invoice Number:</span>
-                <span>${data.invoiceNumber}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Customer:</span>
-                <span>${data.customerName}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Project:</span>
-                <span>${data.projectName}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Amount Paid:</span>
-                <span>R ${parseFloat(data.totalAmount).toFixed(2)}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Branch:</span>
-                <span>${data.branchName}</span>
-            </div>
-        </div>
-        
         <div class="action-buttons">
             <a href="${data.pdfUrl}" class="btn btn-primary" target="_blank" rel="noopener">
                 📄 Download Invoice
-            </a>
-            <a href="${data.pdfUrl}" class="btn btn-secondary" target="_blank">
-                📥 Download PDF
             </a>
             <a href="https://wa.me/?text=My%20invoice%20${data.invoiceNumber}%20is%20ready%20for%20download%20at%20${encodeURIComponent(data.pdfUrl)}" 
                class="btn btn-whatsapp" target="_blank" rel="noopener">
