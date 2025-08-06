@@ -1,30 +1,31 @@
-import { Request, Response } from 'express';
-import SupabaseService from '../services/supabase.service';
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 /**
  * Enhanced PayFast Success Handler with Invoice PDF Generation
- * 
+ *
  * This controller handles PayFast payment success and automatically generates
  * invoice PDFs with proper integration to the existing system.
  */
-
 class PayFastSuccessEnhancedController {
-  /**
-   * Handle PayFast payment success with invoice PDF generation
-   */
-  async handlePaymentSuccess(req: Request, res: Response): Promise<void> {
-    try {
-      console.log('🚀 PayFast Success Handler Started');
-      console.log('📋 Request Method:', req.method);
-      console.log('📋 Request Body:', req.body);
-      console.log('📋 Request Query:', req.query);
-
-      // Get quoteId from query parameter
-      const quoteId = req.query.quoteId as string;
-      
-      if (!quoteId) {
-        // Simple success page without quote data
-        res.send(`
+    /**
+     * Handle PayFast payment success with invoice PDF generation
+     */
+    async handlePaymentSuccess(req, res) {
+        var _a;
+        try {
+            console.log('🚀 PayFast Success Handler Started');
+            console.log('📋 Request Method:', req.method);
+            console.log('📋 Request Body:', req.body);
+            console.log('📋 Request Query:', req.query);
+            // Get quoteId from query parameter
+            const quoteId = req.query.quoteId;
+            if (!quoteId) {
+                // Simple success page without quote data
+                res.send(`
           <!DOCTYPE html>
           <html lang="en">
           <head>
@@ -285,19 +286,16 @@ class PayFastSuccessEnhancedController {
           </body>
           </html>
         `);
-        return;
-      }
-
-      console.log('🔍 Searching for quote with identifier:', quoteId);
-      console.log('📋 Request query params:', JSON.stringify(req.query, null, 2));
-      console.log('📋 Request body params:', JSON.stringify(req.body, null, 2));
-
-      // Fetch quote details
-      const quoteResult = await SupabaseService.fetchQuoteByNumber(quoteId);
-      
-      if (!quoteResult.success) {
-        // Show success page even if quote not found
-        res.send(`
+                return;
+            }
+            console.log('🔍 Searching for quote with identifier:', quoteId);
+            console.log('📋 Request query params:', JSON.stringify(req.query, null, 2));
+            console.log('📋 Request body params:', JSON.stringify(req.body, null, 2));
+            // Fetch quote details
+            const quoteResult = await supabase_service_1.default.fetchQuoteByNumber(quoteId);
+            if (!quoteResult.success) {
+                // Show success page even if quote not found
+                res.send(`
           <!DOCTYPE html>
           <html lang="en">
           <head>
@@ -552,91 +550,81 @@ class PayFastSuccessEnhancedController {
           </body>
           </html>
         `);
-        return;
-      }
-
-      const quote = quoteResult.data;
-
-      // Safely extract payment details with null checks
-      const queryParams = req.query || {};
-      const bodyParams = req.body || {};
-      
-      console.log('💰 Extracting payment details...');
-      console.log('💰 Query pf_payment_id:', queryParams.pf_payment_id);
-      console.log('💰 Body pf_payment_id:', bodyParams.pf_payment_id);
-      console.log('💰 Query amount_gross:', queryParams.amount_gross);
-      console.log('💰 Body amount_gross:', bodyParams.amount_gross);
-      console.log('💰 Query m_payment_id:', queryParams.m_payment_id);
-      console.log('💰 Body m_payment_id:', bodyParams.m_payment_id);
-
-      // Create payment details object with safe property access
-      const paymentDetails = {
-        method: 'PayFast',
-        reference: queryParams.pf_payment_id || bodyParams.pf_payment_id || 'N/A',
-        date: new Date().toISOString(),
-        amount: queryParams.amount_gross || bodyParams.amount_gross || '0',
-        payment_id: queryParams.m_payment_id || bodyParams.m_payment_id || 'N/A'
-      };
-      
-      console.log('💳 Payment details created:', JSON.stringify(paymentDetails, null, 2));
-
-      console.log('💳 Updating existing invoice with payment details...');
-
-      // Find existing invoice for this quote
-      const existingInvoiceResult = await SupabaseService.fetchInvoiceByQuoteId(quoteId);
-      let invoiceNumber: string = '';
-      let pdfUrl: string = '';
-
-      if (existingInvoiceResult.success && existingInvoiceResult.data) {
-        // Use the correct database field name from schema
-        invoiceNumber = existingInvoiceResult.data.invoice_number || '';
-        
-        console.log('✅ Existing invoice found. Raw data:', JSON.stringify(existingInvoiceResult.data, null, 2));
-        console.log('✅ Extracted invoice number:', invoiceNumber);
-        
-        if (!invoiceNumber) {
-          console.error('❌ Invoice number is empty or undefined. Cannot update invoice.');
-          console.log('Available fields in invoice data:', Object.keys(existingInvoiceResult.data));
-        } else {
-          // Update invoice status to paid
-          await SupabaseService.updateInvoiceStatus(invoiceNumber, 'paid');
-          
-          // Update invoice payment details
-          await SupabaseService.updateInvoicePaymentDetails(invoiceNumber, paymentDetails);
-        }
-        
-        // Generate and upload updated invoice PDF
-        try {
-          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
-          if (pdfResult.success && pdfResult.publicUrl) {
-            console.log('✅ Invoice PDF uploaded:', pdfResult.publicUrl);
-          }
-        } catch (pdfError) {
-          console.error('PDF generation error:', pdfError);
-        }
-      } else {
-        // Fallback: Create new invoice if none exists (backward compatibility)
-        console.log('⚠️ No existing invoice found, creating new one...');
-        const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
-        
-        if (invoiceResult.success && invoiceResult.data?.invoiceNumber) {
-          invoiceNumber = invoiceResult.data.invoiceNumber;
-          console.log('✅ New invoice created:', invoiceNumber);
-          
-          // Generate and upload invoice PDF
-          console.log('📄 Generating invoice PDF...');
-          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
-          
-          if (pdfResult.success) {
-            pdfUrl = pdfResult.publicUrl || '';
-            console.log('✅ Invoice PDF generated:', pdfUrl);
-          } else {
-            pdfUrl = `/api/invoices/download/${invoiceNumber}`;
-            console.error('❌ Failed to generate invoice PDF:', pdfResult.error);
-          }
-        } else {
-          // Ultimate fallback
-          res.send(`
+                return;
+            }
+            const quote = quoteResult.data;
+            // Safely extract payment details with null checks
+            const queryParams = req.query || {};
+            const bodyParams = req.body || {};
+            console.log('💰 Extracting payment details...');
+            console.log('💰 Query pf_payment_id:', queryParams.pf_payment_id);
+            console.log('💰 Body pf_payment_id:', bodyParams.pf_payment_id);
+            console.log('💰 Query amount_gross:', queryParams.amount_gross);
+            console.log('💰 Body amount_gross:', bodyParams.amount_gross);
+            console.log('💰 Query m_payment_id:', queryParams.m_payment_id);
+            console.log('💰 Body m_payment_id:', bodyParams.m_payment_id);
+            // Create payment details object with safe property access
+            const paymentDetails = {
+                method: 'PayFast',
+                reference: queryParams.pf_payment_id || bodyParams.pf_payment_id || 'N/A',
+                date: new Date().toISOString(),
+                amount: queryParams.amount_gross || bodyParams.amount_gross || '0',
+                payment_id: queryParams.m_payment_id || bodyParams.m_payment_id || 'N/A'
+            };
+            console.log('💳 Payment details created:', JSON.stringify(paymentDetails, null, 2));
+            console.log('💳 Updating existing invoice with payment details...');
+            // Find existing invoice for this quote
+            const existingInvoiceResult = await supabase_service_1.default.fetchInvoiceByQuoteId(quoteId);
+            let invoiceNumber = '';
+            let pdfUrl = '';
+            if (existingInvoiceResult.success && existingInvoiceResult.data) {
+                // Use the correct database field name from schema
+                invoiceNumber = existingInvoiceResult.data.invoice_number || '';
+                console.log('✅ Existing invoice found. Raw data:', JSON.stringify(existingInvoiceResult.data, null, 2));
+                console.log('✅ Extracted invoice number:', invoiceNumber);
+                if (!invoiceNumber) {
+                    console.error('❌ Invoice number is empty or undefined. Cannot update invoice.');
+                    console.log('Available fields in invoice data:', Object.keys(existingInvoiceResult.data));
+                }
+                else {
+                    // Update invoice status to paid
+                    await supabase_service_1.default.updateInvoiceStatus(invoiceNumber, 'paid');
+                    // Update invoice payment details
+                    await supabase_service_1.default.updateInvoicePaymentDetails(invoiceNumber, paymentDetails);
+                }
+                // Generate and upload updated invoice PDF
+                try {
+                    const pdfResult = await supabase_service_1.default.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
+                    if (pdfResult.success && pdfResult.publicUrl) {
+                        console.log('✅ Invoice PDF uploaded:', pdfResult.publicUrl);
+                    }
+                }
+                catch (pdfError) {
+                    console.error('PDF generation error:', pdfError);
+                }
+            }
+            else {
+                // Fallback: Create new invoice if none exists (backward compatibility)
+                console.log('⚠️ No existing invoice found, creating new one...');
+                const invoiceResult = await supabase_service_1.default.createInvoice(quoteId, paymentDetails);
+                if (invoiceResult.success && ((_a = invoiceResult.data) === null || _a === void 0 ? void 0 : _a.invoiceNumber)) {
+                    invoiceNumber = invoiceResult.data.invoiceNumber;
+                    console.log('✅ New invoice created:', invoiceNumber);
+                    // Generate and upload invoice PDF
+                    console.log('📄 Generating invoice PDF...');
+                    const pdfResult = await supabase_service_1.default.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
+                    if (pdfResult.success) {
+                        pdfUrl = pdfResult.publicUrl || '';
+                        console.log('✅ Invoice PDF generated:', pdfUrl);
+                    }
+                    else {
+                        pdfUrl = `/api/invoices/download/${invoiceNumber}`;
+                        console.error('❌ Failed to generate invoice PDF:', pdfResult.error);
+                    }
+                }
+                else {
+                    // Ultimate fallback
+                    res.send(`
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -798,12 +786,11 @@ class PayFastSuccessEnhancedController {
             </body>
             </html>
           `);
-          return;
-        }
-      }
-
-      // Send success response with download button
-      res.send(`
+                    return;
+                }
+            }
+            // Send success response with download button
+            res.send(`
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -1064,66 +1051,64 @@ class PayFastSuccessEnhancedController {
         </body>
         </html>
       `);
-      return;
-    } catch (error: any) {
-      console.error('❌ PayFast success handler error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error: ' + error.message
-      });
-      return;
-    }
-  }
-
-  /**
-   * Extract quote number from PayFast payment data
-   */
-  extractQuoteNumber(paymentData: any): string | null {
-    try {
-      // Try m_payment_id first
-      const paymentId = paymentData.m_payment_id || paymentData['m_payment_id'];
-      if (paymentId) {
-        const parts = paymentId.split('-');
-        if (parts.length >= 4 && parts[0] === 'QUOTE') {
-          // Handle different formats:
-          // 1. QUOTE-Q-YYYYMMDD-NNNN-1754311399090 (without branch)
-          // 2. QUOTE-Q-YYYYMMDD-NNNN-BRANCH-1754311399090 (with branch)
-          // 3. QUOTE-Q-YYYYMMDD-NNNN-BRANCHNAME-1754311399090 (with branch name)
-          if (parts.length >= 4) {
-            // For format 1: QUOTE-Q-YYYYMMDD-NNNN-timestamp
-            if (parts.length === 5) {
-              return `${parts[1]}-${parts[2]}-${parts[3]}`;
-            }
-            // For format 2 & 3: QUOTE-Q-YYYYMMDD-NNNN-BRANCH-timestamp or QUOTE-Q-YYYYMMDD-NNNN-BRANCHNAME-timestamp
-            if (parts.length >= 6) {
-              return `${parts[1]}-${parts[2]}-${parts[3]}`;
-            }
-          }
+            return;
         }
-      }
-
-      // Try item_name as fallback
-      const itemName = paymentData.item_name || paymentData['item_name'];
-      if (itemName) {
-        // Updated regex to handle both old and new formats with branch names
-        const match = itemName.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,6})?)/);
-        if (match) {
-          return match[1];
+        catch (error) {
+            console.error('❌ PayFast success handler error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Internal server error: ' + error.message
+            });
+            return;
         }
-      }
-
-      return null;
-    } catch (error) {
-      console.error('❌ Quote number extraction error:', error);
-      return null;
     }
-  }
-
-  /**
-   * Render enhanced success page with invoice download
-   */
-  async renderSuccessPage(res: Response, data: any): Promise<void> {
-    const html = `
+    /**
+     * Extract quote number from PayFast payment data
+     */
+    extractQuoteNumber(paymentData) {
+        try {
+            // Try m_payment_id first
+            const paymentId = paymentData.m_payment_id || paymentData['m_payment_id'];
+            if (paymentId) {
+                const parts = paymentId.split('-');
+                if (parts.length >= 4 && parts[0] === 'QUOTE') {
+                    // Handle different formats:
+                    // 1. QUOTE-Q-YYYYMMDD-NNNN-1754311399090 (without branch)
+                    // 2. QUOTE-Q-YYYYMMDD-NNNN-BRANCH-1754311399090 (with branch)
+                    // 3. QUOTE-Q-YYYYMMDD-NNNN-BRANCHNAME-1754311399090 (with branch name)
+                    if (parts.length >= 4) {
+                        // For format 1: QUOTE-Q-YYYYMMDD-NNNN-timestamp
+                        if (parts.length === 5) {
+                            return `${parts[1]}-${parts[2]}-${parts[3]}`;
+                        }
+                        // For format 2 & 3: QUOTE-Q-YYYYMMDD-NNNN-BRANCH-timestamp or QUOTE-Q-YYYYMMDD-NNNN-BRANCHNAME-timestamp
+                        if (parts.length >= 6) {
+                            return `${parts[1]}-${parts[2]}-${parts[3]}`;
+                        }
+                    }
+                }
+            }
+            // Try item_name as fallback
+            const itemName = paymentData.item_name || paymentData['item_name'];
+            if (itemName) {
+                // Updated regex to handle both old and new formats with branch names
+                const match = itemName.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,6})?)/);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+        catch (error) {
+            console.error('❌ Quote number extraction error:', error);
+            return null;
+        }
+    }
+    /**
+     * Render enhanced success page with invoice download
+     */
+    async renderSuccessPage(res, data) {
+        const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1214,60 +1199,52 @@ class PayFastSuccessEnhancedController {
     </div>
 </body>
 </html>`;
-
-    res.send(html);
-  }
-
-  /**
-   * Handle payment failure
-   */
-  async handlePaymentFailure(req: Request, res: Response) {
-    try {
-      const paymentData = { ...req.query, ...req.body };
-      const quoteNumber = this.extractQuoteNumber(paymentData);
-
-      console.log('❌ Payment failed for quote:', quoteNumber);
-
-      return res.json({
-        success: false,
-        message: 'Payment failed',
-        quoteNumber: quoteNumber,
-        error: paymentData.err_msg || 'Payment was unsuccessful'
-      });
-
-    } catch (error: any) {
-      console.error('❌ Payment failure handler error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Payment processing error'
-      });
+        res.send(html);
     }
-  }
-
-  /**
-   * Handle payment cancellation
-   */
-  async handlePaymentCancel(req: Request, res: Response) {
-    try {
-      const paymentData = { ...req.query, ...req.body };
-      const quoteNumber = this.extractQuoteNumber(paymentData);
-
-      console.log('⚠️ Payment cancelled for quote:', quoteNumber);
-
-      return res.json({
-        success: false,
-        message: 'Payment was cancelled',
-        quoteNumber: quoteNumber
-      });
-
-    } catch (error: any) {
-      console.error('❌ Payment cancellation handler error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Payment cancellation error'
-      });
+    /**
+     * Handle payment failure
+     */
+    async handlePaymentFailure(req, res) {
+        try {
+            const paymentData = Object.assign(Object.assign({}, req.query), req.body);
+            const quoteNumber = this.extractQuoteNumber(paymentData);
+            console.log('❌ Payment failed for quote:', quoteNumber);
+            return res.json({
+                success: false,
+                message: 'Payment failed',
+                quoteNumber: quoteNumber,
+                error: paymentData.err_msg || 'Payment was unsuccessful'
+            });
+        }
+        catch (error) {
+            console.error('❌ Payment failure handler error:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Payment processing error'
+            });
+        }
     }
-  }
+    /**
+     * Handle payment cancellation
+     */
+    async handlePaymentCancel(req, res) {
+        try {
+            const paymentData = Object.assign(Object.assign({}, req.query), req.body);
+            const quoteNumber = this.extractQuoteNumber(paymentData);
+            console.log('⚠️ Payment cancelled for quote:', quoteNumber);
+            return res.json({
+                success: false,
+                message: 'Payment was cancelled',
+                quoteNumber: quoteNumber
+            });
+        }
+        catch (error) {
+            console.error('❌ Payment cancellation handler error:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Payment cancellation error'
+            });
+        }
+    }
 }
-
-export default new PayFastSuccessEnhancedController();
+exports.default = new PayFastSuccessEnhancedController();

@@ -146,7 +146,7 @@ const importIQData = async (req, res) => {
 exports.importIQData = importIQData;
 // Generate a complete quote with optimization, pricing, and PDF
 const generateQuote = async (req, res) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     try {
         const { sections, customerName, projectName, phoneNumber, branchData } = req.body;
         // Validate input
@@ -164,6 +164,7 @@ const generateQuote = async (req, res) => {
         let edgingCostTotal = 0;
         let totalBoardsUsed = 0; // Track total boards used for cutting fee
         let pdfUrl;
+        let invoiceNumber; // Declare once at top of function
         for (const section of sections) {
             const { material, cutPieces } = section;
             if (!material || !cutPieces || !Array.isArray(cutPieces) || cutPieces.length === 0) {
@@ -612,6 +613,39 @@ const generateQuote = async (req, res) => {
         }
         else {
             console.log('Quote saved to database successfully with ID:', (_d = quoteResult.data) === null || _d === void 0 ? void 0 : _d.id);
+            // Create invoice and generate PDF at quote creation time
+            try {
+                console.log('🚀 Creating invoice at quote creation time for:', quoteId);
+                // Create invoice with pending status (since payment hasn't been made yet)
+                const invoiceResult = await supabase_service_1.default.createInvoice(quoteId, {
+                    method: 'Pending Payment',
+                    reference: `QUOTE-${quoteId}`,
+                    date: new Date().toISOString(),
+                    amount: grandTotal,
+                    payment_id: `PENDING-${Date.now()}`
+                });
+                if (invoiceResult.success && ((_e = invoiceResult.data) === null || _e === void 0 ? void 0 : _e.invoiceNumber)) {
+                    invoiceNumber = invoiceResult.data.invoiceNumber;
+                    // Generate and upload invoice PDF immediately
+                    if (invoiceNumber) {
+                        const pdfResult = await supabase_service_1.default.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
+                        if (pdfResult.success) {
+                            pdfUrl = pdfResult.publicUrl;
+                            console.log('✅ Invoice PDF generated and uploaded:', pdfUrl);
+                        }
+                        else {
+                            console.error('❌ Failed to generate invoice PDF:', pdfResult.error);
+                        }
+                    }
+                }
+                else {
+                    console.error('❌ Failed to create invoice:', invoiceResult.error);
+                }
+            }
+            catch (invoiceError) {
+                console.error('❌ Error creating invoice at quote creation:', invoiceError);
+                // Continue without invoice if creation fails - quote is still valid
+            }
         }
         // Return the processed data without returning the response object
         res.status(200).json({
@@ -619,6 +653,7 @@ const generateQuote = async (req, res) => {
             message: 'Quote generated successfully',
             data: {
                 quoteId,
+                invoiceNumber,
                 sections: processedSections,
                 grandTotal,
                 pdfUrl

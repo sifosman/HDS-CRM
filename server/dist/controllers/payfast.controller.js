@@ -365,6 +365,11 @@ exports.generatePaymentForm = generatePaymentForm;
 // Handle PayFast ITN (Instant Transaction Notification)
 const handlePaymentNotification = async (req, res) => {
     try {
+        console.log('🔔 PayFast ITN Handler Started - Email sending happens here!');
+        console.log('📋 Request Method:', req.method);
+        console.log('📋 Request Headers:', req.headers);
+        console.log('📋 Request Body:', req.body);
+        console.log('📋 Raw Body Available:', !!req.rawBody);
         console.log('PayFast ITN received:', req.body);
         // Validate the ITN
         const config = getPayFastConfig();
@@ -521,6 +526,7 @@ const handlePaymentNotification = async (req, res) => {
                                     console.log('Invoice status updated to paid');
                                     // Generate and upload invoice PDF
                                     try {
+                                        console.log('Starting invoice PDF generation for quote:', quoteId, 'invoice number:', invoiceResult.data.invoiceNumber);
                                         const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
                                         if (pdfResult.success && pdfResult.publicUrl) {
                                             console.log('Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
@@ -538,93 +544,74 @@ const handlePaymentNotification = async (req, res) => {
                                 console.log('Quote status updated to approved');
                                 // NEW: Send email notification after successful payment
                                 try {
-                                    // Get customer email from database
+                                    console.log('📧 EMAIL SENDING STARTED - This is where emails are sent!');
                                     const emailService = new email_service_1.EmailService();
-                                    // Get customer email from database
-                                    const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
-                                    // TEMPORARY: Also send to hardcoded test email
+                                    // TESTING: Send emails only to test email address for production testing
                                     const testEmail = 'sifosman@gmail.com';
-                                    if (customerEmail) {
-                                        // Get quote details for email
-                                        const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
-                                        if (quoteData.success && quoteData.data) {
-                                            const customerName = quoteData.data.customer_name || 'Customer';
-                                            const quoteNumber = quoteData.data.quote_number || quoteId;
-                                            const amount = parseFloat(pfData.amount_gross || '0');
-                                            // Note: In serverless environments like Vercel, we can't generate PDF files directly
-                                            // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
-                                            const invoicePath = '';
-                                            // Prepare optimization details
-                                            const optimizationDetails = {
-                                                totalBoards: quoteData.data.total_boards,
-                                                totalLength: quoteData.data.total_length,
-                                                wastage: quoteData.data.wastage_percentage,
-                                                cutlistUrl: quoteData.data.cutlist_url
-                                            };
-                                            // Send email notification
-                                            await emailService.sendPaymentConfirmationEmail({
-                                                customerName,
-                                                customerEmail,
-                                                quoteNumber,
-                                                amount,
-                                                invoicePath,
-                                                optimizationDetails
-                                            });
-                                            console.log('Payment confirmation email sent successfully to:', customerEmail);
-                                            // TEMPORARY: Also send to hardcoded test email
-                                            try {
-                                                await emailService.sendPaymentConfirmationEmail({
-                                                    customerName,
-                                                    customerEmail: testEmail,
-                                                    quoteNumber,
-                                                    amount,
-                                                    invoicePath,
-                                                    optimizationDetails
-                                                });
-                                                console.log('Payment confirmation email sent successfully to test email:', testEmail);
-                                            }
-                                            catch (testEmailError) {
-                                                console.error('Error sending payment confirmation email to test email:', testEmailError);
-                                            }
+                                    console.log('📧 Test email address:', testEmail);
+                                    // Get quote details for email
+                                    const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
+                                    if (quoteData.success && quoteData.data) {
+                                        const customerName = quoteData.data.customer_name || 'Customer';
+                                        const quoteNumber = quoteData.data.quote_number || quoteId;
+                                        const amount = parseFloat(pfData.amount_gross || '0');
+                                        // Note: In serverless environments like Vercel, we can't generate PDF files directly
+                                        // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
+                                        const invoicePath = '';
+                                        // Prepare optimization details
+                                        const optimizationDetails = {
+                                            totalBoards: quoteData.data.total_boards,
+                                            totalLength: quoteData.data.total_length,
+                                            wastage: quoteData.data.wastage_percentage,
+                                            cutlistUrl: quoteData.data.cutlist_url
+                                        };
+                                        // Send email to test address for production testing
+                                        console.log('📧 Attempting to send email with data:', {
+                                            customerName,
+                                            testEmail,
+                                            quoteNumber,
+                                            amount,
+                                            invoicePath,
+                                            optimizationDetails
+                                        });
+                                        await emailService.sendPaymentConfirmationEmail({
+                                            customerName,
+                                            customerEmail: testEmail,
+                                            quoteNumber,
+                                            amount,
+                                            invoicePath,
+                                            optimizationDetails
+                                        });
+                                        console.log('✅ Payment confirmation email sent successfully to test email:', testEmail);
+                                        /* ORIGINAL LOGIC - COMMENTED FOR TESTING
+                                        // Get customer email from database
+                                        const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
+                                        
+                                        if (customerEmail) {
+                                          // Send email notification to branch/customer
+                                          await emailService.sendPaymentConfirmationEmail({
+                                            customerName,
+                                            customerEmail,
+                                            quoteNumber,
+                                            amount,
+                                            invoicePath,
+                                            optimizationDetails
+                                          });
+                                          
+                                          console.log('Payment confirmation email sent successfully to:', customerEmail);
+                                        } else {
+                                          console.warn('No email address found for quote:', quoteId);
                                         }
-                                    }
-                                    else {
-                                        console.warn('No email address found for quote:', quoteId);
-                                        // TEMPORARY: Send to hardcoded test email even if no customer email
-                                        try {
-                                            const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
-                                            if (quoteData.success && quoteData.data) {
-                                                const customerName = quoteData.data.customer_name || 'Customer';
-                                                const quoteNumber = quoteData.data.quote_number || quoteId;
-                                                const amount = parseFloat(pfData.amount_gross || '0');
-                                                // Note: In serverless environments like Vercel, we can't generate PDF files directly
-                                                // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
-                                                const invoicePath = '';
-                                                // Prepare optimization details
-                                                const optimizationDetails = {
-                                                    totalBoards: quoteData.data.total_boards,
-                                                    totalLength: quoteData.data.total_length,
-                                                    wastage: quoteData.data.wastage_percentage,
-                                                    cutlistUrl: quoteData.data.cutlist_url
-                                                };
-                                                await emailService.sendPaymentConfirmationEmail({
-                                                    customerName,
-                                                    customerEmail: testEmail,
-                                                    quoteNumber,
-                                                    amount,
-                                                    invoicePath,
-                                                    optimizationDetails
-                                                });
-                                                console.log('Payment confirmation email sent successfully to test email:', testEmail);
-                                            }
-                                        }
-                                        catch (testEmailError) {
-                                            console.error('Error sending payment confirmation email to test email:', testEmailError);
-                                        }
+                                        */
                                     }
                                 }
                                 catch (emailError) {
-                                    console.error('Error sending payment confirmation email:', emailError);
+                                    console.error('❌ EMAIL SENDING FAILED:', emailError);
+                                    console.error('❌ Email error details:', {
+                                        message: emailError === null || emailError === void 0 ? void 0 : emailError.message,
+                                        stack: emailError === null || emailError === void 0 ? void 0 : emailError.stack,
+                                        name: emailError === null || emailError === void 0 ? void 0 : emailError.name
+                                    });
                                     // Don't fail the payment processing if email fails
                                 }
                             }
@@ -916,30 +903,6 @@ const handlePaymentSuccess = async (req, res) => {
     </head>
     <body>
         <script>
-            function downloadInvoice(quoteId) {
-                const button = event.target;
-                const originalText = button.textContent;
-                
-                // Show loading state
-                button.textContent = 'Downloading...';
-                button.disabled = true;
-                
-                // Create download URL
-                const downloadUrl = '/api/invoices/download/' + quoteId;
-                
-                // Create temporary link
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = 'invoice-' + quoteId + '.pdf';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Reset button state
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-            
             function shareOnWhatsApp(quoteId) {
                 const button = event.target;
                 const originalText = button.textContent;
@@ -980,8 +943,9 @@ const handlePaymentSuccess = async (req, res) => {
             </p>
             
             <div class="action-buttons">
-                ${quoteId ? '<button onclick="downloadInvoice(\'' + quoteId + '\')" class="btn">Download Invoice</button>' : ''}
-                ${quoteId ? '<button onclick="shareOnWhatsApp(\'' + quoteId + '\')" class="btn btn-whatsapp">Share on WhatsApp</button>' : ''}
+                ${quoteId ? '<a href="/api/invoices/download/' + quoteId + '" class="btn" target="_blank" rel="noopener">📥 Download Invoice</a>' : ''}
+                ${quoteId ? '<a href="/api/invoices/download/' + quoteId + '" class="btn btn-secondary" target="_blank" rel="noopener">📄 Download PDF</a>' : ''}
+                ${quoteId ? '<button onclick="shareOnWhatsApp(\'' + quoteId + '\')" class="btn btn-whatsapp">💬 Share on WhatsApp</button>' : ''}
             </div>
             
             <p class="footer-text">

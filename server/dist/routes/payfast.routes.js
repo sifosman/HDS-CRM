@@ -6,6 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const payfast_controller_1 = require("../controllers/payfast.controller");
 const payfast_debug_controller_1 = require("../controllers/payfast-debug.controller");
+const payfast_test_itn_controller_1 = require("../controllers/payfast-test-itn.controller");
+// Import the enhanced PayFast success controller
+const payfast_success_enhanced_controller_1 = __importDefault(require("../controllers/payfast-success-enhanced.controller"));
 const router = express_1.default.Router();
 // Middleware to capture raw body for PayFast notifications
 const rawBodyMiddleware = (req, res, next) => {
@@ -27,16 +30,18 @@ const rawBodyMiddleware = (req, res, next) => {
 // Apply raw body middleware
 router.use(rawBodyMiddleware);
 // Generate payment form for a quote
-router.get('/pay', (req, res) => (0, payfast_controller_1.generatePaymentForm)(req, res));
+router.get('/pay', payfast_controller_1.generatePaymentForm);
 // Handle payment success return (both GET and POST)
-router.get('/success', (req, res) => (0, payfast_controller_1.handlePaymentSuccess)(req, res));
-router.post('/success', (req, res) => (0, payfast_controller_1.handlePaymentSuccess)(req, res));
+router.get('/success', (req, res) => payfast_success_enhanced_controller_1.default.handlePaymentSuccess(req, res));
+router.post('/success', (req, res) => payfast_success_enhanced_controller_1.default.handlePaymentSuccess(req, res));
 // Handle payment cancellation return
-router.get('/cancel', (req, res) => (0, payfast_controller_1.handlePaymentCancel)(req, res));
+router.get('/cancel', payfast_controller_1.handlePaymentCancel);
 // Handle PayFast ITN (Instant Transaction Notification)
-router.post('/notify', (req, res) => (0, payfast_controller_1.handlePaymentNotification)(req, res));
+router.post('/notify', payfast_controller_1.handlePaymentNotification);
 // Debug endpoint to test signature generation
-router.get('/debug', (req, res) => (0, payfast_debug_controller_1.debugPayFastSignature)(req, res));
+router.get('/debug', payfast_debug_controller_1.debugPayFastSignature);
+// Test endpoint to manually trigger ITN and email sending
+router.get('/test-itn', payfast_test_itn_controller_1.testITN);
 // Test endpoint for signature verification
 router.get('/test-signature', (req, res) => {
     const testData = {

@@ -1969,6 +1969,34 @@ export const generateAndUploadOptimizationPdf = async (
 };
 
 /**
+ * Helper function to check if there's enough space left on the page
+ * @param doc PDFDocument to check
+ * @param neededHeight Height needed for the next element
+ * @param marginBottom Optional margin to leave at bottom of page
+ * @returns boolean true if there's enough space, false if a new page is needed
+ */
+const hasEnoughSpace = (doc: PDFKit.PDFDocument, neededHeight: number, marginBottom: number = 50): boolean => {
+  const currentY = doc.y;
+  const bottomMargin = doc.page.height - marginBottom;
+  return (currentY + neededHeight) < bottomMargin;
+};
+
+/**
+ * Helper function to ensure we have space for content, adding a page if needed
+ * @param doc PDFDocument to check
+ * @param neededHeight Height needed for the next element
+ * @param marginBottom Optional margin to leave at bottom of page
+ * @returns The Y position where content can be safely added
+ */
+const ensureSpace = (doc: PDFKit.PDFDocument, neededHeight: number, marginBottom: number = 50): number => {
+  if (!hasEnoughSpace(doc, neededHeight, marginBottom)) {
+    doc.addPage();
+    return doc.page.margins.top;
+  }
+  return doc.y;
+};
+
+/**
  * Generate PDF with optimization solution and return buffer for cloud storage
  * @param solution The optimization solution
  * @param unit Unit of measurement (0 = mm, 1 = inches, 2 = feet)
@@ -2162,28 +2190,21 @@ export const generatePdfWithBuffer = async (
 
   doc.moveDown(3);
 
-  // Limit the number of detailed stock piece diagrams to prevent excessive pages
-  const MAX_DETAILED_PAGES = 10; // Maximum number of detailed stock piece diagrams
-  const stockPiecesToShow = Math.min(solution.stockPieces.length, MAX_DETAILED_PAGES);
-  
-  console.log(`📄 PDF Generation: Showing ${stockPiecesToShow} of ${solution.stockPieces.length} stock pieces in detail`);
-  
-  if (solution.stockPieces.length > MAX_DETAILED_PAGES) {
-    // Add a notice about truncated content
-    doc.moveDown(1);
-    doc.fontSize(12).fillColor('#ff6600');
-    doc.text(`⚠️ Note: Showing first ${MAX_DETAILED_PAGES} stock pieces in detail. Total pieces: ${solution.stockPieces.length}`, 50, doc.y, {
-      width: doc.page.width - 100,
-      align: 'center'
-    });
-    doc.moveDown(1);
-  }
-  
-  // Draw each stock piece and its cut pieces with detailed diagrams (limited)
-  solution.stockPieces.slice(0, stockPiecesToShow).forEach((stockPiece, index) => {
-    // Add page for each stock piece except the first one
+  // Draw each stock piece and its cut pieces with detailed diagrams
+  solution.stockPieces.forEach((stockPiece, index) => {
+    // Estimate height needed for this stock piece section
+    // Base height + diagram height + tables height
+    const estimatedHeight = 120 + (stockPiece.length / stockPiece.width * 300) + 200;
+    
+    // Only add a new page if needed
     if (index > 0) {
-      doc.addPage();
+      // Check if we need a new page based on available space
+      if (!hasEnoughSpace(doc, estimatedHeight)) {
+        doc.addPage();
+      } else {
+        // Add some spacing between stock pieces
+        doc.moveDown(2);
+      }
     }
 
     // Stock piece title with colored box
@@ -2191,7 +2212,8 @@ export const generatePdfWithBuffer = async (
 
     // Create a colored header for the stock piece
     const stockTitleX = 50;
-    const stockTitleY = doc.y + 10;
+    // Use current position dynamically rather than adding fixed spacing
+    const stockTitleY = doc.y;
     const stockTitleWidth = doc.page.width - 100;
     const stockTitleHeight = 30;
 
@@ -2358,12 +2380,28 @@ export const generatePdfWithBuffer = async (
          .stroke('#000000');
     });
 
-    // Add cut pieces table with grouping information
-    doc.moveDown(2);
+    // Group cut pieces by externalId for better organization
+    const groupedPieces: { [key: string]: { pieces: PlacedPiece[], count: number } } = {};
+    stockPiece.cutPieces.forEach(piece => {
+      const id = piece.externalId.toString();
+      if (!groupedPieces[id]) {
+        groupedPieces[id] = { pieces: [], count: 0 };
+      }
+      groupedPieces[id].pieces.push(piece);
+      groupedPieces[id].count += 1;
+    });
 
+    // Add cut pieces table with grouping information
+    // Calculate the height needed for the table (header + rows + margins)
+    const estimatedRowsCount = Object.keys(groupedPieces).length;
+    const estimatedTableHeight = 30 + (estimatedRowsCount * 25) + 50;
+    
+    // Check if we have enough space for the table on the current page
+    doc.y = ensureSpace(doc, estimatedTableHeight);
+    
     // Create a colored header for the table
     const tableTitleX = 50;
-    const tableTitleY = startY + stockPiece.length * scale + 50;
+    const tableTitleY = doc.y;
     const tableTitleWidth = doc.page.width - 100;
     const tableTitleHeight = 30;
 
@@ -2522,117 +2560,58 @@ export const generatePdfWithBuffer = async (
     doc.text('Edging Cost', tableStartX + 5, (infoCurrentY + rowHeight) + 8, { width: infoColWidths[0] });
     doc.text(`R ${stockEdgingCost.toFixed(2)}`, tableStartX + infoColWidths[0] + 5, (infoCurrentY + rowHeight) + 8, { width: infoColWidths[1] });
   });
-  
-  // Add comprehensive summary page if we truncated the detailed view
-  if (solution.stockPieces.length > MAX_DETAILED_PAGES) {
-    doc.addPage();
-    
-    // Title for summary page
-    doc.rect(50, 50, doc.page.width - 100, 60)
-       .fillAndStroke('#003366', '#000000');
-    
-    doc.fontSize(18)
-       .fillColor('#FFFFFF')
-       .text('Complete Stock Pieces Summary', 50, 65, { align: 'center', width: doc.page.width - 100 });
-    
-    doc.fontSize(12)
-       .fillColor('#FFFFFF')
-       .text(`All ${solution.stockPieces.length} Stock Pieces`, 50, 90, { align: 'center', width: doc.page.width - 100 });
-    
-    doc.moveDown(3);
-    
-    // Create compact table for all stock pieces
-    const summaryTableStartX = 50;
-    const summaryTableStartY = doc.y + 20;
-    const summaryColWidths = [60, 80, 80, 80, 100, 100]; // Case, Width, Length, Area, Cut Pieces, Waste
-    const summaryRowHeight = 20;
-    
-    // Draw table header
-    doc.rect(summaryTableStartX, summaryTableStartY, summaryColWidths.reduce((a, b) => a + b, 0), summaryRowHeight)
-       .fillAndStroke('#e0e0e0', '#000000');
-    
-    doc.fontSize(9).fillColor('#000000');
-    doc.text('Case', summaryTableStartX + 5, summaryTableStartY + 6, { width: summaryColWidths[0] });
-    doc.text('Width', summaryTableStartX + summaryColWidths[0] + 5, summaryTableStartY + 6, { width: summaryColWidths[1] });
-    doc.text('Length', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + 5, summaryTableStartY + 6, { width: summaryColWidths[2] });
-    doc.text('Area', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + 5, summaryTableStartY + 6, { width: summaryColWidths[3] });
-    doc.text('Cut Pieces', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + 5, summaryTableStartY + 6, { width: summaryColWidths[4] });
-    doc.text('Waste %', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + summaryColWidths[4] + 5, summaryTableStartY + 6, { width: summaryColWidths[5] });
-    
-    // Draw data rows for all stock pieces
-    let currentRowY = summaryTableStartY + summaryRowHeight;
-    const maxRowsPerPage = 30; // Limit rows per page to prevent overflow
-    
-    solution.stockPieces.forEach((stockPiece, index) => {
-      // Add new page if we exceed the row limit
-      if (index > 0 && index % maxRowsPerPage === 0) {
-        doc.addPage();
-        currentRowY = 80; // Reset Y position for new page
-        
-        // Redraw header on new page
-        doc.rect(summaryTableStartX, currentRowY - summaryRowHeight, summaryColWidths.reduce((a, b) => a + b, 0), summaryRowHeight)
-           .fillAndStroke('#e0e0e0', '#000000');
-        
-        doc.fontSize(9).fillColor('#000000');
-        doc.text('Case', summaryTableStartX + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[0] });
-        doc.text('Width', summaryTableStartX + summaryColWidths[0] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[1] });
-        doc.text('Length', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[2] });
-        doc.text('Area', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[3] });
-        doc.text('Cut Pieces', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[4] });
-        doc.text('Waste %', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + summaryColWidths[4] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[5] });
-      }
-      
-      // Draw row
-      doc.rect(summaryTableStartX, currentRowY, summaryColWidths.reduce((a, b) => a + b, 0), summaryRowHeight)
-         .stroke();
-      
-      // Calculate values
-      const stockWidth = convertUnit(stockPiece.width, 0, unit).toFixed(1);
-      const stockLength = convertUnit(stockPiece.length, 0, unit).toFixed(1);
-      const stockArea = (parseFloat(stockWidth) * parseFloat(stockLength)).toFixed(2);
-      const cutPiecesCount = stockPiece.cutPieces.length;
-      
-      // Calculate waste for this stock piece
-      const stockAreaValue = stockPiece.width * stockPiece.length;
-      const cutAreaValue = stockPiece.cutPieces.reduce((sum, cp) => sum + (cp.width * cp.length), 0);
-      const wastePercentageValue = ((stockAreaValue - cutAreaValue) / stockAreaValue * 100).toFixed(1);
-      
-      // Add data
-      doc.fontSize(8).fillColor('#000000');
-      doc.text(`${index + 1}`, summaryTableStartX + 5, currentRowY + 6, { width: summaryColWidths[0] });
-      doc.text(`${stockWidth}`, summaryTableStartX + summaryColWidths[0] + 5, currentRowY + 6, { width: summaryColWidths[1] });
-      doc.text(`${stockLength}`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentRowY + 6, { width: summaryColWidths[2] });
-      doc.text(`${stockArea}`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + 5, currentRowY + 6, { width: summaryColWidths[3] });
-      doc.text(`${cutPiecesCount}`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + 5, currentRowY + 6, { width: summaryColWidths[4] });
-      doc.text(`${wastePercentageValue}%`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + summaryColWidths[4] + 5, currentRowY + 6, { width: summaryColWidths[5] });
-      
-      currentRowY += summaryRowHeight;
-    });
-  }
 
-  // Add footer to the current page only - avoid page switching completely
-  // This prevents the switchToPage out of bounds errors
-  
-  console.log(`Adding footer to current page only. No page switching to avoid buffer errors.`);
-  
-  // Get the current page range information (don't use for switching)
+  // Add footer to each page
+  // Get the current page range using bufferedPageRange
   const pageRange = doc.bufferedPageRange();
   const totalPages = pageRange.count; // Get actual page count from the PDF
-  
-  try {
-    // Add footer with date and page numbers to current page only
-    doc.fontSize(8).fillColor('#666666');
-    doc.text(
-      `HDS Group Cutlist - Generated on ${dateString} - Page ${pageRange.count} of ${totalPages}`,
-      50,
-      doc.page.height - 50,
-      { align: 'center', width: doc.page.width - 100 }
-    );
-      
-    console.log('Footer added successfully to current page');
-  } catch (error) {
-    console.error('Error adding footer:', error);
-    // Continue without footer if there's an error
+  const startPage = pageRange.start;
+
+  // Only try to add footers if there are pages in the document
+  if (totalPages > 0) {
+    console.log(`Adding footers to pages. Page range: start=${startPage}, count=${totalPages}`);
+    
+    // Remember which page we're currently on
+    let currentPageIndex: number = 0; // Default to first page
+    
+    // Safely iterate only through pages we know exist
+    for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+      try {
+        // Calculate the actual page index
+        const actualPageIndex = startPage + pageNum;
+        
+        // Switch to this page
+        doc.switchToPage(actualPageIndex);
+
+        // Add footer with date and page numbers
+        doc.fontSize(8).fillColor('#666666');
+        doc.text(
+          `HDS Group Cutlist - Generated on ${dateString} - Page ${pageNum + 1} of ${totalPages}`,
+          50,
+          doc.page.height - 50,
+          { align: 'center', width: doc.page.width - 100 }
+        );
+      } catch (error) {
+        console.error(`Error adding footer to page at index ${pageNum}:`, error);
+        // Continue with next page if there's an error
+      }
+    }
+    
+    // Try to restore the original page if possible
+    try {
+      // Switch back to the page we were on before adding footers
+      // If currentPageIndex is within the valid range, switch to that page
+      if (currentPageIndex >= startPage && currentPageIndex < startPage + totalPages) {
+        console.log(`Restoring to original page index: ${currentPageIndex}`);
+        doc.switchToPage(currentPageIndex);
+      } else {
+        // Otherwise, switch to the first page
+        console.log('Could not restore to original page, switching to first page');
+        doc.switchToPage(startPage);
+      }
+    } catch (error) {
+      console.error('Error restoring original page:', error);
+    }
   }
   
   // Finalize PDF

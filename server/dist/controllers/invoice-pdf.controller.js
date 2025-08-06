@@ -3,76 +3,106 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.InvoicePdfController = void 0;
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 class InvoicePdfController {
     constructor() {
         this.supabaseService = supabase_service_1.default;
     }
     /**
-     * Generate invoice PDF from quote data
+     * Generate invoice PDF after payment success
      */
     async generateInvoicePdf(req, res) {
         try {
-            const { quoteNumber, invoiceNumber } = req.body;
-            if (!quoteNumber || !invoiceNumber) {
+            const { quoteNumber } = req.params;
+            if (!quoteNumber) {
                 res.status(400).json({
                     success: false,
-                    error: 'quoteNumber and invoiceNumber are required'
+                    error: 'Quote number is required'
                 });
                 return;
             }
-            const result = await this.supabaseService.generateAndUploadInvoicePdf(quoteNumber, invoiceNumber);
+            // Create invoice with PDF generation
+            const result = await this.supabaseService.createInvoiceWithPdf(quoteNumber, {
+                method: 'PayFast',
+                reference: `PAYFAST-${Date.now()}`,
+                date: new Date().toISOString()
+            });
             if (result.success) {
                 res.json({
                     success: true,
-                    publicUrl: result.publicUrl,
-                    message: 'Invoice PDF generated successfully'
+                    message: 'Invoice PDF generated successfully',
+                    invoiceNumber: result.data.invoiceNumber,
+                    pdfUrl: result.data.pdfUrl
                 });
+                return;
             }
             else {
-                res.status(400).json(result);
+                res.status(400).json({
+                    success: false,
+                    error: result.error
+                });
+                return;
             }
         }
         catch (error) {
             console.error('Error generating invoice PDF:', error);
             res.status(500).json({
                 success: false,
-                error: error.message || 'Failed to generate invoice PDF'
+                error: 'Internal server error'
             });
+            return;
         }
     }
     /**
      * Get invoice details including PDF URL
      */
-    async getInvoice(req, res) {
+    async getInvoiceDetails(req, res) {
         try {
             const { invoiceNumber } = req.params;
             if (!invoiceNumber) {
                 res.status(400).json({
                     success: false,
-                    error: 'invoiceNumber is required'
+                    error: 'Invoice number is required'
                 });
                 return;
             }
-            // This would typically fetch invoice details from database
-            // For now, return a placeholder response
+            const { data, error } = await this.supabaseService.supabase
+                .from('invoices')
+                .select('*')
+                .eq('invoice_number', invoiceNumber)
+                .single();
+            if (error) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Invoice not found'
+                });
+                return;
+            }
             res.json({
                 success: true,
-                invoiceNumber,
-                message: 'Invoice details endpoint'
+                data: {
+                    invoiceNumber: data.invoice_number,
+                    quoteNumber: data.quote_number,
+                    customerName: data.customer_name,
+                    total: data.total,
+                    pdfUrl: data.pdf_url,
+                    createdAt: data.created_at,
+                    status: data.status
+                }
             });
+            return;
         }
         catch (error) {
-            console.error('Error fetching invoice:', error);
+            console.error('Error fetching invoice details:', error);
             res.status(500).json({
                 success: false,
-                error: error.message || 'Failed to fetch invoice'
+                error: 'Internal server error'
             });
+            return;
         }
     }
     /**
-     * Regenerate invoice PDF
+     * Regenerate invoice PDF (useful if original failed or needs update)
      */
     async regenerateInvoicePdf(req, res) {
         try {
@@ -80,24 +110,62 @@ class InvoicePdfController {
             if (!invoiceNumber) {
                 res.status(400).json({
                     success: false,
-                    error: 'invoiceNumber is required'
+                    error: 'Invoice number is required'
                 });
                 return;
             }
-            // Implementation would be similar to generateInvoicePdf
-            // but would fetch existing invoice data first
-            res.json({
-                success: true,
-                message: 'Invoice PDF regeneration endpoint'
-            });
+            // Get invoice details first
+            const { data: invoice, error: invoiceError } = await this.supabaseService.supabase
+                .from('invoices')
+                .select('*')
+                .eq('invoice_number', invoiceNumber)
+                .single();
+            if (invoiceError || !invoice) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Invoice not found'
+                });
+                return;
+            }
+            // Get quote number from invoice
+            const { data: quote, error: quoteError } = await this.supabaseService.supabase
+                .from('quotes')
+                .select('quote_number')
+                .eq('id', invoice.quote_id)
+                .single();
+            if (quoteError || !quote) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Quote not found'
+                });
+                return;
+            }
+            // Regenerate PDF
+            const result = await this.supabaseService.generateAndUploadInvoicePdf(quote.quote_number, invoiceNumber);
+            if (result.success) {
+                res.json({
+                    success: true,
+                    message: 'Invoice PDF regenerated successfully',
+                    pdfUrl: result.publicUrl
+                });
+                return;
+            }
+            else {
+                res.status(400).json({
+                    success: false,
+                    error: result.error
+                });
+                return;
+            }
         }
         catch (error) {
             console.error('Error regenerating invoice PDF:', error);
             res.status(500).json({
                 success: false,
-                error: error.message || 'Failed to regenerate invoice PDF'
+                error: 'Internal server error'
             });
+            return;
         }
     }
 }
-exports.InvoicePdfController = InvoicePdfController;
+exports.default = new InvoicePdfController();

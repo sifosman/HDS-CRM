@@ -375,6 +375,11 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
 // Handle PayFast ITN (Instant Transaction Notification)
 export const handlePaymentNotification = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('🔔 PayFast ITN Handler Started - Email sending happens here!');
+    console.log('📋 Request Method:', req.method);
+    console.log('📋 Request Headers:', req.headers);
+    console.log('📋 Request Body:', req.body);
+    console.log('📋 Raw Body Available:', !!(req as any).rawBody);
     console.log('PayFast ITN received:', req.body);
     
     // Validate the ITN
@@ -582,37 +587,60 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                 
                 // NEW: Send email notification after successful payment
                 try {
-                  // Get customer email from database
+                  console.log('📧 EMAIL SENDING STARTED - This is where emails are sent!');
                   const emailService = new EmailService();
                   
-                  // Get customer email from database
-                  const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
-                  
-                  // TEMPORARY: Also send to hardcoded test email
+                  // TESTING: Send emails only to test email address for production testing
                   const testEmail = 'sifosman@gmail.com';
+                  console.log('📧 Test email address:', testEmail);
                   
-                  if (customerEmail) {
-                    // Get quote details for email
-                    const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
+                  // Get quote details for email
+                  const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
+                  
+                  if (quoteData.success && quoteData.data) {
+                    const customerName = quoteData.data.customer_name || 'Customer';
+                    const quoteNumber = quoteData.data.quote_number || quoteId;
+                    const amount = parseFloat(pfData.amount_gross || '0');
                     
-                    if (quoteData.success && quoteData.data) {
-                      const customerName = quoteData.data.customer_name || 'Customer';
-                      const quoteNumber = quoteData.data.quote_number || quoteId;
-                      const amount = parseFloat(pfData.amount_gross || '0');
-                      
-                      // Note: In serverless environments like Vercel, we can't generate PDF files directly
-                      // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
-                      const invoicePath = '';
-                      
-                      // Prepare optimization details
-                      const optimizationDetails = {
-                        totalBoards: quoteData.data.total_boards,
-                        totalLength: quoteData.data.total_length,
-                        wastage: quoteData.data.wastage_percentage,
-                        cutlistUrl: quoteData.data.cutlist_url
-                      };
-                      
-                      // Send email notification
+                    // Note: In serverless environments like Vercel, we can't generate PDF files directly
+                    // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
+                    const invoicePath = '';
+                    
+                    // Prepare optimization details
+                    const optimizationDetails = {
+                      totalBoards: quoteData.data.total_boards,
+                      totalLength: quoteData.data.total_length,
+                      wastage: quoteData.data.wastage_percentage,
+                      cutlistUrl: quoteData.data.cutlist_url
+                    };
+                    
+                    // Send email to test address for production testing
+                    console.log('📧 Attempting to send email with data:', {
+                      customerName,
+                      testEmail,
+                      quoteNumber,
+                      amount,
+                      invoicePath,
+                      optimizationDetails
+                    });
+                    
+                    await emailService.sendPaymentConfirmationEmail({
+                      customerName,
+                      customerEmail: testEmail,
+                      quoteNumber,
+                      amount,
+                      invoicePath,
+                      optimizationDetails
+                    });
+                    
+                    console.log('✅ Payment confirmation email sent successfully to test email:', testEmail);
+                    
+                    /* ORIGINAL LOGIC - COMMENTED FOR TESTING
+                    // Get customer email from database
+                    const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
+                    
+                    if (customerEmail) {
+                      // Send email notification to branch/customer
                       await emailService.sendPaymentConfirmationEmail({
                         customerName,
                         customerEmail,
@@ -623,61 +651,18 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                       });
                       
                       console.log('Payment confirmation email sent successfully to:', customerEmail);
-                      
-                      // TEMPORARY: Also send to hardcoded test email
-                      try {
-                        await emailService.sendPaymentConfirmationEmail({
-                          customerName,
-                          customerEmail: testEmail,
-                          quoteNumber,
-                          amount,
-                          invoicePath,
-                          optimizationDetails
-                        });
-                        console.log('Payment confirmation email sent successfully to test email:', testEmail);
-                      } catch (testEmailError) {
-                        console.error('Error sending payment confirmation email to test email:', testEmailError);
-                      }
+                    } else {
+                      console.warn('No email address found for quote:', quoteId);
                     }
-                  } else {
-                    console.warn('No email address found for quote:', quoteId);
-                    
-                    // TEMPORARY: Send to hardcoded test email even if no customer email
-                    try {
-                      const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
-                      if (quoteData.success && quoteData.data) {
-                        const customerName = quoteData.data.customer_name || 'Customer';
-                        const quoteNumber = quoteData.data.quote_number || quoteId;
-                        const amount = parseFloat(pfData.amount_gross || '0');
-                        
-                        // Note: In serverless environments like Vercel, we can't generate PDF files directly
-                        // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
-                        const invoicePath = '';
-                        
-                        // Prepare optimization details
-                        const optimizationDetails = {
-                          totalBoards: quoteData.data.total_boards,
-                          totalLength: quoteData.data.total_length,
-                          wastage: quoteData.data.wastage_percentage,
-                          cutlistUrl: quoteData.data.cutlist_url
-                        };
-                        
-                        await emailService.sendPaymentConfirmationEmail({
-                          customerName,
-                          customerEmail: testEmail,
-                          quoteNumber,
-                          amount,
-                          invoicePath,
-                          optimizationDetails
-                        });
-                        console.log('Payment confirmation email sent successfully to test email:', testEmail);
-                      }
-                    } catch (testEmailError) {
-                      console.error('Error sending payment confirmation email to test email:', testEmailError);
-                    }
+                    */
                   }
-                } catch (emailError) {
-                  console.error('Error sending payment confirmation email:', emailError);
+                } catch (emailError: any) {
+                  console.error('❌ EMAIL SENDING FAILED:', emailError);
+                  console.error('❌ Email error details:', {
+                    message: emailError?.message,
+                    stack: emailError?.stack,
+                    name: emailError?.name
+                  });
                   // Don't fail the payment processing if email fails
                 }
               } else {

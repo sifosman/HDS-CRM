@@ -20,81 +20,113 @@ const downloadInvoice = async (req, res) => {
             });
             return;
         }
-        console.log('Downloading invoice for quote:', quoteId);
-        // Import Supabase client for storage operations
-        const { createClient } = require('@supabase/supabase-js');
-        const supabaseUrl = process.env.SUPABASE_URL || '';
-        const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        console.log('🔍 [DEBUG] Downloading invoice for quote:', quoteId);
+        console.log('🔍 [DEBUG] Quote ID type:', typeof quoteId);
+        console.log('🔍 [DEBUG] Quote ID length:', quoteId.length);
+        console.log('🔍 [DEBUG] Quote ID (URL decoded):', decodeURIComponent(quoteId));
         // First, find the invoice associated with this quote
-        try {
-            const { data: invoiceData, error: invoiceError } = await supabase
-                .from('invoices')
-                .select('invoice_number')
-                .eq('quote_number', quoteId)
-                .single();
-            if (invoiceData && !invoiceError) {
-                console.log('Found invoice for quote:', quoteId, 'Invoice number:', invoiceData.invoice_number);
-                // Try to find the invoice PDF in the invoices bucket
-                // Invoice PDFs are saved with format: invoice-{invoiceNumber}-{timestamp}.pdf
-                // We'll need to list files and find the one that matches our invoice number
-                const { data: files, error: listError } = await supabase
-                    .storage
-                    .from('invoices')
-                    .list('', {
-                    search: `invoice-${invoiceData.invoice_number}-`
-                });
-                if (files && files.length > 0 && !listError) {
-                    // Sort by name to get the most recent one (assuming timestamp is in the filename)
-                    files.sort((a, b) => b.name.localeCompare(a.name));
-                    const latestFile = files[0];
-                    console.log('Found invoice PDF:', latestFile.name);
-                    // Download the PDF
-                    const { data: pdfData, error: pdfError } = await supabase
-                        .storage
-                        .from('invoices')
-                        .download(latestFile.name);
-                    if (pdfData && !pdfError) {
-                        console.log('Found PDF in storage:', latestFile.name);
-                        res.setHeader('Content-Type', 'application/pdf');
-                        res.setHeader('Content-Disposition', `attachment; filename="${latestFile.name}"`);
-                        res.send(Buffer.from(await pdfData.arrayBuffer()));
-                        return;
-                    }
-                    else {
-                        console.error('Error downloading PDF:', pdfError);
-                    }
-                }
-                else {
-                    console.log('No invoice PDF found in storage for invoice:', invoiceData.invoice_number);
-                }
+        const invoiceResult = await supabase_service_1.default.fetchInvoiceByQuoteId(quoteId);
+        if (invoiceResult.success && invoiceResult.data) {
+            console.log('Found invoice for quote:', quoteId, 'Invoice number:', invoiceResult.data.invoice_number);
+            // Try to find and download the invoice PDF from the invoices bucket
+            const downloadResult = await supabase_service_1.default.downloadInvoicePdf(invoiceResult.data.invoice_number);
+            if (downloadResult.success && downloadResult.data) {
+                console.log('Found PDF in storage for invoice:', invoiceResult.data.invoice_number);
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${downloadResult.fileName}"`);
+                res.send(downloadResult.data);
+                return;
             }
             else {
-                console.log('No invoice found for quote:', quoteId);
+                console.log('No invoice PDF found in storage for invoice:', invoiceResult.data.invoice_number);
             }
         }
-        catch (invoiceLookupError) {
-            console.error('Error looking up invoice:', invoiceLookupError);
+        else {
+            console.log('No invoice found for quote:', quoteId);
         }
-        // If no PDF found, try to generate a simple invoice
-        console.log('No PDF found, generating simple invoice for:', quoteId);
-        // Generate a basic invoice with placeholder data
-        const basicInvoiceData = {
-            quoteId,
-            customerName: 'Customer',
+        // If no PDF found, try to generate an invoice based on the actual quote data
+        console.log('No PDF found, fetching quote data for:', quoteId);
+        // First, get the quote details to use the same data structure as the quote PDF
+        console.log('🔍 [DEBUG] Attempting to fetch quote with fetchQuoteByNumber:', quoteId);
+        const quoteResult = await supabase_service_1.default.fetchQuoteByNumber(quoteId);
+        console.log('🔍 [DEBUG] fetchQuoteByNumber result:', {
+            success: quoteResult.success,
+            hasData: !!quoteResult.data,
+            error: quoteResult.error
+        });
+        if (!quoteResult.success || !quoteResult.data) {
+            console.error('❌ [ERROR] Could not fetch quote data for invoice generation:', quoteId);
+            console.error('❌ [ERROR] fetchQuoteByNumber response:', quoteResult);
+            // Try to get all quotes to see what's available
+            console.log('🔍 [DEBUG] Attempting to fetch all quotes to debug...');
+            try {
+                // Let's try to fetch a few quotes to see what quote numbers exist
+                const debugQuoteResult = await supabase_service_1.default.fetchQuoteById('any'); // This will fail but might give us info
+                console.log('🔍 [DEBUG] Debug quote fetch result:', debugQuoteResult);
+            }
+            catch (debugError) {
+                console.error('❌ [ERROR] Could not fetch sample quotes:', debugError);
+            }
+            res.status(404).json({
+                success: false,
+                message: `Could not find quote data for ID: ${quoteId}. Please check that the quote exists in the database.`
+            });
+            return;
+        }
+        console.log(`Successfully fetched quote data for ${quoteId}`);
+        // Extract the quote data including sections, items, totals
+        const quoteData = quoteResult.data;
+        // Use simple defaults for branch and banking data
+        const branchData = { name: 'HDS Group', phone: '', address: '', email: '' };
+        const bankingDetails = { bank: '', account: '', branch: '' };
+        // Try to parse sections and items
+        let sections = [];
+        let items = [];
+        try {
+            sections = JSON.parse(quoteData.sections || '[]');
+        }
+        catch (e) {
+            console.error('Failed to parse sections:', e);
+            sections = [{
+                    name: 'Custom Furniture',
+                    items: [{ description: 'Custom Furniture', quantity: 1, unitPrice: quoteData.subtotal || 0, total: quoteData.subtotal || 0 }],
+                    subtotal: quoteData.subtotal || 0,
+                    sectionTotal: quoteData.subtotal || 0
+                }];
+        }
+        try {
+            items = JSON.parse(quoteData.items || '[]');
+        }
+        catch (e) {
+            console.error('Failed to parse items:', e);
+            items = [{ description: 'Custom Furniture', quantity: 1, unitPrice: quoteData.subtotal || 0, total: quoteData.subtotal || 0 }];
+        }
+        // Construct invoice data using the actual quote data
+        const invoiceData = {
+            quoteId: quoteData.quote_number,
+            customerName: quoteData.customer_name || 'Customer',
+            customerEmail: quoteData.customer_email || '',
+            customerPhone: quoteData.customer_phone || '',
             date: new Date().toISOString(),
-            items: [
-                { description: 'Custom Furniture Quote', quantity: 1, unitPrice: 1000, total: 1000 }
-            ],
-            subtotal: 1000,
-            tax: 150,
-            total: 1150
+            projectName: quoteData.project_name || 'Custom Furniture',
+            sections,
+            items,
+            subtotal: quoteData.subtotal || 0,
+            tax: quoteData.tax || 0,
+            total: quoteData.total || 0,
+            grandTotal: quoteData.total || 0,
+            branchData,
+            bankingDetails,
+            edgingLength: quoteData.edging_length || 0,
+            edgingCost: quoteData.edging_cost || 0
         };
-        const invoiceResult = await (0, optimizer_service_1.generateQuotePdf)(basicInvoiceData, true);
-        if (invoiceResult && invoiceResult.buffer) {
+        console.log('Generated invoice data from quote:', invoiceData.quoteId);
+        // Generate PDF with isPaid=true to mark it as an invoice
+        const invoiceResult2 = await (0, optimizer_service_1.generateQuotePdf)(invoiceData, true);
+        if (invoiceResult2 && invoiceResult2.buffer) {
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="${quoteId}.pdf"`);
-            res.send(invoiceResult.buffer);
+            res.setHeader('Content-Disposition', `inline; filename="${quoteId}.pdf"`);
+            res.send(invoiceResult2.buffer);
             return;
         }
         res.status(404).json({

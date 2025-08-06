@@ -5,6 +5,7 @@ import {
   handlePaymentNotification
 } from '../controllers/payfast.controller';
 import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
+import { testITN } from '../controllers/payfast-test-itn.controller';
 
 // Import the enhanced PayFast success controller
 import payFastSuccessEnhancedController from '../controllers/payfast-success-enhanced.controller';
@@ -46,6 +47,9 @@ router.post('/notify', handlePaymentNotification);
 
 // Debug endpoint to test signature generation
 router.get('/debug', debugPayFastSignature);
+
+// Test endpoint to manually trigger ITN and email sending
+router.get('/test-itn', testITN);
 
 // Test endpoint for signature verification
 router.get('/test-signature', (req: Request, res: Response) => {
