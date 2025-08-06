@@ -1,14 +1,10 @@
-import { Router, Request, Response } from 'express';
-import { testQueryParams } from '../controllers/test.controller';
+import express from 'express';
 import SupabaseService from '../services/supabase.service';
 
-const router = Router();
-
-// Test endpoint to verify query parameter extraction
-router.get('/test-query', testQueryParams);
+const router = express.Router();
 
 // Test endpoint to generate and upload invoice PDF
-router.post('/test-invoice-pdf', async (req: Request, res: Response) => {
+router.post('/test-invoice-pdf', async (req, res) => {
   try {
     const { quoteNumber, invoiceNumber } = req.body;
     
@@ -57,7 +53,7 @@ router.post('/test-invoice-pdf', async (req: Request, res: Response) => {
 });
 
 // Test endpoint to check if invoice exists in bucket
-router.get('/test-check-invoice/:invoiceNumber', async (req: Request, res: Response) => {
+router.get('/test-check-invoice/:invoiceNumber', async (req, res) => {
   try {
     const { invoiceNumber } = req.params;
     
@@ -80,7 +76,7 @@ router.get('/test-check-invoice/:invoiceNumber', async (req: Request, res: Respo
 });
 
 // Test endpoint to download invoice PDF
-router.get('/test-download-invoice/:invoiceNumber', async (req: Request, res: Response) => {
+router.get('/test-download-invoice/:invoiceNumber', async (req, res) => {
   try {
     const { invoiceNumber } = req.params;
     
@@ -109,18 +105,37 @@ router.get('/test-download-invoice/:invoiceNumber', async (req: Request, res: Re
 });
 
 // Test endpoint to list all invoices
-router.get('/test-list-invoices', async (req: Request, res: Response) => {
+router.get('/test-list-invoices', async (req, res) => {
   try {
     console.log('Listing all invoice PDFs in bucket...');
     
-    const result = await SupabaseService.listInvoicePdfs('');
+    const { data, error } = await SupabaseService.supabase.storage
+      .from('invoices')
+      .list('', {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
     
-    console.log('📋 Found', result.data?.length || 0, 'invoice PDFs');
+    if (error) {
+      console.error('❌ Error listing invoices:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+    
+    console.log('📋 Found', data.length, 'invoice PDFs');
     
     res.json({
       success: true,
-      count: result.data?.length || 0,
-      files: result.data || []
+      count: data.length,
+      files: data.map(file => ({
+        name: file.name,
+        created: file.created_at,
+        size: file.metadata?.size || 0,
+        url: `${process.env.SUPABASE_URL}/storage/v1/object/public/invoices/${file.name}`
+      }))
     });
     
   } catch (error: any) {

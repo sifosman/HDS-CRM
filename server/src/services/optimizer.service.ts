@@ -899,28 +899,40 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
     try {
       console.log('Generating invoice PDF for quote:', quoteData.quote_number || quoteData.id);
       
-      // Extract data from quote
+      // Extract data from quote with better fallback handling
       const quoteId = quoteData.quote_number || quoteData.id || `INV-${Date.now()}`;
-      const customerName = quoteData.customer_name || 'Customer';
-      const projectName = quoteData.project_name || 'Project';
+      const customerName = quoteData.customer_name || quoteData.customerName || 'Customer';
+      const projectName = quoteData.project_name || quoteData.projectName || 'Project';
       const quoteDate = quoteData.created_at ? new Date(quoteData.created_at).toLocaleDateString() : new Date().toLocaleDateString();
       const invoiceDate = new Date().toLocaleDateString();
       const invoiceNumber = `INV-${quoteId}-${Date.now()}`;
       
-      // Parse quote data
+      // Parse quote data with better structure handling
       let parsedQuoteData;
       try {
         parsedQuoteData = typeof quoteData.quote_data === 'string' 
           ? JSON.parse(quoteData.quote_data) 
-          : quoteData.quote_data;
+          : quoteData.quote_data || quoteData;
       } catch (e) {
         console.warn('Could not parse quote_data, using fallback');
         parsedQuoteData = { items: [], totals: { finalTotal: 0 } };
       }
       
+      // Handle different data structures
       const items = parsedQuoteData.items || [];
       const totals = parsedQuoteData.totals || { finalTotal: 0 };
-      const finalTotal = totals.finalTotal || 0;
+      const finalTotal = totals.finalTotal || quoteData.total || 0;
+      
+      // Create items from quote data if none exist
+      let invoiceItems = items;
+      if (items.length === 0 && finalTotal > 0) {
+        invoiceItems = [{
+          description: projectName || 'Custom Furniture Quote',
+          quantity: 1,
+          unitPrice: finalTotal,
+          total: finalTotal
+        }];
+      }
       
       // Create PDF document
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -1018,60 +1030,82 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
       let currentY = tableTop + 25;
       doc.font('Helvetica').fontSize(9).fillColor('#333333');
       
-      items.forEach((item: any, index: number) => {
+      invoiceItems.forEach((item: any, index: number) => {
         const rowHeight = 20;
         
         // Alternate row colors
         if (index % 2 === 0) {
           doc.rect(tableLeft, currentY, tableWidth, rowHeight)
-             .fillAndStroke('#f9f9f9', '#f9f9f9');
+             .fillAndStroke('#f9f9f9', '#cccccc');
+        } else {
+          doc.rect(tableLeft, currentY, tableWidth, rowHeight)
+             .fillAndStroke('#ffffff', '#cccccc');
         }
         
+        // Row data
         doc.fillColor('#333333');
-        doc.text(item.description || item.name || 'Item', tableLeft + 10, currentY + 6, { width: 200 });
-        doc.text((item.quantity || 1).toString(), tableLeft + 220, currentY + 6, { width: 50, align: 'center' });
-        doc.text(`R ${(item.unitPrice || 0).toFixed(2)}`, tableLeft + 280, currentY + 6, { width: 80, align: 'right' });
-        doc.text(`R ${(item.total || 0).toFixed(2)}`, tableLeft + 370, currentY + 6, { width: 80, align: 'right' });
+        doc.text(item.description || 'Custom Furniture', tableLeft + 10, currentY + 5, { width: 200 });
+        doc.text(item.quantity || 1, tableLeft + 220, currentY + 5, { width: 50, align: 'center' });
+        doc.text(`R${(item.unitPrice || 0).toFixed(2)}`, tableLeft + 280, currentY + 5, { width: 80, align: 'right' });
+        doc.text(`R${(item.total || 0).toFixed(2)}`, tableLeft + 370, currentY + 5, { width: 80, align: 'right' });
         
         currentY += rowHeight;
       });
       
-      // Total section
-      currentY += 10;
+      // Add subtotal row
+      doc.rect(tableLeft, currentY, tableWidth, 20)
+         .fillAndStroke('#e0e0e0', '#cccccc');
+      
+      doc.font('Helvetica-Bold').fillColor('#003366');
+      doc.text('SUBTOTAL', tableLeft + 10, currentY + 5, { width: 370 });
+      doc.text(`R${finalTotal.toFixed(2)}`, tableLeft + 370, currentY + 5, { width: 80, align: 'right' });
+      
+      currentY += 20;
+      
+      // Tax row
+      const tax = finalTotal * 0.15; // 15% VAT
+      doc.rect(tableLeft, currentY, tableWidth, 20)
+         .fillAndStroke('#e0e0e0', '#cccccc');
+      
+      doc.text('VAT (15%)', tableLeft + 10, currentY + 5, { width: 370 });
+      doc.text(`R${tax.toFixed(2)}`, tableLeft + 370, currentY + 5, { width: 80, align: 'right' });
+      
+      currentY += 20;
+      
+      // Total row
+      doc.rect(tableLeft, currentY, tableWidth, 25)
+         .fillAndStroke('#003366', '#cccccc');
+      
+      doc.fontSize(12).fillColor('#ffffff');
+      doc.text('TOTAL DUE', tableLeft + 10, currentY + 8, { width: 370 });
+      doc.text(`R${(finalTotal + tax).toFixed(2)}`, tableLeft + 370, currentY + 8, { width: 80, align: 'right' });
+      
+      currentY += 40;
+      
+      // Payment details
       doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
+      doc.text('Payment Details', 50, currentY);
       
-      // Draw total background
-      doc.rect(tableLeft + 250, currentY, 200, 25)
-         .fillAndStroke('#e8f4f8', '#003366');
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
+      doc.text('Bank: Standard Bank', 50, currentY + 20);
+      doc.text('Account Name: HDS (Pty) Ltd', 50, currentY + 35);
+      doc.text('Account Number: 123456789', 50, currentY + 50);
+      doc.text('Branch Code: 051001', 50, currentY + 65);
+      doc.text('Reference: ' + invoiceNumber, 50, currentY + 80);
       
-      doc.fillColor('#003366');
-      doc.text('TOTAL:', tableLeft + 260, currentY + 8);
-      doc.text(`R ${finalTotal.toFixed(2)}`, tableLeft + 370, currentY + 8, { width: 80, align: 'right' });
+      // Footer
+      doc.fontSize(8).fillColor('#666666');
+      doc.text('Thank you for your business!', 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
+      doc.text('This invoice was generated automatically. Please contact us if you have any questions.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
       
-      // ===== PAYMENT STATUS =====
-      doc.moveDown(3);
-      doc.fontSize(14).fillColor('#28a745').font('Helvetica-Bold');
-      doc.text('PAYMENT STATUS: PAID', 50, doc.y, { align: 'center', width: doc.page.width - 100 });
-      
-      doc.fontSize(10).fillColor('#666666').font('Helvetica');
-      doc.text(`Payment received on ${invoiceDate}`, 50, doc.y + 10, { align: 'center', width: doc.page.width - 100 });
-      
-      // ===== FOOTER =====
-      doc.moveDown(2);
-      doc.fontSize(9).fillColor('#666666').font('Helvetica');
-      doc.text('Thank you for your business!', 50, doc.y, { align: 'center', width: doc.page.width - 100 });
-      doc.text('This is a computer-generated invoice and does not require a signature.', 50, doc.y + 15, { align: 'center', width: doc.page.width - 100 });
-      
-      // Finalize PDF
       doc.end();
       
-    } catch (error) {
-      console.error('Error generating invoice PDF:', error);
+    } catch (error: any) {
+      console.error('Error in generateInvoicePdf:', error);
       reject(error);
     }
   });
 };
-
 // Generate IQ software compatible export data
 export const generateIQExport = (solution: Solution, unit: number, cutWidth: number = 3, layout: number = 0): any => {
   // Create an object structure that matches the IQ software import format
