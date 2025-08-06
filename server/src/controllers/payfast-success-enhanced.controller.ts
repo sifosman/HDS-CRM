@@ -160,7 +160,7 @@ class PayFastSuccessEnhancedController {
           const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
           
           if (pdfResult.success) {
-            pdfUrl = pdfResult.publicUrl;
+            pdfUrl = pdfResult.publicUrl || '';
             console.log('✅ Invoice PDF generated:', pdfUrl);
           } else {
             pdfUrl = `/api/invoices/download/${invoiceNumber}`;

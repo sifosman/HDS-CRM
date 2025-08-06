@@ -191,7 +191,7 @@ export const generateQuote = async (req: Request, res: Response) => {
     let edgingCostTotal = 0;
     let totalBoardsUsed = 0; // Track total boards used for cutting fee
     let pdfUrl: string | undefined;
-    let invoiceNumber: string | undefined;
+    let invoiceNumber: string | undefined; // Declare once at top of function
 
     for (const section of sections) {
       const { material, cutPieces } = section;
@@ -688,17 +688,14 @@ export const generateQuote = async (req: Request, res: Response) => {
     });
     
     const quoteResult = await SupabaseService.createQuote(quoteSaveData);
-    let invoiceNumber: string | undefined;
     
     if (!quoteResult.success) {
       console.error('Failed to save quote to database:', quoteResult.error);
     } else {
       console.log('Quote saved to database successfully with ID:', quoteResult.data?.id);
-      
       // Create invoice and generate PDF at quote creation time
       try {
         console.log('🚀 Creating invoice at quote creation time for:', quoteId);
-        
         // Create invoice with pending status (since payment hasn't been made yet)
         const invoiceResult = await SupabaseService.createInvoice(quoteId, {
           method: 'Pending Payment',
@@ -707,18 +704,17 @@ export const generateQuote = async (req: Request, res: Response) => {
           amount: grandTotal,
           payment_id: `PENDING-${Date.now()}`
         });
-
         if (invoiceResult.success && invoiceResult.data?.invoiceNumber) {
           invoiceNumber = invoiceResult.data.invoiceNumber;
-          
           // Generate and upload invoice PDF immediately
-          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
-          
-          if (pdfResult.success) {
-            pdfUrl = pdfResult.publicUrl;
-            console.log('✅ Invoice PDF generated and uploaded:', pdfUrl);
-          } else {
-            console.error('❌ Failed to generate invoice PDF:', pdfResult.error);
+          if (invoiceNumber) {
+            const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
+            if (pdfResult.success) {
+              pdfUrl = pdfResult.publicUrl;
+              console.log('✅ Invoice PDF generated and uploaded:', pdfUrl);
+            } else {
+              console.error('❌ Failed to generate invoice PDF:', pdfResult.error);
+            }
           }
         } else {
           console.error('❌ Failed to create invoice:', invoiceResult.error);
