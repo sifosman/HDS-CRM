@@ -186,7 +186,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [quoteSuccessDialogOpen, setQuoteSuccessDialogOpen] = useState(false);
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
-  const [successQuoteData, setSuccessQuoteData] = useState<{ quoteId: string; pdfUrl: string; phoneNumber?: string } | null>(null);
+  const [successQuoteData, setSuccessQuoteData] = useState<{ quoteId: string; quotePdfUrl: string; phoneNumber?: string } | null>(null);
   const [message, setMessage] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -606,6 +606,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       const branchDropdownElement = document.querySelector('[data-testid="branch-dropdown"], .branch-dropdown, input[name="branch"], select[name="branch"]') as HTMLElement;
       if (branchDropdownElement) {
         console.log('Found branch dropdown element, scrolling to it');
+        // Scroll to the element with smooth behavior
         branchDropdownElement.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'center' 
@@ -614,6 +615,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
         // Add visual highlight
         branchDropdownElement.style.boxShadow = '0 0 8px 2px rgba(244, 67, 54, 0.6)';
         
+        // Add a slight delay then focus the dropdown
         setTimeout(() => {
           branchDropdownElement.focus();
           // Add pulsing animation
@@ -886,19 +888,19 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       }
       
       // Extract data from the response
-      const { quoteId, sections: processedSections, grandTotal, pdfUrl } = quoteResult.data;
+      const { quoteId, sections: processedSections, grandTotal, quotePdfUrl } = quoteResult.data;
       
       // Trigger PDF download
-      if (pdfUrl) {
-        console.log('Downloading PDF from URL:', pdfUrl ? pdfUrl.substring(0, 100) + '...' : 'undefined');
+      if (quotePdfUrl) {
+        console.log('Downloading PDF from URL:', quotePdfUrl ? quotePdfUrl.substring(0, 100) + '...' : 'undefined');
         
         // Handle both Supabase public URLs and base64 data URLs
-        if (pdfUrl.startsWith('data:application/pdf;base64,') || pdfUrl.startsWith('http')) {
-          console.log('Valid PDF URL detected:', pdfUrl.startsWith('data:') ? 'base64 format' : 'Supabase public URL');
+        if (quotePdfUrl.startsWith('data:application/pdf;base64,') || quotePdfUrl.startsWith('http')) {
+          console.log('Valid PDF URL detected:', quotePdfUrl.startsWith('data:') ? 'base64 format' : 'Supabase public URL');
           // Store data and open success modal
           setSuccessQuoteData({
             quoteId,
-            pdfUrl,
+            quotePdfUrl,
             phoneNumber: phoneNumber || undefined
           });
           setQuoteSuccessDialogOpen(true);
@@ -993,14 +995,14 @@ Thank you for your business!
 
   // Handle PDF download from the success modal
   const handleDownloadQuotePdf = () => {
-    if (successQuoteData?.pdfUrl) {
-      downloadPdf(successQuoteData.pdfUrl, `Quote-${successQuoteData.quoteId}.pdf`);
+    if (successQuoteData?.quotePdfUrl) {
+      downloadPdf(successQuoteData.quotePdfUrl, `Quote-${successQuoteData.quoteId}.pdf`);
     }
   };
   
   // Handle sharing to WhatsApp from the success modal
   const handleShareToWhatsApp = async () => {
-    if (!successQuoteData?.quoteId || !successQuoteData?.pdfUrl) {
+    if (!successQuoteData?.quoteId || !successQuoteData?.quotePdfUrl) {
       setSnackbarMessage('Missing quote data for WhatsApp sharing');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
@@ -1012,7 +1014,7 @@ Thank you for your business!
       setIsLoading(true);
       
       // Extract PDF data URL and convert to proper URL if needed
-      let pdfUrl = successQuoteData.pdfUrl;
+      let pdfUrl = successQuoteData.quotePdfUrl;
       let finalPdfUrl = pdfUrl;
       
       // If this is a data URL, we need to upload it to the server to get a shareable link
