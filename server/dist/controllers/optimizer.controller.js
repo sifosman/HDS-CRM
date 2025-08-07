@@ -161,10 +161,11 @@ const generateQuote = async (req, res) => {
         const pdfSections = [];
         let grandTotal = 0;
         let totalEdgingLength = 0;
+        let invoiceNumber = null;
+        let quotePdfUrl = '';
+        let invoicePdfUrl = '';
         let edgingCostTotal = 0;
         let totalBoardsUsed = 0; // Track total boards used for cutting fee
-        let pdfUrl;
-        let invoiceNumber; // Declare once at top of function
         for (const section of sections) {
             const { material, cutPieces } = section;
             if (!material || !cutPieces || !Array.isArray(cutPieces) || cutPieces.length === 0) {
@@ -497,7 +498,7 @@ const generateQuote = async (req, res) => {
         // Upload PDF to storage and get URL
         // Note: uploadQuotePdf takes fileBuffer first, then fileName
         const uploadResult = await supabase_service_1.default.uploadQuotePdf(pdfResult.buffer, pdfId);
-        pdfUrl = uploadResult.publicUrl || ''; // Use publicUrl directly or empty string as fallback
+        quotePdfUrl = uploadResult.publicUrl || ''; // Store quote PDF URL separately
         // Generate a unique cutlist ID for this quote based on the quote ID
         const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
         // Create cutlist record in database before creating quote to satisfy foreign key constraint
@@ -567,7 +568,7 @@ const generateQuote = async (req, res) => {
                 tax: grandTotal * 0.15,
                 total: grandTotal * 1.15,
                 status: 'pending',
-                cutlistUrl: pdfUrl,
+                cutlistUrl: quotePdfUrl,
                 branchData: branchData
             };
         }
@@ -630,8 +631,8 @@ const generateQuote = async (req, res) => {
                     if (invoiceNumber) {
                         const pdfResult = await supabase_service_1.default.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
                         if (pdfResult.success) {
-                            pdfUrl = pdfResult.publicUrl;
-                            console.log('✅ Invoice PDF generated and uploaded:', pdfUrl);
+                            invoicePdfUrl = pdfResult.publicUrl || '';
+                            console.log('✅ Invoice PDF generated and uploaded:', invoicePdfUrl);
                         }
                         else {
                             console.error('❌ Failed to generate invoice PDF:', pdfResult.error);
@@ -656,7 +657,8 @@ const generateQuote = async (req, res) => {
                 invoiceNumber,
                 sections: processedSections,
                 grandTotal,
-                pdfUrl
+                quotePdfUrl,
+                invoicePdfUrl
             }
         });
     }

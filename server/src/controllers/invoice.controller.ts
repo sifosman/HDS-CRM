@@ -84,9 +84,53 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       // Extract the quote data including sections, items, totals
       const quoteData = quoteResult.data;
       
-      // Use simple defaults for branch and banking data
-      const branchData = { name: 'HDS Group', phone: '', address: '', email: '' };
-      const bankingDetails = { bank: '', account: '', branch: '' };
+      // Fetch branch data dynamically from branches table
+      let branchData = { name: 'HDS Group', phone: '', address: '', email: '' };
+      let bankingDetails = { bank: '', account: '', branch: '' };
+      
+      // Try to determine branch from quote data or use default
+      let branchTradingAs = 'HDS Group'; // Default fallback
+      
+      // Check if quote has branch information in quote_data
+      try {
+        const parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
+        if (parsedQuoteData.branchData && parsedQuoteData.branchData.trading_as) {
+          branchTradingAs = parsedQuoteData.branchData.trading_as;
+          console.log(`Found branch in quote data: ${branchTradingAs}`);
+        }
+      } catch (e) {
+        console.log('No branch data found in quote_data, using default');
+      }
+      
+      // Fetch branch details from branches table
+      console.log(`Fetching branch data for: ${branchTradingAs}`);
+      const branchResult = await SupabaseService.getBranchByTradingAs(branchTradingAs);
+      
+      if (branchResult.success && branchResult.data) {
+        const branch = branchResult.data;
+        branchData = {
+          name: branch.trading_as || 'HDS Group',
+          phone: branch.branch_telephone || '',
+          address: branch.branch_address || '',
+          email: branch.email_address || ''
+        };
+        console.log(`✅ Fetched branch data:`, branchData);
+        
+        // Try to fetch banking details for this branch
+        const bankingResult = await SupabaseService.getBankingDetailsByBranch(branchTradingAs);
+        if (bankingResult.success && bankingResult.data) {
+          bankingDetails = {
+            bank: bankingResult.data.bank_name || '',
+            account: bankingResult.data.account_number || '',
+            branch: bankingResult.data.branch_code || ''
+          };
+          console.log(`✅ Fetched banking details:`, bankingDetails);
+        } else {
+          console.log(`⚠️ Banking details not found for branch: ${branchTradingAs}`);
+        }
+      } else {
+        console.log(`⚠️ Branch not found: ${branchTradingAs}, using defaults`);
+      }
 
       // Try to parse sections and items
       let sections = [];

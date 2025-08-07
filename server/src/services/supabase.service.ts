@@ -329,9 +329,6 @@ const SupabaseService = {
       if (quoteData.cutlistUrl) {
         quote.cutlist_url = quoteData.cutlistUrl;
       }
-      if (quoteData.branchData) {
-        quote.branch_data = JSON.stringify(quoteData.branchData);
-      }
       
       console.log('Inserting quote with quote_number field populated:', JSON.stringify(quote));
 
@@ -370,7 +367,7 @@ const SupabaseService = {
     try {
       const { data, error } = await supabase
         .from('quotes')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({ status })
         .eq('quote_number', quoteNumber)
         .select()
         .single();
@@ -764,6 +761,33 @@ const SupabaseService = {
   },
 
   /**
+   * Get the first available branch from branches table (fallback method)
+   */
+  getFirstAvailableBranch: async (): Promise<any> => {
+    try {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching first available branch:', error);
+        return { success: false, error: error.message };
+      }
+      
+      if (!data) {
+        return { success: false, error: 'No branches found in database' };
+      }
+      
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error in getFirstAvailableBranch:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Get branch by trading_as value from branches table
    */
   getBranchByTradingAs: async (tradingAs: string): Promise<any> => {
@@ -900,50 +924,91 @@ const SupabaseService = {
   async fetchQuoteByNumber(quoteNumber: string): Promise<any> {
     try {
       console.log(`🔍 Searching for quote with identifier: ${quoteNumber}`);
+      console.log(`🔍 Quote ID details: type=${typeof quoteNumber}, length=${quoteNumber.length}`);
       
       // First try to find by filename (exact match)
+      console.log(`🔍 Step 1: Trying exact filename match...`);
       let { data, error } = await supabase
         .from('quotes')
         .select('*')
-        .eq('filename', quoteNumber)
-        .single();
+        .eq('filename', quoteNumber);
 
-      // If no exact match, try with file extension removed
-      if (error || !data) {
-        console.log(`🔍 No exact filename match, trying without file extension...`);
-
-        // Try matching filename without extension (e.g., "Q-20250806-4477-HDSCHUSTR.pdf" -> "Q-20250806-4477-HDSCHUSTR")
-        ({ data, error } = await supabase
-          .from('quotes')
-          .select('*')
-          .or(`filename.eq.${quoteNumber},filename.eq.${quoteNumber}.pdf,filename.like.${quoteNumber}.%`)
-          .limit(1)
-          .single());
+      console.log(`🔍 Step 1 result: found ${data?.length || 0} quotes, error: ${error?.message || 'none'}`);
+      if (data && data.length > 0) {
+        console.log(`✅ Found quote by exact filename match`);
+        return { success: true, data: data[0] };
       }
 
-      // If still no match, try the old quote_number field as fallback
-      if (error || !data) {
-        console.log(`🔍 No filename match, trying quote_number field as fallback...`);
+      // Try with .pdf extension
+      console.log(`🔍 Step 2: Trying with .pdf extension...`);
+      ({ data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('filename', `${quoteNumber}.pdf`));
 
-        ({ data, error } = await supabase
-          .from('quotes')
-          .select('*')
-          .eq('quote_number', quoteNumber)
-          .single());
+      console.log(`🔍 Step 2 result: found ${data?.length || 0} quotes, error: ${error?.message || 'none'}`);
+      if (data && data.length > 0) {
+        console.log(`✅ Found quote by filename with .pdf extension`);
+        return { success: true, data: data[0] };
       }
 
-      if (error) {
-        console.error(`❌ Error fetching quote with identifier ${quoteNumber}:`, error);
-        return { success: false, error: error.message };
+      // Try using LIKE pattern for various extensions
+      console.log(`🔍 Step 3: Trying LIKE pattern for extensions...`);
+      ({ data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .like('filename', `${quoteNumber}.%`));
+
+      console.log(`🔍 Step 3 result: found ${data?.length || 0} quotes, error: ${error?.message || 'none'}`);
+      if (data && data.length > 0) {
+        console.log(`✅ Found quote by filename LIKE pattern`);
+        return { success: true, data: data[0] };
       }
 
-      if (!data) {
-        console.error(`❌ Quote not found for identifier: ${quoteNumber}`);
-        return { success: false, error: 'Quote not found' };
+      // Try the quote_number field as fallback
+      console.log(`🔍 Step 4: Trying quote_number field as fallback...`);
+      ({ data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('quote_number', quoteNumber));
+
+      console.log(`🔍 Step 4 result: found ${data?.length || 0} quotes, error: ${error?.message || 'none'}`);
+      if (data && data.length > 0) {
+        console.log(`✅ Found quote by quote_number field`);
+        return { success: true, data: data[0] };
       }
 
-      console.log(`✅ Quote found: ID ${data.id}, filename: "${data.filename}", quote_number: "${data.quote_number || 'null'}"`);
-      return { success: true, data };
+      // Try case-insensitive search as last resort
+      console.log(`🔍 Step 5: Trying case-insensitive search...`);
+      ({ data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .or(`filename.ilike.${quoteNumber},filename.ilike.${quoteNumber}.pdf,quote_number.ilike.${quoteNumber}`));
+
+      console.log(`🔍 Step 5 result: found ${data?.length || 0} quotes, error: ${error?.message || 'none'}`);
+      if (data && data.length > 0) {
+        console.log(`✅ Found quote by case-insensitive search`);
+        return { success: true, data: data[0] };
+      }
+
+      // If we get here, the quote truly doesn't exist
+      console.error(`❌ Quote not found after all search attempts for identifier: ${quoteNumber}`);
+      
+      // Get some recent quotes for debugging
+      console.log(`🔍 Getting recent quotes for debugging...`);
+      const { data: recentQuotes } = await supabase
+        .from('quotes')
+        .select('id, filename, quote_number, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      console.log(`🔍 Recent quotes in database:`, recentQuotes?.map(q => ({
+        filename: q.filename,
+        quote_number: q.quote_number,
+        created_at: q.created_at
+      })));
+      
+      return { success: false, error: 'Quote not found' };
     } catch (error: any) {
       console.error(`❌ Error in fetchQuoteByNumber for ${quoteNumber}:`, error);
       return { success: false, error: error.message };
@@ -979,16 +1044,145 @@ const SupabaseService = {
         total: quote.total
       });
 
-      // Generate the PDF
-      console.log('Generating invoice PDF');
-      const pdfResult = await generateInvoicePdf(quote);
+      // Extract branch identifier from quote filename and find matching branch
+      let branchData: any = { 
+        name: 'HDS Group', 
+        trading_as: 'HDS Group',
+        branch_address: '',
+        branch_telephone: '', 
+        email_address: '' 
+      };
       
-      if (!pdfResult.success || !pdfResult.buffer) {
-        console.error('Failed to generate PDF:', pdfResult.error || 'Unknown error');
-        return { success: false, error: pdfResult.error || 'Failed to generate PDF' };
+      // Extract branch code from filename (pattern: Q-YYYYMMDD-NNNN-BRANCHCODE)
+      const filename = quote.filename || quote.quote_number;
+      console.log(`📋 Analyzing filename for branch: ${filename}`);
+      
+      const parts = filename.split('-');
+      let branchFound = false;
+      
+      if (parts.length >= 4) {
+        const branchCode = parts[3];
+        console.log(`🔍 Extracted branch code: ${branchCode}`);
+        
+        // Get all branches to find the best match
+        const { data: allBranches, error: branchesError } = await supabase
+          .from('branches')
+          .select('*');
+        
+        if (!branchesError && allBranches && allBranches.length > 0) {
+          console.log(`📊 Found ${allBranches.length} branches in database`);
+          
+          // Try exact match first
+          let matchedBranch = allBranches.find(b => b.trading_as === branchCode);
+          
+          if (!matchedBranch) {
+            // Try partial matches - look for branch names that contain parts of the code
+            matchedBranch = allBranches.find(b => 
+              b.trading_as.toLowerCase().includes(branchCode.toLowerCase()) ||
+              branchCode.toLowerCase().includes(b.trading_as.toLowerCase())
+            );
+          }
+          
+          if (!matchedBranch && branchCode.startsWith('HDS')) {
+            // Extract location code and try pattern matching
+            const locationCode = branchCode.substring(3);
+            console.log(`🔍 Trying location-based matching with: ${locationCode}`);
+            
+            // Special case mappings for common patterns
+            const locationMappings: { [key: string]: string } = {
+              'DEDEU': 'HDS De Deur',
+              'LOUIS': 'HDS Louis Trichardt',
+              'BLOEM': 'HDS Bloemfontein',
+              'BRITS': 'HDS Brits',
+              'BURG': 'HDS Burgersfort',
+              'CHURCH': 'HDS Church Street',
+              'EMPAN': 'HDS Empangeni',
+              'HAMMAN': 'HDS Hammanskraal',
+              'KLERK': 'HDS Klerksdorp',
+              'KRUGER': 'HDS Krugersdorp',
+              'KYA': 'HDS Kya Sands',
+              'LADY': 'HDS Ladysmith',
+              'MAFIK': 'HDS Mafikeng',
+              'MARULA': 'HDS Marula',
+              'NELSP': 'HDS Nelspruit',
+              'NEWC': 'HDS Newcastle',
+              'PMB': 'HDS PMB',
+              'SECUN': 'HDS Secunda',
+              'SOUTH': 'HDS South Coast',
+              'SOWETO': 'HDS Soweto',
+              'SPRING': 'HDS Springs',
+              'SUNDER': 'HDS Sunderland',
+              'TEMBI': 'HDS Tembisa',
+              'VANDER': 'HDS Vanderbijlpark',
+              'WALTLOO': 'HDS Waltloo',
+              'MAIN': 'HDS Main Reef',
+              'WITBANK': 'HDS Witbank',
+              'WYNBERG': 'HDS Wynberg',
+              'ERMELO': 'HDS Ermelo',
+              'ALBER': 'HDS Alberton',
+              'WELKOM': 'HDS Welkom',
+              'PIET': 'HDS Piet Retief'
+            };
+            
+            // Check if we have a direct mapping
+            if (locationMappings[locationCode]) {
+              matchedBranch = allBranches.find(b => b.trading_as === locationMappings[locationCode]);
+              if (matchedBranch) {
+                console.log(`✅ Found branch using location mapping: ${matchedBranch.trading_as}`);
+              }
+            }
+            
+            // If no direct mapping, try fuzzy matching
+            if (!matchedBranch) {
+              matchedBranch = allBranches.find(b => {
+                const branchName = b.trading_as.toLowerCase().replace(/hds\s+/i, '');
+                return branchName.includes(locationCode.toLowerCase()) ||
+                       locationCode.toLowerCase().includes(branchName);
+              });
+            }
+          }
+          
+          if (matchedBranch) {
+            branchData = {
+              name: matchedBranch.trading_as,
+              trading_as: matchedBranch.trading_as,
+              branch_address: matchedBranch.branch_address || '',
+              branch_telephone: matchedBranch.branch_telephone || '',
+              email_address: matchedBranch.email_address || ''
+            };
+            branchFound = true;
+            console.log(`✅ Successfully matched branch: ${matchedBranch.trading_as}`);
+            console.log(`📍 Branch details:`, {
+              address: branchData.branch_address,
+              phone: branchData.branch_telephone,
+              email: branchData.email_address
+            });
+          }
+        }
       }
       
-      console.log('PDF generated successfully, buffer size:', pdfResult.buffer.length);
+      if (!branchFound) {
+        console.log(`⚠️ Could not determine branch from filename: ${filename}`);
+        console.log(`⚠️ Using default branch data`);
+      }
+
+      // Generate the PDF
+      console.log('Generating invoice PDF');
+      let pdfResult: any;
+      try {
+        pdfResult = await generateInvoicePdf(quote, branchData);
+        
+        if (!pdfResult || !pdfResult.buffer) {
+          console.error('❌ Failed to generate PDF: No buffer returned');
+          return { success: false, error: 'Failed to generate PDF - no buffer returned' };
+        }
+        
+        console.log('✅ PDF generated successfully, buffer size:', pdfResult.buffer.length);
+      } catch (pdfError: any) {
+        console.error('❌ PDF generation error:', pdfError);
+        console.error('❌ PDF error message:', pdfError.message);
+        return { success: false, error: `PDF generation failed: ${pdfError.message}` };
+      }
 
       // Create filename with timestamp
       const timestamp = Date.now();

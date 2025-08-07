@@ -585,7 +585,7 @@ class PayFastSuccessEnhancedController {
       // Find existing invoice for this quote
       const existingInvoiceResult = await SupabaseService.fetchInvoiceByQuoteId(quoteId);
       let invoiceNumber: string = '';
-      let pdfUrl: string = '';
+      let pdfUrl: string = `/api/invoices/download/${quoteId}`; // Default fallback URL
 
       if (existingInvoiceResult.success && existingInvoiceResult.data) {
         // Use the correct database field name from schema
@@ -609,10 +609,16 @@ class PayFastSuccessEnhancedController {
         try {
           const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceNumber);
           if (pdfResult.success && pdfResult.publicUrl) {
+            pdfUrl = pdfResult.publicUrl;
             console.log('✅ Invoice PDF uploaded:', pdfResult.publicUrl);
+          } else {
+            // Fallback to download endpoint if direct URL not available
+            pdfUrl = `/api/invoices/download/${invoiceNumber}`;
           }
         } catch (pdfError) {
           console.error('PDF generation error:', pdfError);
+          // Fallback to download endpoint on error
+          pdfUrl = `/api/invoices/download/${invoiceNumber}`;
         }
       } else {
         // Fallback: Create new invoice if none exists (backward compatibility)

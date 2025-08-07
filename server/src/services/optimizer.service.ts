@@ -889,7 +889,7 @@ export const generatePdf = (solution: Solution, unit: number, cutWidth: number =
 };
 
 // Generate a PDF invoice from quote data
-export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: string }> => {
+export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ buffer: any, id: string }> => {
   return new Promise((resolve, reject) => {
     try {
       console.log('Generating invoice PDF for quote:', quoteData.quote_number || quoteData.id);
@@ -913,21 +913,124 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
         parsedQuoteData = { items: [], totals: { finalTotal: 0 } };
       }
       
-      // Handle different data structures
-      const items = parsedQuoteData.items || [];
-      const totals = parsedQuoteData.totals || { finalTotal: 0 };
-      const finalTotal = totals.finalTotal || quoteData.total || 0;
+      // Extract sections data (same as quote PDF)
+      const sections = parsedQuoteData.sections || [];
       
-      // Create items from quote data if none exist
-      let invoiceItems = items;
-      if (items.length === 0 && finalTotal > 0) {
-        invoiceItems = [{
-          description: projectName || 'Custom Furniture Quote',
-          quantity: 1,
-          unitPrice: finalTotal,
-          total: finalTotal
-        }];
+      // Calculate totals using the same logic as quote PDF
+      const EDGING_PRICE_PER_METER = 14; // R14 per meter
+      let totalEdgingMeters = 0;
+      
+      console.log('💰 Extracting amounts from quote data...');
+      
+      let boardTotal = 0;
+      let totalEdgingCost = 0;
+      let totalCuttingFee = 0;
+      let finalTotal = 0;
+      
+      // Parse quote data to get the actual totals
+      try {
+        const parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
+        console.log('📊 Parsed quote data keys:', Object.keys(parsedQuoteData));
+        
+        if (parsedQuoteData.totals) {
+          // Use the totals from the quote data
+          const quoteTotals = parsedQuoteData.totals;
+          console.log('💰 Found totals in quote data:', quoteTotals);
+          
+          // The quote already has calculated totals - use the subtotal as our base
+          finalTotal = parseFloat(quoteTotals.subtotal || quoteTotals.finalTotal || 0);
+          boardTotal = finalTotal; // For display purposes, treat the subtotal as board total
+          
+          console.log('✅ Using quote subtotal as base amount:', finalTotal);
+        } else if (parsedQuoteData.items && Array.isArray(parsedQuoteData.items)) {
+          // Fallback: calculate from items if totals not available
+          console.log('📦 Calculating from items...');
+          parsedQuoteData.items.forEach((item: any) => {
+            if (item.total && !isNaN(item.total)) {
+              finalTotal += parseFloat(item.total);
+            }
+          });
+          boardTotal = finalTotal;
+          console.log('✅ Calculated total from items:', finalTotal);
+        }
+        
+        // If we still don't have amounts, try to use sections data (fallback)
+        if (finalTotal === 0 && sections && sections.length > 0) {
+          console.log('⚠️ No amounts in quote data, trying sections fallback...');
+          
+          // Calculate sectionTotal for each section if not already calculated
+          sections.forEach((section: any) => {
+            if (!section.sectionTotal && section.pricePerBoard && section.boardsNeeded) {
+              section.sectionTotal = parseFloat((section.pricePerBoard * section.boardsNeeded).toFixed(2));
+            }
+          });
+          
+          // Calculate initial grand total from board costs
+          boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
+          boardTotal = parseFloat(boardTotal.toFixed(2));
+
+          // Calculate edging costs for each section
+          sections.forEach((section: any) => {
+            if (section.edging && section.edging.totalEdging > 0) {
+              // Convert from mm to meters
+              const edgingMeters = section.edging.totalEdging / 1000;
+              totalEdgingMeters += edgingMeters;
+              
+              // Use the already calculated cost from the controller if available
+              if (section.edging.cost !== undefined) {
+                section.edgingCost = parseFloat(section.edging.cost);
+                totalEdgingCost += section.edgingCost;
+              } else {
+                // Fallback calculation if cost not provided
+                const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
+                section.edgingCost = parseFloat(edgingCost);
+                totalEdgingCost += section.edgingCost;
+              }
+            } else {
+              section.edgingCost = 0;
+            }
+          });
+          
+          // Round the total edging cost to 2 decimal places
+          totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
+          
+          // Calculate cutting fee (R70 per board)
+          const cuttingFeePerBoard = 70; // R70 per board
+          const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
+          totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+          
+          // Calculate final grand total with edging and cutting fee included
+          finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
+          
+          console.log('✅ Calculated from sections - Board:', boardTotal, 'Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee, 'Total:', finalTotal);
+        }
+        
+      } catch (parseError) {
+        console.error('❌ Error parsing quote data for amounts:', parseError);
+        // Use fallback amounts if parsing fails
+        finalTotal = 0;
+        boardTotal = 0;
       }
+      
+      // Ensure we have some amount to display (never show R0.00 if quote has a total)
+      if (finalTotal === 0 && quoteData.total && !isNaN(quoteData.total)) {
+        console.log('⚠️ Using quote.total as fallback:', quoteData.total);
+        finalTotal = parseFloat(quoteData.total);
+        boardTotal = finalTotal;
+      }
+      
+      // Define variables needed for PDF display
+      const cuttingFeePerBoard = 70; // R70 per board (for display purposes)
+      const totalBoardsUsed = sections.length > 0 
+        ? sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0)
+        : Math.ceil(finalTotal / 500); // Estimate boards if no sections data
+      
+      console.log('💰 Final amounts for invoice:');
+      console.log('  Board Total:', boardTotal);
+      console.log('  Edging Cost:', totalEdgingCost);
+      console.log('  Cutting Fee:', totalCuttingFee);
+      console.log('  Total Boards Used:', totalBoardsUsed);
+      console.log('  Subtotal (before VAT):', finalTotal);
       
       // Create PDF document
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -962,14 +1065,40 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
       
       doc.moveDown(1);
       
-      // Company details (left side)
+      // Company details (left side) - using dynamic branch data
+      console.log('🏢 Branch data received in generateInvoicePdf:', JSON.stringify(branchData, null, 2));
+      
+      const effectiveBranchData = branchData || {
+        name: 'HDS Group',
+        trading_as: 'HDS Group',
+        branch_address: 'Please contact us for address details',
+        branch_telephone: '011 123 4567',
+        email_address: 'info@hdsgroup.co.za'
+      };
+      
+      console.log('🏢 Effective branch data:', JSON.stringify(effectiveBranchData, null, 2));
+      
       doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-      doc.text('HDS (Pty) Ltd', 50, doc.y);
+      const companyName = effectiveBranchData.trading_as || effectiveBranchData.name || 'HDS Group';
+      doc.text(companyName, 50, doc.y);
+      console.log('🏢 Company name displayed:', companyName);
+      
       doc.font('Helvetica').fontSize(10).fillColor('#333333');
-      doc.text('123 Business Street', 50, doc.y + 5);
-      doc.text('Cape Town, 8000', 50, doc.y + 5);
-      doc.text('Tel: +27 21 123 4567', 50, doc.y + 5);
-      doc.text('Email: info@hds-nine.vercel.app', 50, doc.y + 5);
+      
+      // Address - always show something
+      const address = effectiveBranchData.branch_address || 'Please contact us for address details';
+      doc.text(address, 50, doc.y + 5);
+      console.log('🏢 Address displayed:', address);
+      
+      // Phone - always show something
+      const phone = effectiveBranchData.branch_telephone || '011 123 4567';
+      doc.text(`Tel: ${phone}`, 50, doc.y + 5);
+      console.log('🏢 Phone displayed:', phone);
+      
+      // Email - always show something
+      const email = effectiveBranchData.email_address || 'info@hdsgroup.co.za';
+      doc.text(`Email: ${email}`, 50, doc.y + 5);
+      console.log('🏢 Email displayed:', email);
       
       // Invoice details (right side)
       const rightColumnX = doc.page.width - 250;
@@ -1002,91 +1131,179 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
       
       doc.moveDown(2);
       
-      // ===== INVOICE ITEMS TABLE =====
-      const tableTop = doc.y + 20;
-      const tableLeft = 50;
-      const tableWidth = doc.page.width - 100;
+      // ===== INVOICE ITEMS TABLE (using same structure as quote PDF) =====
+      doc.moveDown(1);
       
-      // Table headers
-      doc.fontSize(10).fillColor('#003366').font('Helvetica-Bold');
-      
-      // Draw header background
-      doc.rect(tableLeft, tableTop, tableWidth, 25)
-         .fillAndStroke('#f0f0f0', '#cccccc');
-      
-      // Header text
-      doc.fillColor('#003366');
-      doc.text('Description', tableLeft + 10, tableTop + 8, { width: 200 });
-      doc.text('Qty', tableLeft + 220, tableTop + 8, { width: 50, align: 'center' });
-      doc.text('Unit Price', tableLeft + 280, tableTop + 8, { width: 80, align: 'right' });
-      doc.text('Total', tableLeft + 370, tableTop + 8, { width: 80, align: 'right' });
-      
-      // Table rows
-      let currentY = tableTop + 25;
-      doc.font('Helvetica').fontSize(9).fillColor('#333333');
-      
-      invoiceItems.forEach((item: any, index: number) => {
-        const rowHeight = 20;
+      // For each material section (same as quote PDF)
+      sections.forEach((section: any, index: number) => {
+        const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
         
-        // Alternate row colors
-        if (index % 2 === 0) {
-          doc.rect(tableLeft, currentY, tableWidth, rowHeight)
-             .fillAndStroke('#f9f9f9', '#cccccc');
-        } else {
-          doc.rect(tableLeft, currentY, tableWidth, rowHeight)
-             .fillAndStroke('#ffffff', '#cccccc');
+        // Check if we need a new page for this section
+        if (doc.y > doc.page.height - 200) {
+          doc.addPage();
         }
         
-        // Row data
-        doc.fillColor('#333333');
-        doc.text(item.description || 'Custom Furniture', tableLeft + 10, currentY + 5, { width: 200 });
-        doc.text(item.quantity || 1, tableLeft + 220, currentY + 5, { width: 50, align: 'center' });
-        doc.text(`R${(item.unitPrice || 0).toFixed(2)}`, tableLeft + 280, currentY + 5, { width: 80, align: 'right' });
-        doc.text(`R${(item.total || 0).toFixed(2)}`, tableLeft + 370, currentY + 5, { width: 80, align: 'right' });
+        doc.moveDown(0.5);
+        
+        // Create a compact table for this section's details
+        const startY = doc.y;
+        const colWidths = [200, 100, 100, 100];
+        const rowHeight = 20;
+        
+        const currentStartY = doc.y;
+        
+        // Header row
+        doc.rect(50, currentStartY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
+           .fillAndStroke('#cccccc', '#000000');
+        
+        doc.fontSize(10).fillColor('#000000');
+        doc.text('Description', 55, currentStartY + 8, { width: colWidths[0] - 10 });
+        doc.text('Board Size', 55 + colWidths[0], currentStartY + 8, { width: colWidths[1] - 10 });
+        doc.text('Quantity', 55 + colWidths[0] + colWidths[1], currentStartY + 8, { width: colWidths[2] - 10 });
+        doc.text('Price', 55 + colWidths[0] + colWidths[1] + colWidths[2], currentStartY + 8, { width: colWidths[3] - 10 });
+        
+        // Data row
+        let currentY = currentStartY + rowHeight;
+        
+        doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
+           .stroke();
+        doc.text(material ?? '-', 55, currentY + 8, { width: colWidths[0] - 10 });
+        doc.text(boardSize ?? '-', 55 + colWidths[0], currentY + 8, { width: colWidths[1] - 10 });
+        
+        const boardsNeededDisplay = boardsNeeded !== undefined && boardsNeeded !== null ? boardsNeeded.toString() : '-';
+        doc.text(boardsNeededDisplay, 55 + colWidths[0] + colWidths[1], currentY + 8, { width: colWidths[2] - 10 });
+        
+        const priceDisplay = pricePerBoard !== undefined && pricePerBoard !== null ? `R ${pricePerBoard.toFixed(2)}` : '-';
+        doc.text(priceDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
         
         currentY += rowHeight;
+        
+        // Section total
+        doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
+           .stroke();
+        
+        doc.fontSize(10).fillColor('#000000');
+        doc.text('Board Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
+        const sectionTotalDisplay = sectionTotal !== undefined && sectionTotal !== null ? `R ${sectionTotal.toFixed(2)}` : '-';
+        doc.text(sectionTotalDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
+        
+        currentY += rowHeight;
+        
+        // Add edging information if available
+        if (edging && edging.totalEdging > 0) {
+          doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
+             .stroke();
+          
+          const edgingMeters = (edging.totalEdging / 1000).toFixed(2);
+          const edgingCost = section.edgingCost !== undefined 
+            ? section.edgingCost.toFixed(2) 
+            : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
+          
+          doc.fontSize(10).fillColor('#000000');
+          doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m):`, 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
+          doc.text(`R ${edgingCost}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
+          
+          currentY += rowHeight;
+          
+          // Combined section total (boards + edging)
+          doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
+             .fillAndStroke('#e6e6e6', '#000000');
+             
+          doc.fontSize(10).fillColor('#000000');
+          doc.text('Section Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
+          
+          const combinedTotal = (parseFloat(sectionTotal || '0') + parseFloat(edgingCost)).toFixed(2);
+          doc.text(`R ${combinedTotal}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
+        }
+        
+        // Minimal spacing between sections
+        doc.moveDown(0.5);
       });
       
-      // Add subtotal row
-      doc.rect(tableLeft, currentY, tableWidth, 20)
-         .fillAndStroke('#e0e0e0', '#cccccc');
+      // Add invoice summary (same as quote PDF summary)
+      doc.moveDown(0.5);
       
-      doc.font('Helvetica-Bold').fillColor('#003366');
-      doc.text('SUBTOTAL', tableLeft + 10, currentY + 5, { width: 370 });
-      doc.text(`R${finalTotal.toFixed(2)}`, tableLeft + 370, currentY + 5, { width: 80, align: 'right' });
-      
-      currentY += 20;
-      
-      // Tax row
-      const tax = finalTotal * 0.15; // 15% VAT
-      doc.rect(tableLeft, currentY, tableWidth, 20)
-         .fillAndStroke('#e0e0e0', '#cccccc');
-      
-      doc.text('VAT (15%)', tableLeft + 10, currentY + 5, { width: 370 });
-      doc.text(`R${tax.toFixed(2)}`, tableLeft + 370, currentY + 5, { width: 80, align: 'right' });
-      
-      currentY += 20;
-      
-      // Total row
-      doc.rect(tableLeft, currentY, tableWidth, 25)
-         .fillAndStroke('#003366', '#cccccc');
-      
-      doc.fontSize(12).fillColor('#ffffff');
-      doc.text('TOTAL DUE', tableLeft + 10, currentY + 8, { width: 370 });
-      doc.text(`R${(finalTotal + tax).toFixed(2)}`, tableLeft + 370, currentY + 8, { width: 80, align: 'right' });
-      
-      currentY += 40;
-      
-      // Payment details
-      doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-      doc.text('Payment Details', 50, currentY);
-      
+      const pageWidth = doc.page.width - 100;
+      doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+      doc.text('Invoice Summary', 50, doc.y, { align: 'center', width: pageWidth });
       doc.font('Helvetica').fontSize(10).fillColor('#333333');
-      doc.text('Bank: Standard Bank', 50, currentY + 20);
-      doc.text('Account Name: HDS (Pty) Ltd', 50, currentY + 35);
-      doc.text('Account Number: 123456789', 50, currentY + 50);
-      doc.text('Branch Code: 051001', 50, currentY + 65);
-      doc.text('Reference: ' + invoiceNumber, 50, currentY + 80);
+      doc.moveDown(0.3);
+      
+      // Create a summary table
+      const summaryStartY = doc.y;
+      const summaryColWidth = (doc.page.width - 100) / 2;
+      const summaryRowHeight = 25;
+      
+      // Table header
+      doc.rect(50, summaryStartY, summaryColWidth * 2, summaryRowHeight)
+         .fillAndStroke('#cccccc', '#000000');
+      
+      doc.fontSize(12).fillColor('#000000');
+      doc.text('Description', 60, summaryStartY + 8);
+      doc.text('Amount', 60 + summaryColWidth, summaryStartY + 8);
+      
+      let summaryY = summaryStartY + summaryRowHeight;
+      
+      // Board costs row
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
+      doc.text('Total Board Cost', 60, summaryY + 8);
+      doc.text(`R ${boardTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+      
+      summaryY += summaryRowHeight;
+      
+      // Edging costs row
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
+      doc.text(`Total Edging Cost (${totalEdgingMeters.toFixed(2)}m @ R${EDGING_PRICE_PER_METER}/m)`, 60, summaryY + 8);
+      doc.text(`R ${totalEdgingCost.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+      
+      summaryY += summaryRowHeight;
+
+      // Cutting fee row
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
+         .fillAndStroke('#ffffff', '#000000');
+      doc.fillColor('#000000');
+      doc.text(`Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, 60, summaryY + 8);
+      doc.text(`R ${totalCuttingFee.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+
+      summaryY += summaryRowHeight;
+
+      // Subtotal row (before VAT)
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
+         .fillAndStroke('#f0f0f0', '#000000');
+      
+      doc.fontSize(11).fillColor('#000000').font('Helvetica-Bold');
+      doc.text('SUBTOTAL (Excl. VAT):', 60, summaryY + 8);
+      doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+      
+      summaryY += summaryRowHeight;
+      
+      // VAT calculation (15.5%)
+      const VAT_RATE = 0.155; // 15.5%
+      const vatAmount = finalTotal * VAT_RATE;
+      
+      // VAT row
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
+         .stroke('#000000');
+      
+      doc.fontSize(11).fillColor('#000000').font('Helvetica');
+      doc.text('VAT (15.5%):', 60, summaryY + 8);
+      doc.text(`R ${vatAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+      
+      summaryY += summaryRowHeight;
+      
+      // Total including VAT
+      const totalIncludingVAT = finalTotal + vatAmount;
+      
+      // Grand total row (including VAT)
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
+         .fillAndStroke('#003366', '#000000');
+      
+      doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
+      doc.text('TOTAL (Incl. VAT):', 60, summaryY + 8);
+      doc.text(`R ${totalIncludingVAT.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+      doc.font('Helvetica');
+      
+      // Payment details section removed per user request
       
       // Footer
       doc.fontSize(8).fillColor('#666666');
@@ -1096,8 +1313,11 @@ export const generateInvoicePdf = (quoteData: any): Promise<{ buffer: any, id: s
       doc.end();
       
     } catch (error: any) {
-      console.error('Error in generateInvoicePdf:', error);
-      reject(error);
+      console.error('❌ Error in generateInvoicePdf:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error details:', JSON.stringify(error, null, 2));
+      reject(new Error(`PDF generation failed: ${error.message || 'Unknown error'}`));
     }
   });
 };
@@ -1603,7 +1823,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   doc.moveDown(0.5);
   
   // Use fallback branch data if none is provided
-  const effectiveBranchData = branchData || {
+  const quoteBranchData = branchData || {
     name: 'HDS Products',
     trading_as: 'HDS Products',
     address1: 'Please contact us for more information',
@@ -1617,7 +1837,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   
   // Draw branch name/title
   doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-  doc.text(effectiveBranchData.trading_as || effectiveBranchData.name || 'Branch', 60, boxStartY + 10, { width: doc.page.width - 120 });
+  doc.text(quoteBranchData.trading_as || quoteBranchData.name || 'Branch', 60, boxStartY + 10, { width: doc.page.width - 120 });
   
   // Prepare to list branch details
   doc.fontSize(9).fillColor('#333333').font('Helvetica');
@@ -1646,9 +1866,9 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   };
   
   // Render all key/value pairs except excluded ones and name/trading_as (already shown)
-  Object.keys(effectiveBranchData).forEach((key) => {
+  Object.keys(quoteBranchData).forEach((key) => {
     if (excludeKeys.includes(key) || key === 'trading_as' || key === 'name') return;
-    const value = effectiveBranchData[key];
+    const value = quoteBranchData[key];
     if (!value) return;
     const label = prettyLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     doc.text(`${label}: ${value}`, 60, currentY, { width: doc.page.width - 120 });
@@ -2162,468 +2382,111 @@ export const generatePdfWithBuffer = async (
 
   doc.moveDown(3);
 
-  // Limit the number of detailed stock piece diagrams to prevent excessive pages
-  const MAX_DETAILED_PAGES = 10; // Maximum number of detailed stock piece diagrams
-  const stockPiecesToShow = Math.min(solution.stockPieces.length, MAX_DETAILED_PAGES);
+  // CRITICAL FIX: Disable detailed diagrams completely to prevent excessive pages
+  const MAX_DETAILED_PAGES = 0; // Completely disabled - only show summary table
+  const stockPiecesToShow = 0; // No detailed diagrams
   
-  console.log(`📄 PDF Generation: Showing ${stockPiecesToShow} of ${solution.stockPieces.length} stock pieces in detail`);
+  console.log(`📄 PDF Generation: Limiting to ${stockPiecesToShow} of ${solution.stockPieces.length} detailed diagrams`);
   
-  if (solution.stockPieces.length > MAX_DETAILED_PAGES) {
-    // Add a notice about truncated content
-    doc.moveDown(1);
-    doc.fontSize(12).fillColor('#ff6600');
-    doc.text(`⚠️ Note: Showing first ${MAX_DETAILED_PAGES} stock pieces in detail. Total pieces: ${solution.stockPieces.length}`, 50, doc.y, {
-      width: doc.page.width - 100,
-      align: 'center'
-    });
-    doc.moveDown(1);
-  }
+  // Add comprehensive summary table for ALL stock pieces first
+  doc.addPage(); // Start detailed content on new page to prevent overlap
   
-  // Draw each stock piece and its cut pieces with detailed diagrams (limited)
-  solution.stockPieces.slice(0, stockPiecesToShow).forEach((stockPiece, index) => {
-    // Add page for each stock piece except the first one
-    if (index > 0) {
+  // Title for complete summary
+  doc.rect(50, 50, doc.page.width - 100, 40)
+     .fillAndStroke('#003366', '#000000');
+  
+  doc.fontSize(16)
+     .fillColor('#FFFFFF')
+     .text('Complete Stock Pieces Summary', 50, 60, { align: 'center', width: doc.page.width - 100 });
+  
+  doc.moveDown(2);
+  
+  // Create compact table for ALL stock pieces
+  const allStockTableStartX = 50;
+  const allStockTableStartY = doc.y;
+  const allStockColWidths = [50, 70, 70, 80, 80, 100]; // Case, Width, Length, Area, Cut Pieces, Waste
+  const allStockRowHeight = 18;
+  
+  // Draw table header
+  doc.rect(allStockTableStartX, allStockTableStartY, allStockColWidths.reduce((a, b) => a + b, 0), allStockRowHeight)
+     .fillAndStroke('#e0e0e0', '#000000');
+  
+  doc.fontSize(9).fillColor('#000000');
+  doc.text('Case', allStockTableStartX + 5, allStockTableStartY + 5, { width: allStockColWidths[0] });
+  doc.text('Width', allStockTableStartX + allStockColWidths[0] + 5, allStockTableStartY + 5, { width: allStockColWidths[1] });
+  doc.text('Length', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + 5, allStockTableStartY + 5, { width: allStockColWidths[2] });
+  doc.text('Area', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + 5, allStockTableStartY + 5, { width: allStockColWidths[3] });
+  doc.text('Pieces', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + 5, allStockTableStartY + 5, { width: allStockColWidths[4] });
+  doc.text('Waste %', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + allStockColWidths[4] + 5, allStockTableStartY + 5, { width: allStockColWidths[5] });
+  
+  // Draw data rows for ALL stock pieces (compact format)
+  let currentRowY = allStockTableStartY + allStockRowHeight;
+  const maxRowsPerPage = 35; // Increased rows per page for compact format
+  
+  solution.stockPieces.forEach((stockPiece, index) => {
+    // Add new page if we exceed the row limit
+    if (index > 0 && index % maxRowsPerPage === 0) {
       doc.addPage();
+      currentRowY = 80; // Reset Y position for new page
+      
+      // Redraw header on new page
+      doc.rect(allStockTableStartX, currentRowY - allStockRowHeight, allStockColWidths.reduce((a, b) => a + b, 0), allStockRowHeight)
+         .fillAndStroke('#e0e0e0', '#000000');
+      
+      doc.fontSize(9).fillColor('#000000');
+      doc.text('Case', allStockTableStartX + 5, currentRowY - allStockRowHeight + 5, { width: allStockColWidths[0] });
+      doc.text('Width', allStockTableStartX + allStockColWidths[0] + 5, currentRowY - allStockRowHeight + 5, { width: allStockColWidths[1] });
+      doc.text('Length', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + 5, currentRowY - allStockRowHeight + 5, { width: allStockColWidths[2] });
+      doc.text('Area', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + 5, currentRowY - allStockRowHeight + 5, { width: allStockColWidths[3] });
+      doc.text('Pieces', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + 5, currentRowY - allStockRowHeight + 5, { width: allStockColWidths[4] });
+      doc.text('Waste %', allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + allStockColWidths[4] + 5, currentRowY - allStockRowHeight + 5, { width: allStockColWidths[5] });
     }
-
-    // Stock piece title with colored box
-    const unitLabel = unit === 0 ? 'mm' : unit === 1 ? 'in' : 'ft';
-
-    // Create a colored header for the stock piece
-    const stockTitleX = 50;
-    const stockTitleY = doc.y + 10;
-    const stockTitleWidth = doc.page.width - 100;
-    const stockTitleHeight = 30;
-
-    doc.rect(stockTitleX, stockTitleY, stockTitleWidth, stockTitleHeight)
-       .fillAndStroke('#003366', '#000000');
-
-    doc.fontSize(14)
-       .fillColor('#FFFFFF')
-       .text(`CASE ${index + 1}`, stockTitleX, stockTitleY + 8,
-             { align: 'center', width: stockTitleWidth });
-
-    // Add stock piece details in a table format
-    const stockDetailsStartX = 50;
-    const stockDetailsStartY = stockTitleY + stockTitleHeight + 10;
-    const stockDetailsColWidths = [100, 100, 100, 100];
-    const stockDetailsRowHeight = 25;
-
-    // Draw header
-    doc.rect(stockDetailsStartX, stockDetailsStartY,
-             stockDetailsColWidths.reduce((a, b) => a + b, 0),
-             stockDetailsRowHeight)
-       .fillAndStroke('#e0e0e0', '#000000');
-
-    doc.fontSize(10).fillColor('#000000');
-    doc.text('Resource', stockDetailsStartX + 5, stockDetailsStartY + 8,
-             { width: stockDetailsColWidths[0] });
-    doc.text('Width', stockDetailsStartX + stockDetailsColWidths[0] + 5,
-             stockDetailsStartY + 8, { width: stockDetailsColWidths[1] });
-    doc.text('Length', stockDetailsStartX + stockDetailsColWidths[0] +
-             stockDetailsColWidths[1] + 5, stockDetailsStartY + 8,
-             { width: stockDetailsColWidths[2] });
-    doc.text('Area', stockDetailsStartX + stockDetailsColWidths[0] +
-             stockDetailsColWidths[1] + stockDetailsColWidths[2] + 5,
-             stockDetailsStartY + 8, { width: stockDetailsColWidths[3] });
-
-    // Draw data row
-    const stockDetailsDataY = stockDetailsStartY + stockDetailsRowHeight;
-    doc.rect(stockDetailsStartX, stockDetailsDataY,
-             stockDetailsColWidths.reduce((a, b) => a + b, 0),
-             stockDetailsRowHeight)
-       .stroke();
-
+    
+    // Calculate values for this stock piece
     const stockWidth = convertUnit(stockPiece.width, 0, unit).toFixed(1);
     const stockLength = convertUnit(stockPiece.length, 0, unit).toFixed(1);
-    const stockAreaFormatted = (parseFloat(stockWidth) * parseFloat(stockLength)).toFixed(2);
-
-    doc.text(`Case ${index + 1}`, stockDetailsStartX + 5, stockDetailsDataY + 8,
-             { width: stockDetailsColWidths[0] });
-    doc.text(`${stockWidth} ${unitLabel}`, stockDetailsStartX + stockDetailsColWidths[0] + 5,
-             stockDetailsDataY + 8, { width: stockDetailsColWidths[1] });
-    doc.text(`${stockLength} ${unitLabel}`, stockDetailsStartX + stockDetailsColWidths[0] +
-             stockDetailsColWidths[1] + 5, stockDetailsDataY + 8,
-             { width: stockDetailsColWidths[2] });
-    doc.text(`${stockAreaFormatted} ${unitLabel}`, stockDetailsStartX + stockDetailsColWidths[0] +
-             stockDetailsColWidths[1] + stockDetailsColWidths[2] + 5,
-             stockDetailsDataY + 8, { width: stockDetailsColWidths[3] });
-
-    doc.moveDown(3);
-
-    // Calculate scale to fit on page
-    const pageWidth = 500;
-    const pageHeight = 700;
-    const scale = Math.min(
-      pageWidth / stockPiece.width,
-      pageHeight / stockPiece.length
-    ) * 0.8;
-
-    // Draw stock piece
-    const startX = 50;
-    const startY = 120;
-
-    // Draw stock piece outline
-    doc.rect(
-      startX,
-      startY,
-      stockPiece.width * scale,
-      stockPiece.length * scale
-    ).stroke('#000000');
-
-    // Draw cut pieces
-    stockPiece.cutPieces.forEach((cutPiece, pieceIndex) => {
-      // Generate a color for this piece (pastel colors for better visibility)
-      const colors = [
-        '#FFD6D6', // light pink
-        '#D6FFDB', // light green
-        '#D6F0FF', // light blue
-        '#FFF7D6', // light yellow
-        '#EBD6FF', // light purple
-        '#FFE4D6', // light orange
-        '#D6FFFF'  // light cyan
-      ];
-      const fillColor = colors[pieceIndex % colors.length];
-
-      // Draw cut piece
-      doc.rect(
-        startX + cutPiece.x * scale,
-        startY + cutPiece.y * scale,
-        cutPiece.width * scale,
-        cutPiece.length * scale
-      ).fillAndStroke(fillColor, '#000000');
-
-      // Add ID label in the center
-      const labelX = startX + cutPiece.x * scale + (cutPiece.width * scale / 2);
-      const labelY = startY + cutPiece.y * scale + (cutPiece.length * scale / 2);
-
-      // Draw the ID in the center with larger font
-      doc.fontSize(14)
-         .fillColor('#000000')
-         .text(
-           `${cutPiece.externalId}`,
-           labelX - 10,
-           labelY - 10,
-           { width: 20, align: 'center' }
-         );
-
-      // Draw width dimension on top
-      const widthLabel = convertUnit(cutPiece.width, 0, unit).toFixed(0);
-      doc.fontSize(8)
-         .fillColor('#000000')
-         .text(
-           widthLabel,
-           startX + cutPiece.x * scale + (cutPiece.width * scale / 2) - 10,
-           startY + cutPiece.y * scale - 12,
-           { width: 20, align: 'center' }
-         );
-
-      // Draw length dimension on the left side
-      const lengthLabel = convertUnit(cutPiece.length, 0, unit).toFixed(0);
-      doc.fontSize(8)
-         .fillColor('#000000')
-         .text(
-           lengthLabel,
-           startX + cutPiece.x * scale - 20,
-           startY + cutPiece.y * scale + (cutPiece.length * scale / 2) - 5,
-           { width: 20, align: 'center' }
-         );
-
-      // Draw dimension lines
-      // Top width line
-      doc.moveTo(startX + cutPiece.x * scale, startY + cutPiece.y * scale - 5)
-         .lineTo(startX + cutPiece.x * scale + cutPiece.width * scale, startY + cutPiece.y * scale - 5)
-         .stroke('#000000');
-
-      // Left length line
-      doc.moveTo(startX + cutPiece.x * scale - 5, startY + cutPiece.y * scale)
-         .lineTo(startX + cutPiece.x * scale - 5, startY + cutPiece.y * scale + cutPiece.length * scale)
-         .stroke('#000000');
-
-      // Draw small ticks at the ends of dimension lines
-      // Top width ticks
-      doc.moveTo(startX + cutPiece.x * scale, startY + cutPiece.y * scale - 3)
-         .lineTo(startX + cutPiece.x * scale, startY + cutPiece.y * scale - 7)
-         .stroke('#000000');
-      doc.moveTo(startX + cutPiece.x * scale + cutPiece.width * scale, startY + cutPiece.y * scale - 3)
-         .lineTo(startX + cutPiece.x * scale + cutPiece.width * scale, startY + cutPiece.y * scale - 7)
-         .stroke('#000000');
-
-      // Left length ticks
-      doc.moveTo(startX + cutPiece.x * scale - 3, startY + cutPiece.y * scale)
-         .lineTo(startX + cutPiece.x * scale - 7, startY + cutPiece.y * scale)
-         .stroke('#000000');
-      doc.moveTo(startX + cutPiece.x * scale - 3, startY + cutPiece.y * scale + cutPiece.length * scale)
-         .lineTo(startX + cutPiece.x * scale - 7, startY + cutPiece.y * scale + cutPiece.length * scale)
-         .stroke('#000000');
-    });
-
-    // Add cut pieces table with grouping information
-    doc.moveDown(2);
-
-    // Create a colored header for the table
-    const tableTitleX = 50;
-    const tableTitleY = startY + stockPiece.length * scale + 50;
-    const tableTitleWidth = doc.page.width - 100;
-    const tableTitleHeight = 30;
-
-    doc.rect(tableTitleX, tableTitleY, tableTitleWidth, tableTitleHeight)
-       .fillAndStroke('#003366', '#000000');
-
-    doc.fontSize(14)
-       .fillColor('#FFFFFF')
-       .text('CUT PIECES DETAILS', tableTitleX, tableTitleY + 8,
-             { align: 'center', width: tableTitleWidth });
-
-    doc.moveDown(2);
-
-    // Group cut pieces by externalId for better organization
-    const groupedPieces: { [key: string]: { pieces: PlacedPiece[], count: number } } = {};
-    stockPiece.cutPieces.forEach(piece => {
-      const id = piece.externalId.toString();
-      if (!groupedPieces[id]) {
-        groupedPieces[id] = { pieces: [], count: 0 };
-      }
-      groupedPieces[id].pieces.push(piece);
-      groupedPieces[id].count += 1;
-    });
-
-    const tableTop = doc.y;
-    const tableStartX = 50;
-    const rowHeight = 25;
-    const colWidths = [50, 100, 100, 100, 100];
-
-    // Draw table header
-    doc.rect(tableStartX, tableTop, colWidths.reduce((a, b) => a + b, 0), rowHeight)
-       .fillAndStroke('#4682B4', '#000000');
-
-    doc.fontSize(10).fillColor('#FFFFFF');
-    doc.text('ID', tableStartX + 5, tableTop + 8, { width: colWidths[0] });
-    doc.text('Width (' + unitLabel + ')', tableStartX + colWidths[0] + 5, tableTop + 8, { width: colWidths[1] });
-    doc.text('Length (' + unitLabel + ')', tableStartX + colWidths[0] + colWidths[1] + 5, tableTop + 8, { width: colWidths[2] });
-    doc.text('Quantity', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, tableTop + 8, { width: colWidths[3] });
-    doc.text('Area (' + unitLabel + ')', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, tableTop + 8, { width: colWidths[4] });
-
-    let currentY = tableTop + rowHeight;
-
-    // Draw table rows
-    Object.entries(groupedPieces).forEach(([partName, group], groupIndex) => {
-      const piece = group.pieces[0]; // Take first piece for dimensions
-      const width = convertUnit(piece.width, 0, unit).toFixed(2);
-      const length = convertUnit(piece.length, 0, unit).toFixed(2);
-      const area = (parseFloat(width) * parseFloat(length)).toFixed(2);
-
-      // Alternate row colors
-      const rowColor = groupIndex % 2 === 0 ? '#F0F8FF' : '#FFFFFF';
-      doc.rect(startX, currentY, colWidths.reduce((a, b) => a + b, 0), rowHeight)
-         .fillAndStroke(rowColor, '#000000');
-
-      doc.fillColor('#000000');
-      doc.text(partName, startX + 5, currentY + 8, { width: colWidths[0] });
-      doc.text(width, startX + colWidths[0] + 5, currentY + 8, { width: colWidths[1] });
-      doc.text(length, startX + colWidths[0] + colWidths[1] + 5, currentY + 8, { width: colWidths[2] });
-      doc.text(group.count.toString(), startX + colWidths[0] + colWidths[1] + colWidths[2] + 5, currentY + 8, { width: colWidths[3] });
-      doc.text(area, startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, currentY + 8, { width: colWidths[4] });
-
-      currentY += rowHeight;
-
-      // Update all pieces in this group with the same externalId
-      group.pieces.forEach((piece: PlacedPiece) => {
-        piece.externalId = partName;
-      });
-    });
-
-    // Draw table border
-    doc.rect(startX, tableTop, colWidths.reduce((a, b) => a + b, 0), currentY - tableTop)
-       .stroke('#000000');
-
-    // Add additional information table with colored header
-    doc.moveDown(2);
-
-    // Create a colored header for the info table
-    const infoTitleX = 50;
-    const infoTitleY = doc.y;
-    const infoTitleWidth = doc.page.width - 100;
-    const infoTitleHeight = 30;
-
-    doc.rect(infoTitleX, infoTitleY, infoTitleWidth, infoTitleHeight)
-       .fillAndStroke('#003366', '#000000');
-
-    doc.fontSize(14)
-       .fillColor('#FFFFFF')
-       .text('CUTTING PARAMETERS', infoTitleX, infoTitleY + 8,
-             { align: 'center', width: infoTitleWidth });
-
-    doc.moveDown(2);
-
-    const infoTableTop = doc.y;
-    const infoColWidths = [150, 150];
-
-    // Draw info table header
-    doc.rect(tableStartX, infoTableTop, infoColWidths[0] + infoColWidths[1], rowHeight)
-       .fillAndStroke('#4682B4', '#000000');
-
-    doc.fontSize(10).fillColor('#FFFFFF');
-    doc.text('Parameter', tableStartX + 5, infoTableTop + 8, { width: infoColWidths[0] });
-    doc.text('Value', tableStartX + infoColWidths[0] + 5, infoTableTop + 8, { width: infoColWidths[1] });
-
-    let infoCurrentY = infoTableTop + rowHeight;
-
-    // Row 1: Guillotine Cutting
-    doc.rect(tableStartX, infoCurrentY, infoColWidths[0] + infoColWidths[1], rowHeight)
-       .fillAndStroke('#F0F8FF', '#000000'); // Light blue background
-    doc.fillColor('#000000');
-    doc.text('Guillotine Cutting', tableStartX + 5, infoCurrentY + 8, { width: infoColWidths[0] });
-    doc.text(layout === 0 ? 'Yes' : 'No', tableStartX + infoColWidths[0] + 5, infoCurrentY + 8, { width: infoColWidths[1] });
-    infoCurrentY += rowHeight;
-
-    // Row 2: Rotating
-    doc.rect(tableStartX, infoCurrentY, infoColWidths[0] + infoColWidths[1], rowHeight)
-       .fillAndStroke('#FFFFFF', '#000000'); // White background
-    doc.text('Rotating', tableStartX + 5, infoCurrentY + 8, { width: infoColWidths[0] });
-    // Check if any pieces have canRotate=true
-    const canRotate = stockPiece.cutPieces.some(p => p.canRotate);
-    doc.text(canRotate ? 'Yes' : 'No', tableStartX + infoColWidths[0] + 5, infoCurrentY + 8, { width: infoColWidths[1] });
-    infoCurrentY += rowHeight;
-
-    // Row 3: Waste
+    const stockAreaFormatted = (parseFloat(stockWidth) * parseFloat(stockLength)).toFixed(1);
+    
     const stockAreaValue = stockPiece.width * stockPiece.length;
     let usedAreaValue = 0;
     stockPiece.cutPieces.forEach(p => {
       usedAreaValue += p.width * p.length;
     });
     const wasteAreaValue = stockAreaValue - usedAreaValue;
-    const wastePercentage = ((wasteAreaValue / stockAreaValue) * 100).toFixed(2);
-
-    doc.rect(tableStartX, infoCurrentY, infoColWidths[0] + infoColWidths[1], rowHeight)
-       .fillAndStroke('#FFECEC', '#000000'); // Light red background for waste
-    doc.text('Waste', tableStartX + 5, infoCurrentY + 8, { width: infoColWidths[0] });
-    doc.text(`${convertUnit(wasteAreaValue, 0, unit).toFixed(2)} ${unitLabel} (${wastePercentage}%)`,
-             tableStartX + infoColWidths[0] + 5, infoCurrentY + 8, { width: infoColWidths[1] });
-
-    // Row 4: Edging Cost
-    // Calculate edging for this stock piece
-    let stockEdging = 0;
-    stockPiece.cutPieces.forEach((cp: any) => {
-      const edgingNeeded = [
-        cp.edgeL1 ? cp.length : 0,
-        cp.edgeL2 ? cp.length : 0,
-        cp.edgeW1 ? cp.width : 0,
-        cp.edgeW2 ? cp.width : 0
-      ].reduce((sum: number, val: number) => sum + val, 0);
-      stockEdging += edgingNeeded;
-    });
-    const stockEdgingMeters = stockEdging / 1000;
-    const stockEdgingCost = stockEdgingMeters * 14; // R14 per meter
+    const wastePercentage = ((wasteAreaValue / stockAreaValue) * 100).toFixed(1);
     
-    doc.rect(tableStartX, infoCurrentY + rowHeight, infoColWidths[0] + infoColWidths[1], rowHeight)
-       .fillAndStroke('#F0F8FF', '#000000'); // Light blue background
-    doc.fillColor('#000000');
-    doc.text('Edging Cost', tableStartX + 5, (infoCurrentY + rowHeight) + 8, { width: infoColWidths[0] });
-    doc.text(`R ${stockEdgingCost.toFixed(2)}`, tableStartX + infoColWidths[0] + 5, (infoCurrentY + rowHeight) + 8, { width: infoColWidths[1] });
+    // Draw row
+    doc.rect(allStockTableStartX, currentRowY, allStockColWidths.reduce((a, b) => a + b, 0), allStockRowHeight)
+       .stroke();
+    
+    doc.fontSize(8).fillColor('#000000');
+    doc.text(`${index + 1}`, allStockTableStartX + 5, currentRowY + 5, { width: allStockColWidths[0] });
+    doc.text(`${stockWidth}`, allStockTableStartX + allStockColWidths[0] + 5, currentRowY + 5, { width: allStockColWidths[1] });
+    doc.text(`${stockLength}`, allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + 5, currentRowY + 5, { width: allStockColWidths[2] });
+    doc.text(`${stockAreaFormatted}`, allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + 5, currentRowY + 5, { width: allStockColWidths[3] });
+    doc.text(`${stockPiece.cutPieces.length}`, allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + 5, currentRowY + 5, { width: allStockColWidths[4] });
+    doc.text(`${wastePercentage}%`, allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + allStockColWidths[4] + 5, currentRowY + 5, { width: allStockColWidths[5] });
+    
+    currentRowY += allStockRowHeight;
   });
   
-  // Add comprehensive summary page if we truncated the detailed view
-  if (solution.stockPieces.length > MAX_DETAILED_PAGES) {
-    doc.addPage();
-    
-    // Title for summary page
-    doc.rect(50, 50, doc.page.width - 100, 60)
-       .fillAndStroke('#003366', '#000000');
-    
-    doc.fontSize(18)
-       .fillColor('#FFFFFF')
-       .text('Complete Stock Pieces Summary', 50, 65, { align: 'center', width: doc.page.width - 100 });
-    
-    doc.fontSize(12)
-       .fillColor('#FFFFFF')
-       .text(`All ${solution.stockPieces.length} Stock Pieces`, 50, 90, { align: 'center', width: doc.page.width - 100 });
-    
-    doc.moveDown(3);
-    
-    // Create compact table for all stock pieces
-    const summaryTableStartX = 50;
-    const summaryTableStartY = doc.y + 20;
-    const summaryColWidths = [60, 80, 80, 80, 100, 100]; // Case, Width, Length, Area, Cut Pieces, Waste
-    const summaryRowHeight = 20;
-    
-    // Draw table header
-    doc.rect(summaryTableStartX, summaryTableStartY, summaryColWidths.reduce((a, b) => a + b, 0), summaryRowHeight)
-       .fillAndStroke('#e0e0e0', '#000000');
-    
-    doc.fontSize(9).fillColor('#000000');
-    doc.text('Case', summaryTableStartX + 5, summaryTableStartY + 6, { width: summaryColWidths[0] });
-    doc.text('Width', summaryTableStartX + summaryColWidths[0] + 5, summaryTableStartY + 6, { width: summaryColWidths[1] });
-    doc.text('Length', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + 5, summaryTableStartY + 6, { width: summaryColWidths[2] });
-    doc.text('Area', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + 5, summaryTableStartY + 6, { width: summaryColWidths[3] });
-    doc.text('Cut Pieces', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + 5, summaryTableStartY + 6, { width: summaryColWidths[4] });
-    doc.text('Waste %', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + summaryColWidths[4] + 5, summaryTableStartY + 6, { width: summaryColWidths[5] });
-    
-    // Draw data rows for all stock pieces
-    let currentRowY = summaryTableStartY + summaryRowHeight;
-    const maxRowsPerPage = 30; // Limit rows per page to prevent overflow
-    
-    solution.stockPieces.forEach((stockPiece, index) => {
-      // Add new page if we exceed the row limit
-      if (index > 0 && index % maxRowsPerPage === 0) {
-        doc.addPage();
-        currentRowY = 80; // Reset Y position for new page
-        
-        // Redraw header on new page
-        doc.rect(summaryTableStartX, currentRowY - summaryRowHeight, summaryColWidths.reduce((a, b) => a + b, 0), summaryRowHeight)
-           .fillAndStroke('#e0e0e0', '#000000');
-        
-        doc.fontSize(9).fillColor('#000000');
-        doc.text('Case', summaryTableStartX + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[0] });
-        doc.text('Width', summaryTableStartX + summaryColWidths[0] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[1] });
-        doc.text('Length', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[2] });
-        doc.text('Area', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[3] });
-        doc.text('Cut Pieces', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[4] });
-        doc.text('Waste %', summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + summaryColWidths[4] + 5, currentRowY - summaryRowHeight + 6, { width: summaryColWidths[5] });
-      }
-      
-      // Draw row
-      doc.rect(summaryTableStartX, currentRowY, summaryColWidths.reduce((a, b) => a + b, 0), summaryRowHeight)
-         .stroke();
-      
-      // Calculate values
-      const stockWidth = convertUnit(stockPiece.width, 0, unit).toFixed(1);
-      const stockLength = convertUnit(stockPiece.length, 0, unit).toFixed(1);
-      const stockArea = (parseFloat(stockWidth) * parseFloat(stockLength)).toFixed(2);
-      const cutPiecesCount = stockPiece.cutPieces.length;
-      
-      // Calculate waste for this stock piece
-      const stockAreaValue = stockPiece.width * stockPiece.length;
-      const cutAreaValue = stockPiece.cutPieces.reduce((sum, cp) => sum + (cp.width * cp.length), 0);
-      const wastePercentageValue = ((stockAreaValue - cutAreaValue) / stockAreaValue * 100).toFixed(1);
-      
-      // Add data
-      doc.fontSize(8).fillColor('#000000');
-      doc.text(`${index + 1}`, summaryTableStartX + 5, currentRowY + 6, { width: summaryColWidths[0] });
-      doc.text(`${stockWidth}`, summaryTableStartX + summaryColWidths[0] + 5, currentRowY + 6, { width: summaryColWidths[1] });
-      doc.text(`${stockLength}`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentRowY + 6, { width: summaryColWidths[2] });
-      doc.text(`${stockArea}`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + 5, currentRowY + 6, { width: summaryColWidths[3] });
-      doc.text(`${cutPiecesCount}`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + 5, currentRowY + 6, { width: summaryColWidths[4] });
-      doc.text(`${wastePercentageValue}%`, summaryTableStartX + summaryColWidths[0] + summaryColWidths[1] + summaryColWidths[2] + summaryColWidths[3] + summaryColWidths[4] + 5, currentRowY + 6, { width: summaryColWidths[5] });
-      
-      currentRowY += summaryRowHeight;
-    });
-  }
+  // Detailed diagrams completely disabled to prevent excessive pages
+  // All information is available in the summary table above
+  
+  console.log(`📄 PDF Generation Complete: Summary table only, no detailed diagrams`);
+  
+  // All detailed diagram code has been completely removed to prevent excessive page generation
+  
+  // Summary table is now at the beginning of the PDF - no duplicate needed
 
-  // Add footer to the current page only - avoid page switching completely
-  // This prevents the switchToPage out of bounds errors
-  
-  console.log(`Adding footer to current page only. No page switching to avoid buffer errors.`);
-  
-  // Get the current page range information (don't use for switching)
-  const pageRange = doc.bufferedPageRange();
-  const totalPages = pageRange.count; // Get actual page count from the PDF
+  // Add simple footer without page switching to avoid buffer errors
+  console.log(`Adding simple footer to current page only.`);
   
   try {
-    // Add footer with date and page numbers to current page only
+    // Add footer with date and basic page info to current page only
     doc.fontSize(8).fillColor('#666666');
     doc.text(
-      `HDS Group Cutlist - Generated on ${dateString} - Page ${pageRange.count} of ${totalPages}`,
+      `HDS Group Cutlist - Generated on ${new Date().toLocaleDateString()}`,
       50,
       doc.page.height - 50,
       { align: 'center', width: doc.page.width - 100 }
