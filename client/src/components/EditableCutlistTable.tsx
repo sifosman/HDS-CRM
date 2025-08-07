@@ -280,6 +280,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     }
     // Otherwise, make sure at least one material section exists
     else if (cutPieces.length === 0 || !cutPieces.some(p => p.separator)) {
+      // Add default material section if all were deleted
       handleAddMaterialSection();
     }
   }, [detectedMaterials.length]);
@@ -995,14 +996,16 @@ Thank you for your business!
 
   // Handle PDF download from the success modal
   const handleDownloadQuotePdf = () => {
-    if (successQuoteData?.quotePdfUrl) {
-      downloadPdf(successQuoteData.quotePdfUrl, `Quote-${successQuoteData.quoteId}.pdf`);
+    if (successQuoteData?.quoteId) {
+      // Create URL for quote in hdsquotes bucket
+      const quotePdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/${successQuoteData.quoteId}.pdf`;
+      downloadPdf(quotePdfUrl, `Quote-${successQuoteData.quoteId}.pdf`);
     }
   };
   
   // Handle sharing to WhatsApp from the success modal
   const handleShareToWhatsApp = async () => {
-    if (!successQuoteData?.quoteId || !successQuoteData?.quotePdfUrl) {
+    if (!successQuoteData?.quoteId) {
       setSnackbarMessage('Missing quote data for WhatsApp sharing');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
@@ -1013,75 +1016,56 @@ Thank you for your business!
       // Set loading state
       setIsLoading(true);
       
-      // Extract PDF data URL and convert to proper URL if needed
-      let pdfUrl = successQuoteData.quotePdfUrl;
-      let finalPdfUrl = pdfUrl;
+      // Create URL for quote in hdsquotes bucket
+      const quotePdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/${successQuoteData.quoteId}.pdf`;
+      let finalPdfUrl = quotePdfUrl;
       
-      // If this is a data URL, we need to upload it to the server to get a shareable link
-      const isPdfDataUrl = pdfUrl.startsWith('data:application/pdf');
+      // Show loading message
+      setSnackbarMessage('Preparing PDF for sharing...');
+      setSnackbarSeverity('info');
+      setSnackbarOpen(true);
       
-      if (isPdfDataUrl) {
-        // Show loading message
-        setSnackbarMessage('Preparing PDF for sharing...');
-        setSnackbarSeverity('info');
-        setSnackbarOpen(true);
+      // Upload PDF to get a shareable link if needed
+      try {
+        // Upload PDF URL to get a shareable link
+        const response = await fetch('/api/quotes/upload-pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            quoteId: successQuoteData.quoteId,
+            pdfUrl: quotePdfUrl
+          }),
+        });
         
-        try {
-          // Upload PDF data URL to get a shareable link
-          const response = await fetch('/api/quotes/upload-pdf', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              quoteId: successQuoteData.quoteId,
-              pdfDataUrl: pdfUrl
-            }),
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to upload PDF');
-          }
-          
-          const result = await response.json();
-          finalPdfUrl = result.pdfUrl; // Use the URL returned by the server
-          
-        } catch (uploadError) {
-          console.error('PDF upload error:', uploadError);
-          // If upload fails, we'll use a fallback message
-          setSnackbarMessage('Failed to prepare PDF for sharing, using fallback method');
-          setSnackbarSeverity('warning');
-          setSnackbarOpen(true);
+        if (!response.ok) {
+          throw new Error('Failed to upload PDF');
         }
+        
+        const result = await response.json();
+        finalPdfUrl = result.pdfUrl; // Use the URL returned by the server
+        
+      } catch (uploadError) {
+        console.error('PDF upload error:', uploadError);
+        // Fallback to direct Supabase URL if upload fails
+        finalPdfUrl = quotePdfUrl;
       }
       
-      // Create a thank you message from HDS stating that the quotation is ready
-      let thankYouMessage = `Thank you for choosing HDS Group! Your quotation (ID: ${successQuoteData.quoteId}) is now ready.`;
+      // Proceed with WhatsApp sharing using the quote PDF URL
+      await onSendWhatsApp(finalPdfUrl, successQuoteData.phoneNumber);
       
-      // Always include the PDF link - either the uploaded URL or the original URL
-      thankYouMessage += ` You can view and download your quotation at: ${finalPdfUrl}\n\nWe appreciate your business and look forward to working with you.`;
-      
-      // Encode the message for the WhatsApp URL
-      const encodedMessage = encodeURIComponent(thankYouMessage);
-      
-      // Create the WhatsApp URL with the encoded message
-      const whatsappUrl = `whatsapp://send?text=${encodedMessage}`;
-      
-      // Clear loading state
-      setIsLoading(false);
-      
-      // Open the URL in a new window/tab
-      window.open(whatsappUrl, '_blank');
-      
-      setSnackbarMessage('WhatsApp sharing initiated with PDF download link');
+      // Show success message
+      setSnackbarMessage('Quote shared successfully!');
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
-      handleCloseQuoteSuccessDialog();
+      
     } catch (error) {
       console.error('WhatsApp sharing error:', error);
-      setSnackbarMessage('Failed to initiate WhatsApp sharing');
+      setSnackbarMessage('Failed to share quote via WhatsApp');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
+    } finally {
       setIsLoading(false);
     }
   };
