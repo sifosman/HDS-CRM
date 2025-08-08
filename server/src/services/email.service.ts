@@ -63,34 +63,12 @@ export class EmailService {
         html: this.generatePaymentConfirmationTemplate(data)
       };
 
-      // Add PDF attachments from Supabase storage URLs
-      const attachments: any[] = [];
-      
-      // Add invoice PDF attachment
-      if (data.invoicePdfUrl) {
-        attachments.push({
-          filename: `invoice-${data.quoteNumber}.pdf`,
-          href: data.invoicePdfUrl,
-          contentType: 'application/pdf'
-        });
-      }
-      
-      // Add cutlist PDF attachment
-      if (data.cutlistPdfUrl) {
-        attachments.push({
-          filename: `cutlist-${data.quoteNumber}.pdf`,
-          href: data.cutlistPdfUrl,
-          contentType: 'application/pdf'
-        });
-      }
-      
-      if (attachments.length > 0) {
-        mailOptions.attachments = attachments;
-      }
+      // Note: Using download links instead of attachments for better reliability
+      // PDF files will be linked in the email template for branch staff to download
 
       const result = await this.transporter.sendMail(mailOptions);
       console.log('Payment confirmation email sent:', result.messageId);
-      console.log('Attachments included:', attachments.length);
+      console.log('Email includes download links for PDFs');
     } catch (error) {
       console.error('Error sending payment confirmation email:', error);
       throw error;
@@ -135,12 +113,25 @@ export class EmailService {
         </div>
 
         <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #155724;">📎 Attachments</h3>
-          <p style="color: #155724; margin-bottom: 0;">This email includes the following attachments:</p>
-          <ul style="color: #155724; margin: 10px 0 0 20px;">
-            ${data.invoicePdfUrl ? '<li>Invoice PDF</li>' : ''}
-            ${data.cutlistPdfUrl ? '<li>Cutlist PDF</li>' : ''}
-          </ul>
+          <h3 style="margin-top: 0; color: #155724;">📎 Download Documents</h3>
+          <p style="color: #155724; margin-bottom: 10px;">Click the links below to download the required documents:</p>
+          <div style="margin: 15px 0;">
+            ${data.invoicePdfUrl ? `
+              <div style="margin: 10px 0;">
+                <a href="${data.invoicePdfUrl}" style="display: inline-block; background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  📄 Download Invoice PDF
+                </a>
+              </div>
+            ` : ''}
+            ${data.cutlistPdfUrl ? `
+              <div style="margin: 10px 0;">
+                <a href="${data.cutlistPdfUrl}" style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  📋 Download Cutlist PDF
+                </a>
+              </div>
+            ` : ''}
+            ${!data.invoicePdfUrl && !data.cutlistPdfUrl ? '<p style="color: #856404;">Documents will be available shortly.</p>' : ''}
+          </div>
         </div>
         
         <div style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 30px; color: #6c757d; font-size: 14px;">
