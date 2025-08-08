@@ -113,6 +113,9 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
         
         // 2. Cutlist PDF: Look up the actual PDF file in storage
         let cutlistPdfUrl = '';
+        console.log('🔍 Quote data cutlist_id:', quoteData.data.cutlist_id);
+        console.log('🔍 Quote data keys:', Object.keys(quoteData.data));
+        
         if (quoteData.data.cutlist_id) {
           const cutlistId = quoteData.data.cutlist_id;
           console.log('🔍 Looking up cutlist PDF for ID:', cutlistId);
