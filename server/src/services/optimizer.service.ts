@@ -1149,21 +1149,21 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       doc.font('Helvetica').fontSize(10).fillColor('#333333');
       
-      // Invoice Number - use flexible layout
+      // Invoice Number - use flexible layout with extra spacing
       doc.text('Invoice Number:', rightColumnX, topY + 20, { width: labelWidth });
       doc.text(invoiceNumber, valueX, topY + 20, { width: 180 }); // Allow wrapping if needed
       
-      // Invoice Date
-      doc.text('Invoice Date:', rightColumnX, topY + 35, { width: labelWidth });
-      doc.text(invoiceDate, valueX, topY + 35, { width: 180 });
+      // Invoice Date - increased spacing to prevent overlap with long invoice numbers
+      doc.text('Invoice Date:', rightColumnX, topY + 45, { width: labelWidth }); // Was topY + 35
+      doc.text(invoiceDate, valueX, topY + 45, { width: 180 });
       
-      // Quote Number - may also be long
-      doc.text('Quote Number:', rightColumnX, topY + 50, { width: labelWidth });
-      doc.text(quoteId, valueX, topY + 50, { width: 180 });
+      // Quote Number - may also be long, increased spacing
+      doc.text('Quote Number:', rightColumnX, topY + 65, { width: labelWidth }); // Was topY + 50
+      doc.text(quoteId, valueX, topY + 65, { width: 180 });
       
-      // Quote Date
-      doc.text('Quote Date:', rightColumnX, topY + 65, { width: labelWidth });
-      doc.text(quoteDate, valueX, topY + 65, { width: 180 });
+      // Quote Date - increased spacing
+      doc.text('Quote Date:', rightColumnX, topY + 85, { width: labelWidth }); // Was topY + 65
+      doc.text(quoteDate, valueX, topY + 85, { width: 180 });
       
       // Customer details
       doc.y = topY + 100;
@@ -1312,43 +1312,39 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
 
       summaryY += summaryRowHeight;
 
-      // Subtotal row (before VAT)
-      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
-         .fillAndStroke('#f0f0f0', '#000000');
-      
-      doc.fontSize(11).fillColor('#000000').font('Helvetica-Bold');
-      doc.text('SUBTOTAL (Excl. VAT):', 60, summaryY + 8);
-      doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-      
-      summaryY += summaryRowHeight;
-      
-      // VAT calculation (15.5%)
-      const VAT_RATE = 0.155; // 15.5%
-      const vatAmount = finalTotal * VAT_RATE;
-      
-      // VAT row
-      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
-         .stroke('#000000');
-      
-      doc.fontSize(11).fillColor('#000000').font('Helvetica');
-      doc.text('VAT (15.5%):', 60, summaryY + 8);
-      doc.text(`R ${vatAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-      
-      summaryY += summaryRowHeight;
-      
-      // Total including VAT
-      const totalIncludingVAT = finalTotal + vatAmount;
-      
-      // Grand total row (including VAT)
+      // Grand total row (no VAT)
       doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
          .fillAndStroke('#003366', '#000000');
       
       doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-      doc.text('TOTAL (Incl. VAT):', 60, summaryY + 8);
-      doc.text(`R ${totalIncludingVAT.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+      doc.text('TOTAL:', 60, summaryY + 8);
+      doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
       doc.font('Helvetica');
       
-      // Payment details section removed per user request
+      // Payment Status Section
+      doc.moveDown(1);
+      
+      // Payment status box
+      const paymentBoxY = doc.y + 10;
+      const paymentBoxWidth = doc.page.width - 100;
+      const paymentBoxHeight = 40;
+      
+      // Green background for paid status
+      doc.rect(50, paymentBoxY, paymentBoxWidth, paymentBoxHeight)
+         .fillAndStroke('#d4edda', '#28a745');
+      
+      // Payment status text
+      doc.fontSize(14).fillColor('#155724').font('Helvetica-Bold');
+      doc.text('✓ PAYMENT RECEIVED', 50, paymentBoxY + 12, { 
+        align: 'center', 
+        width: paymentBoxWidth 
+      });
+      
+      doc.fontSize(10).fillColor('#155724').font('Helvetica');
+      doc.text('This invoice has been paid in full', 50, paymentBoxY + 28, { 
+        align: 'center', 
+        width: paymentBoxWidth 
+      });
       
       // Footer
       doc.fontSize(8).fillColor('#666666');
