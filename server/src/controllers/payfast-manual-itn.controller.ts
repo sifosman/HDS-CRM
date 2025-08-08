@@ -96,25 +96,52 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
         const amount = parseFloat(mockPaymentData.amount_gross || '0');
         
         // Get PDF URLs from Supabase storage
-        // 1. Invoice PDF: Generate the URL based on invoice number
+        // 1. Invoice PDF: Generate and get the actual PDF URL with timestamp
         let invoicePdfUrl = '';
         if (invoiceResult.data?.invoiceNumber) {
-          // Invoice PDFs are stored in invoices bucket with format: invoice-{invoiceNumber}.pdf
-          invoicePdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/invoices/invoice-${invoiceResult.data.invoiceNumber}.pdf`;
+          try {
+            const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
+            if (pdfResult.success && pdfResult.publicUrl) {
+              // Use the actual uploaded PDF URL with timestamp
+              invoicePdfUrl = pdfResult.publicUrl;
+              console.log('✅ Using actual invoice PDF URL with timestamp:', invoicePdfUrl);
+            }
+          } catch (error) {
+            console.error('❌ Could not get invoice PDF URL:', error);
+          }
         }
         
-        // 2. Cutlist PDF: Get from cutlist_id field, not cutlist_url (which points to quote PDF)
+        // 2. Cutlist PDF: Handle cutlist_id format correctly
         let cutlistPdfUrl = '';
         if (quoteData.data.cutlist_id) {
-          // Cutlist PDFs are stored in cutlists bucket with format: solution_{cutlist_id}.pdf
-          cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/solution_${quoteData.data.cutlist_id}.pdf`;
+          const cutlistId = quoteData.data.cutlist_id;
+          console.log('🔍 Cutlist ID format check:', cutlistId);
+          
+          // Check if it's a UUID format (like 94552cfd-34ec-401a-9123-ea35c80e5a07)
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          
+          if (uuidRegex.test(cutlistId)) {
+            // UUID format - use solution_{uuid}.pdf
+            cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/solution_${cutlistId}.pdf`;
+            console.log('🔍 Using UUID format for cutlist PDF');
+          } else {
+            // Filename format (like cutlist-q-20250808-7560-hdschustr) - use as direct filename
+            cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/${cutlistId}.pdf`;
+            console.log('🔍 Using filename format for cutlist PDF');
+          }
+          
+          console.log('🔍 Cutlist PDF URL constructed:', cutlistPdfUrl);
         }
         
-        console.log('📎 PDF URLs determined:', {
+        // Check cutlist ID format for logging
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
+        console.log('📎 Final PDF URLs determined:', {
           invoicePdfUrl,
           cutlistPdfUrl,
           invoiceNumber: invoiceResult.data?.invoiceNumber,
-          cutlistId: quoteData.data.cutlist_id
+          cutlistId: quoteData.data.cutlist_id,
+          cutlistIdFormat: quoteData.data.cutlist_id ? (uuidRegex.test(quoteData.data.cutlist_id) ? 'UUID' : 'filename') : 'none'
         });
         
         console.log('📧 Email data:', {
