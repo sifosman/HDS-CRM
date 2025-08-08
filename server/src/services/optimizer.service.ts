@@ -1050,16 +1050,25 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
         boardTotal = 0;
       }
       
-      // PRIORITY FIX: Always use the database quote total (VAT-inclusive) for invoice
-      if (quoteData.total && !isNaN(quoteData.total)) {
-        console.log('✅ Using database quote.total (VAT-inclusive):', quoteData.total);
+      // PRIORITY FIX: Calculate board total directly from sections (same as quote PDF)
+      if (sections && sections.length > 0) {
+        // Calculate board total from sections (same as quote PDF logic)
+        boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
+        boardTotal = parseFloat(boardTotal.toFixed(2));
+        console.log('✅ Board total calculated from sections:', boardTotal);
+        
+        // Calculate final total as: board total + edging + cutting fee
+        finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
+        console.log('✅ Final total calculated as board + edging + cutting:', finalTotal);
+      } else if (quoteData.total && !isNaN(quoteData.total)) {
+        console.log('⚠️ No sections data, using database quote.total as fallback:', quoteData.total);
         finalTotal = parseFloat(quoteData.total);
-        // Calculate board total by subtracting fees
+        // Estimate board total (fallback only)
         boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
-        if (boardTotal < 0) boardTotal = finalTotal * 0.8; // Reasonable fallback
-      } else if (finalTotal === 0) {
-        console.log('⚠️ No quote.total found, using calculated amount as fallback');
-        // Keep the calculated finalTotal from above logic
+        if (boardTotal < 0) boardTotal = finalTotal * 0.8;
+      } else {
+        console.log('⚠️ No sections or quote.total found, using calculated amounts');
+        // Keep the calculated amounts from above logic
       }
       
       // Define variables needed for PDF display
