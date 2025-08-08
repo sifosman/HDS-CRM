@@ -63,6 +63,19 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
       if (invoiceResult.data?.invoiceNumber) {
         await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
         console.log('✅ Invoice status updated to paid');
+        
+        // Generate and upload invoice PDF
+        try {
+          console.log('📄 Generating invoice PDF for quote:', quoteId, 'invoice number:', invoiceResult.data.invoiceNumber);
+          const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
+          if (pdfResult.success && pdfResult.publicUrl) {
+            console.log('✅ Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
+          } else {
+            console.error('❌ Failed to generate or upload invoice PDF:', pdfResult.error);
+          }
+        } catch (pdfError) {
+          console.error('❌ Error generating/uploading invoice PDF:', pdfError);
+        }
       }
       
       // Update quote status to approved
@@ -83,8 +96,26 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
         const amount = parseFloat(mockPaymentData.amount_gross || '0');
         
         // Get PDF URLs from Supabase storage
-        const invoicePdfUrl = quoteData.data.invoice_url || '';
-        const cutlistPdfUrl = quoteData.data.cutlist_url || '';
+        // 1. Invoice PDF: Generate the URL based on invoice number
+        let invoicePdfUrl = '';
+        if (invoiceResult.data?.invoiceNumber) {
+          // Invoice PDFs are stored in invoices bucket with format: invoice-{invoiceNumber}.pdf
+          invoicePdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/invoices/invoice-${invoiceResult.data.invoiceNumber}.pdf`;
+        }
+        
+        // 2. Cutlist PDF: Get from cutlist_id field, not cutlist_url (which points to quote PDF)
+        let cutlistPdfUrl = '';
+        if (quoteData.data.cutlist_id) {
+          // Cutlist PDFs are stored in cutlists bucket with format: solution_{cutlist_id}.pdf
+          cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/solution_${quoteData.data.cutlist_id}.pdf`;
+        }
+        
+        console.log('📎 PDF URLs determined:', {
+          invoicePdfUrl,
+          cutlistPdfUrl,
+          invoiceNumber: invoiceResult.data?.invoiceNumber,
+          cutlistId: quoteData.data.cutlist_id
+        });
         
         console.log('📧 Email data:', {
           customerName,
