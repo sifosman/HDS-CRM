@@ -6,6 +6,7 @@ import {
 } from '../controllers/payfast.controller';
 import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
 import { testITN } from '../controllers/payfast-test-itn.controller';
+import { simulatePayFastITN } from '../controllers/payfast-manual-itn.controller';
 
 // Import the enhanced PayFast success controller
 import payFastSuccessEnhancedController from '../controllers/payfast-success-enhanced.controller';
@@ -50,6 +51,9 @@ router.get('/debug', debugPayFastSignature);
 
 // Test endpoint to manually trigger ITN and email sending
 router.get('/test-itn', testITN);
+
+// Manual test endpoint to simulate PayFast ITN for real quotes
+router.get('/simulate-itn', simulatePayFastITN);
 
 // Test endpoint for signature verification
 router.get('/test-signature', (req: Request, res: Response) => {
