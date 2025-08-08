@@ -1050,11 +1050,16 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
         boardTotal = 0;
       }
       
-      // Ensure we have some amount to display (never show R0.00 if quote has a total)
-      if (finalTotal === 0 && quoteData.total && !isNaN(quoteData.total)) {
-        console.log('⚠️ Using quote.total as fallback:', quoteData.total);
+      // PRIORITY FIX: Always use the database quote total (VAT-inclusive) for invoice
+      if (quoteData.total && !isNaN(quoteData.total)) {
+        console.log('✅ Using database quote.total (VAT-inclusive):', quoteData.total);
         finalTotal = parseFloat(quoteData.total);
-        boardTotal = finalTotal;
+        // Calculate board total by subtracting fees
+        boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
+        if (boardTotal < 0) boardTotal = finalTotal * 0.8; // Reasonable fallback
+      } else if (finalTotal === 0) {
+        console.log('⚠️ No quote.total found, using calculated amount as fallback');
+        // Keep the calculated finalTotal from above logic
       }
       
       // Define variables needed for PDF display
@@ -1312,12 +1317,31 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
 
       summaryY += summaryRowHeight;
 
-      // Grand total row (no VAT)
+      // Calculate VAT breakdown from final total
+      const subtotalAmount = finalTotal / 1.15; // Remove VAT to get subtotal
+      const vatAmount = finalTotal - subtotalAmount; // Calculate VAT amount
+
+      // Subtotal row (pre-VAT)
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
+      doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
+      doc.text('Subtotal:', 60, summaryY + 8);
+      doc.text(`R ${subtotalAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+
+      summaryY += summaryRowHeight;
+
+      // VAT row (15%)
+      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
+      doc.text('VAT (15%):', 60, summaryY + 8);
+      doc.text(`R ${vatAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+
+      summaryY += summaryRowHeight;
+
+      // Grand total row (VAT-inclusive)
       doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
          .fillAndStroke('#003366', '#000000');
       
       doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-      doc.text('TOTAL:', 60, summaryY + 8);
+      doc.text('TOTAL (VAT Incl.):', 60, summaryY + 8);
       doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
       doc.font('Helvetica');
       

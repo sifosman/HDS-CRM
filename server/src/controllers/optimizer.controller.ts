@@ -711,7 +711,7 @@ export const generateQuote = async (req: Request, res: Response) => {
           method: 'Pending Payment',
           reference: `QUOTE-${quoteId}`,
           date: new Date().toISOString(),
-          amount: grandTotal,
+          amount: grandTotal * 1.15, // Include 15% VAT to match quote total
           payment_id: `PENDING-${Date.now()}`
         });
         if (invoiceResult.success && invoiceResult.data?.invoiceNumber) {
