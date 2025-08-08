@@ -132,10 +132,9 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
               
               console.log('⚠️ Cutlist ID is not a UUID, attempting pattern matching...');
               
-              // For now, skip cutlist PDF link since we need proper UUID mapping
-              console.log('⚠️ Skipping cutlist PDF - requires proper UUID lookup implementation');
-              console.log('💡 Cutlist access should be implemented via database lookup or online viewer');
-              cutlistPdfUrl = ''; // Leave empty until proper lookup is implemented
+              // Use the cutlist_id directly as filename (our new approach)
+              cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/${cutlistId}.pdf`;
+              console.log('🔍 Using cutlist_id as direct filename:', cutlistPdfUrl);
             }
           } catch (error) {
             console.error('❌ Error looking up cutlist PDF:', error);

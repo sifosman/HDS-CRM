@@ -105,7 +105,7 @@ export class EmailService {
         </div>
 
         <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #0c5460;">Board Optimization Summary</h3>
+          <h3 style="margin-top: 0; color: #0c5460;">Accepted Quotation</h3>
           ${optimization.totalBoards ? `<p><strong>Total Boards:</strong> ${optimization.totalBoards}</p>` : ''}
           ${optimization.totalLength ? `<p><strong>Total Length:</strong> ${optimization.totalLength}mm</p>` : ''}
           ${optimization.wastage ? `<p><strong>Wastage:</strong> ${optimization.wastage}%</p>` : ''}
