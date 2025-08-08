@@ -12,7 +12,7 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
     console.log('📋 Simulating ITN for quote:', quoteId);
     
     // Import SupabaseService dynamically to avoid circular dependencies
-    const { SupabaseService } = await import('../services/supabase.service');
+    const SupabaseService = (await import('../services/supabase.service')).default;
     
     // Simulate successful payment data
     const mockPaymentData = {
