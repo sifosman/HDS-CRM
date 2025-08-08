@@ -51,7 +51,8 @@ export const testPaymentEmail = async (req: Request, res: Response): Promise<voi
       customerEmail,
       quoteNumber,
       amount: parseFloat(amount),
-      invoicePath: invoicePath || './test-invoice.pdf',
+      invoicePdfUrl: invoicePath || './test-invoice.pdf',
+      cutlistPdfUrl: './test-cutlist.pdf',
       optimizationDetails: optimizationDetails || {
         totalBoards: 5,
         totalLength: 2400,

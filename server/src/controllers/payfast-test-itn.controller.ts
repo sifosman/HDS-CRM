@@ -66,7 +66,8 @@ export const testITN = async (req: Request, res: Response): Promise<void> => {
             customerEmail: testEmail,
             quoteNumber,
             amount,
-            invoicePath,
+            invoicePdfUrl: invoicePath,
+            cutlistPdfUrl: './test-cutlist.pdf',
             optimizationDetails
           });
           

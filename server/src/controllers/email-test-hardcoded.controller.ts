@@ -27,7 +27,8 @@ export const testPaymentEmailHardcoded = async (req: Request, res: Response): Pr
       customerEmail,
       quoteNumber,
       amount: parseFloat(amount),
-      invoicePath: invoicePath || './test-invoice.pdf',
+      invoicePdfUrl: invoicePath || './test-invoice.pdf',
+      cutlistPdfUrl: './test-cutlist.pdf',
       optimizationDetails: {
         totalBoards: 5,
         totalLength: 2400,
@@ -65,7 +66,8 @@ export const quickTestEmail = async (req: Request, res: Response): Promise<void>
       customerEmail: 'sifosman@gmail.com',
       quoteNumber: 'QT-001',
       amount: 100.00,
-      invoicePath: './test-invoice.pdf',
+      invoicePdfUrl: './test-invoice.pdf',
+      cutlistPdfUrl: './test-cutlist.pdf',
       optimizationDetails: {
         totalBoards: 3,
         totalLength: 1200,
