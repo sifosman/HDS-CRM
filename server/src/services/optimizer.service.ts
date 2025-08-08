@@ -2192,15 +2192,22 @@ export const generateAndUploadOptimizationPdf = async (
   solution: Solution,
   unit: number,
   cutWidth: number = 3,
-  layout: number = 0
+  layout: number = 0,
+  cutlistId?: string
 ): Promise<{ success: boolean; publicUrl?: string; pdfId?: string; error?: string }> => {
   try {
     // Generate PDF buffer using existing generatePdfWithBuffer function
     const pdfResult = await generatePdfWithBuffer(solution, unit, cutWidth, layout);
     
-    // Create filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `solution_${pdfResult.id}.pdf`;
+    // Create filename using cutlistId if provided, otherwise use UUID format
+    let fileName: string;
+    if (cutlistId) {
+      fileName = `${cutlistId}.pdf`;
+      console.log('✅ Using cutlistId for PDF filename:', fileName);
+    } else {
+      fileName = `solution_${pdfResult.id}.pdf`;
+      console.log('⚠️ Using UUID format for PDF filename (no cutlistId provided):', fileName);
+    }
     
     // Import Supabase service dynamically to avoid circular dependencies
     const SupabaseService = (await import('./supabase.service')).default;

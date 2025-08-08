@@ -194,6 +194,44 @@ export const generateQuote = async (req: Request, res: Response) => {
     let edgingCostTotal = 0;
     let totalBoardsUsed = 0; // Track total boards used for cutting fee
 
+    // Generate a unique quote ID with branch name BEFORE processing sections
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    
+    // Include branch name in quote ID if available
+    let quoteId;
+    if (branchData && branchData.trading_as) {
+      // Create branch abbreviation from trading_as (more descriptive)
+      let branchAbbr = '';
+      const words = branchData.trading_as.split(' ').filter((word: string) => word.length > 0);
+      
+      if (words.length === 1) {
+        // Single word: take first 8 characters
+        branchAbbr = words[0].substring(0, 8).toUpperCase();
+      } else if (words.length === 2) {
+        // Two words: take first 4 chars of each
+        branchAbbr = words[0].substring(0, 4).toUpperCase() + words[1].substring(0, 4).toUpperCase();
+      } else {
+        // Multiple words: take first 3 chars of first 3 words
+        branchAbbr = words.slice(0, 3)
+          .map((word: string) => word.substring(0, 3).toUpperCase())
+          .join('');
+      }
+      
+      // Ensure max length of 10 characters for readability
+      branchAbbr = branchAbbr.substring(0, 10);
+      quoteId = `Q-${dateStr}-${randomNum}-${branchAbbr}`;
+      console.log(`Generated quote ID with branch: ${quoteId} (Branch: ${branchData.trading_as})`);
+    } else {
+      quoteId = `Q-${dateStr}-${randomNum}`;
+      console.log(`Generated quote ID without branch: ${quoteId}`);
+    }
+
+    // Generate a unique cutlist ID for this quote based on the quote ID
+    const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    console.log('Generated cutlist ID:', dynamicCutlistId);
+
     for (const section of sections) {
       const { material, cutPieces } = section;
       
@@ -332,7 +370,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       // Generate and upload cutlist PDF to cutlists bucket
       try {
         console.log('Generating cutlist PDF');
-        const cutlistPdfResult = await generateAndUploadOptimizationPdf(solution, unit, cutWidth, layout);
+        const cutlistPdfResult = await generateAndUploadOptimizationPdf(solution, unit, cutWidth, layout, dynamicCutlistId);
         if (cutlistPdfResult.success && cutlistPdfResult.publicUrl) {
           console.log('Cutlist PDF generated and uploaded successfully:', cutlistPdfResult.publicUrl);
         } else {
@@ -490,39 +528,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate a unique quote ID with branch name
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    
-    // Include branch name in quote ID if available
-    let quoteId;
-    if (branchData && branchData.trading_as) {
-      // Create branch abbreviation from trading_as (more descriptive)
-      let branchAbbr = '';
-      const words = branchData.trading_as.split(' ').filter((word: string) => word.length > 0);
-      
-      if (words.length === 1) {
-        // Single word: take first 8 characters
-        branchAbbr = words[0].substring(0, 8).toUpperCase();
-      } else if (words.length === 2) {
-        // Two words: take first 4 chars of each
-        branchAbbr = words[0].substring(0, 4).toUpperCase() + words[1].substring(0, 4).toUpperCase();
-      } else {
-        // Multiple words: take first 3 chars of first 3 words
-        branchAbbr = words.slice(0, 3)
-          .map((word: string) => word.substring(0, 3).toUpperCase())
-          .join('');
-      }
-      
-      // Ensure max length of 10 characters for readability
-      branchAbbr = branchAbbr.substring(0, 10);
-      quoteId = `Q-${dateStr}-${randomNum}-${branchAbbr}`;
-      console.log(`Generated quote ID with branch: ${quoteId} (Branch: ${branchData.trading_as})`);
-    } else {
-      quoteId = `Q-${dateStr}-${randomNum}`;
-      console.log(`Generated quote ID without branch: ${quoteId}`);
-    }
+    // Quote ID already generated earlier in the function
 
     // Calculate cutting fee (same as in PDF quote - R70 per board)
     const cuttingFeePerBoard = 70; // R70 per board
@@ -574,8 +580,7 @@ export const generateQuote = async (req: Request, res: Response) => {
     const uploadResult = await SupabaseService.uploadQuotePdf(pdfResult.buffer, pdfId);
     quotePdfUrl = uploadResult.publicUrl || ''; // Store quote PDF URL separately
 
-    // Generate a unique cutlist ID for this quote based on the quote ID
-    const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    // dynamicCutlistId already generated earlier in the function
     
     // Create cutlist record in database before creating quote to satisfy foreign key constraint
     try {

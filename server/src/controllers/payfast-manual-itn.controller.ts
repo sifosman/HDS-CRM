@@ -111,37 +111,47 @@ export const simulatePayFastITN = async (req: Request, res: Response): Promise<v
           }
         }
         
-        // 2. Cutlist PDF: Handle cutlist_id format correctly
+        // 2. Cutlist PDF: Look up the actual PDF file in storage
         let cutlistPdfUrl = '';
         if (quoteData.data.cutlist_id) {
           const cutlistId = quoteData.data.cutlist_id;
-          console.log('🔍 Cutlist ID format check:', cutlistId);
+          console.log('🔍 Looking up cutlist PDF for ID:', cutlistId);
           
-          // Check if it's a UUID format (like 94552cfd-34ec-401a-9123-ea35c80e5a07)
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          
-          if (uuidRegex.test(cutlistId)) {
-            // UUID format - use solution_{uuid}.pdf
-            cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/solution_${cutlistId}.pdf`;
-            console.log('🔍 Using UUID format for cutlist PDF');
-          } else {
-            // Filename format (like cutlist-q-20250808-7560-hdschustr) - use as direct filename
-            cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/${cutlistId}.pdf`;
-            console.log('🔍 Using filename format for cutlist PDF');
+          try {
+            // Check if it's a UUID format (like 94552cfd-34ec-401a-9123-ea35c80e5a07)
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            
+            if (uuidRegex.test(cutlistId)) {
+              // Direct UUID - use solution_{uuid}.pdf format
+              cutlistPdfUrl = `https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/cutlists/solution_${cutlistId}.pdf`;
+              console.log('🔍 Using UUID format for cutlist PDF:', cutlistPdfUrl);
+            } else {
+              // Not a UUID - this is likely a reference ID, not the actual PDF UUID
+              // For now, we'll need to implement a lookup mechanism
+              // Try the most common patterns:
+              
+              console.log('⚠️ Cutlist ID is not a UUID, attempting pattern matching...');
+              
+              // For now, skip cutlist PDF link since we need proper UUID mapping
+              console.log('⚠️ Skipping cutlist PDF - requires proper UUID lookup implementation');
+              console.log('💡 Cutlist access should be implemented via database lookup or online viewer');
+              cutlistPdfUrl = ''; // Leave empty until proper lookup is implemented
+            }
+          } catch (error) {
+            console.error('❌ Error looking up cutlist PDF:', error);
+            cutlistPdfUrl = ''; // Leave empty if lookup fails
           }
-          
-          console.log('🔍 Cutlist PDF URL constructed:', cutlistPdfUrl);
         }
         
         // Check cutlist ID format for logging
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidRegexForLogging = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         
         console.log('📎 Final PDF URLs determined:', {
           invoicePdfUrl,
           cutlistPdfUrl,
           invoiceNumber: invoiceResult.data?.invoiceNumber,
           cutlistId: quoteData.data.cutlist_id,
-          cutlistIdFormat: quoteData.data.cutlist_id ? (uuidRegex.test(quoteData.data.cutlist_id) ? 'UUID' : 'filename') : 'none'
+          cutlistIdFormat: quoteData.data.cutlist_id ? (uuidRegexForLogging.test(quoteData.data.cutlist_id) ? 'UUID' : 'filename') : 'none'
         });
         
         console.log('📧 Email data:', {
