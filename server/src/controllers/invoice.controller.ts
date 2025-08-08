@@ -90,17 +90,13 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       
       // Try to determine branch from quote data or use default
       let branchTradingAs = 'HDS Group'; // Default fallback
-      // Keep parsed quote_data available for downstream use (sections, items, totals)
-      let parsedQuoteData: any = {};
       
       // Check if quote has branch information in quote_data
       try {
-        parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
+        const parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
         if (parsedQuoteData.branchData && parsedQuoteData.branchData.trading_as) {
           branchTradingAs = parsedQuoteData.branchData.trading_as;
           console.log(`Found branch in quote data: ${branchTradingAs}`);
-        } else {
-          console.log('No branchData.trading_as in quote_data');
         }
       } catch (e) {
         console.log('No branch data found in quote_data, using default');
@@ -137,55 +133,29 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
       }
 
       // Try to parse sections and items
-      let sections: any[] = [];
-      let items: any[] = [];
-
-      // Prefer rich sections/items from quote_data (these include edging and boardsNeeded)
-      if (parsedQuoteData && Array.isArray(parsedQuoteData.sections) && parsedQuoteData.sections.length) {
-        sections = parsedQuoteData.sections;
-        console.log('✅ Using sections from quote_data (preferred)');
-      } else {
-        try {
-          sections = JSON.parse(quoteData.sections || '[]');
-          if (sections.length) {
-            console.log('ℹ️ Using sections from quote DB columns');
-          }
-        } catch (e) {
-          console.error('Failed to parse sections from DB columns:', e);
-        }
-      }
-
-      if (parsedQuoteData && Array.isArray(parsedQuoteData.items) && parsedQuoteData.items.length) {
-        items = parsedQuoteData.items;
-        console.log('✅ Using items from quote_data (preferred)');
-      } else {
-        try {
-          items = JSON.parse(quoteData.items || '[]');
-          if (items.length) {
-            console.log('ℹ️ Using items from quote DB columns');
-          }
-        } catch (e) {
-          console.error('Failed to parse items from DB columns:', e);
-        }
-      }
-
-      // Fallback if both sources failed to provide sections
-      if (!sections || !sections.length) {
+      let sections = [];
+      let items = [];
+      
+      try {
+        sections = JSON.parse(quoteData.sections || '[]');
+      } catch (e) {
+        console.error('Failed to parse sections:', e);
         sections = [{
           name: 'Custom Furniture',
           items: [{ description: 'Custom Furniture', quantity: 1, unitPrice: quoteData.subtotal || 0, total: quoteData.subtotal || 0 }],
           subtotal: quoteData.subtotal || 0,
           sectionTotal: quoteData.subtotal || 0
         }];
-        console.warn('⚠️ No sections found; using generic fallback section');
+      }
+      
+      try {
+        items = JSON.parse(quoteData.items || '[]');
+      } catch (e) {
+        console.error('Failed to parse items:', e);
+        items = [{ description: 'Custom Furniture', quantity: 1, unitPrice: quoteData.subtotal || 0, total: quoteData.subtotal || 0 }];
       }
 
       // Construct invoice data using the actual quote data
-      // Pull edging totals if present in quote_data.totals (best effort)
-      const totalsFromQuote = (parsedQuoteData && parsedQuoteData.totals) ? parsedQuoteData.totals : undefined;
-      const edgingLengthFromTotals = totalsFromQuote?.edgingLength || totalsFromQuote?.edging_meters || totalsFromQuote?.edgingMeters;
-      const edgingCostFromTotals = totalsFromQuote?.edgingCost || totalsFromQuote?.edging_cost;
-
       const invoiceData = {
         quoteId: quoteData.quote_number,
         customerName: quoteData.customer_name || 'Customer',
@@ -201,9 +171,8 @@ export const downloadInvoice = async (req: Request, res: Response): Promise<void
         grandTotal: quoteData.total || 0,
         branchData,
         bankingDetails,
-        // Keep existing DB columns as fallback, but prefer values extracted from quote_data.totals
-        edgingLength: edgingLengthFromTotals ?? quoteData.edging_length ?? 0,
-        edgingCost: edgingCostFromTotals ?? quoteData.edging_cost ?? 0
+        edgingLength: quoteData.edging_length || 0,
+        edgingCost: quoteData.edging_cost || 0
       };
 
       console.log('Generated invoice data from quote:', invoiceData.quoteId);

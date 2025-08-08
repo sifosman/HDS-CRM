@@ -932,31 +932,9 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
         const parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
         console.log('📊 Parsed quote data keys:', Object.keys(parsedQuoteData));
         
-        if (parsedQuoteData.totals) {
-          // Use the totals from the quote data
-          const quoteTotals = parsedQuoteData.totals;
-          console.log('💰 Found totals in quote data:', quoteTotals);
-          
-          // The quote already has calculated totals - use the subtotal as our base
-          finalTotal = parseFloat(quoteTotals.subtotal || quoteTotals.finalTotal || 0);
-          boardTotal = finalTotal; // For display purposes, treat the subtotal as board total
-          
-          console.log('✅ Using quote subtotal as base amount:', finalTotal);
-        } else if (parsedQuoteData.items && Array.isArray(parsedQuoteData.items)) {
-          // Fallback: calculate from items if totals not available
-          console.log('📦 Calculating from items...');
-          parsedQuoteData.items.forEach((item: any) => {
-            if (item.total && !isNaN(item.total)) {
-              finalTotal += parseFloat(item.total);
-            }
-          });
-          boardTotal = finalTotal;
-          console.log('✅ Calculated total from items:', finalTotal);
-        }
-        
-        // If we still don't have amounts, try to use sections data (fallback)
-        if (finalTotal === 0 && sections && sections.length > 0) {
-          console.log('⚠️ No amounts in quote data, trying sections fallback...');
+        // Always calculate edging and cutting fees from sections data first
+        if (sections && sections.length > 0) {
+          console.log('💰 Calculating edging and cutting fees from sections...');
           
           // Calculate sectionTotal for each section if not already calculated
           sections.forEach((section: any) => {
@@ -964,10 +942,6 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
               section.sectionTotal = parseFloat((section.pricePerBoard * section.boardsNeeded).toFixed(2));
             }
           });
-          
-          // Calculate initial grand total from board costs
-          boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
-          boardTotal = parseFloat(boardTotal.toFixed(2));
 
           // Calculate edging costs for each section
           sections.forEach((section: any) => {
@@ -998,6 +972,42 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
           const cuttingFeePerBoard = 70; // R70 per board
           const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
           totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+          
+          console.log('✅ Calculated fees - Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee);
+        }
+        
+        // Now determine the base total amount
+        if (parsedQuoteData.totals) {
+          // Use the totals from the quote data
+          const quoteTotals = parsedQuoteData.totals;
+          console.log('💰 Found totals in quote data:', quoteTotals);
+          
+          // The quote already has calculated totals - use the subtotal as our base
+          finalTotal = parseFloat(quoteTotals.subtotal || quoteTotals.finalTotal || 0);
+          
+          // Calculate board total by subtracting fees from final total
+          boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
+          if (boardTotal < 0) boardTotal = finalTotal; // Fallback if calculation doesn't make sense
+          
+          console.log('✅ Using quote subtotal as base amount:', finalTotal);
+        } else if (parsedQuoteData.items && Array.isArray(parsedQuoteData.items)) {
+          // Fallback: calculate from items if totals not available
+          console.log('📦 Calculating from items...');
+          parsedQuoteData.items.forEach((item: any) => {
+            if (item.total && !isNaN(item.total)) {
+              finalTotal += parseFloat(item.total);
+            }
+          });
+          boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
+          if (boardTotal < 0) boardTotal = finalTotal;
+          console.log('✅ Calculated total from items:', finalTotal);
+        } else if (sections && sections.length > 0) {
+          // Calculate from sections data
+          console.log('📦 Calculating from sections...');
+          
+          // Calculate initial grand total from board costs
+          boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
+          boardTotal = parseFloat(boardTotal.toFixed(2));
           
           // Calculate final grand total with edging and cutting fee included
           finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
