@@ -8,15 +8,16 @@ export const sendTestPaymentEmail = async (req: Request, res: Response): Promise
     
     const emailService = new EmailService();
     
-    // Mock data for testing
+    // Mock data for testing (without attachments to avoid 404 errors)
     const testData = {
       customerName: 'John Smith',
       customerPhone: '+27 82 123 4567',
       customerEmail: 'sifosman@gmail.com',
       quoteNumber: 'Q-20250108-TEST',
       amount: 2527.09,
-      invoicePdfUrl: 'https://example.com/invoice-Q-20250108-TEST.pdf',
-      cutlistPdfUrl: 'https://example.com/cutlist-Q-20250108-TEST.pdf',
+      // Remove PDF URLs for testing to avoid 404 errors
+      // invoicePdfUrl: 'https://example.com/invoice-Q-20250108-TEST.pdf',
+      // cutlistPdfUrl: 'https://example.com/cutlist-Q-20250108-TEST.pdf',
       optimizationDetails: {
         totalBoards: 8,
         totalLength: 15600,
