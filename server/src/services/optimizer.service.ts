@@ -1181,97 +1181,8 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       doc.moveDown(2);
       
-      // ===== INVOICE ITEMS TABLE (using same structure as quote PDF) =====
-      doc.moveDown(1);
-      
-      // For each material section (same as quote PDF)
-      sections.forEach((section: any, index: number) => {
-        const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
-        
-        // Check if we need a new page for this section
-        if (doc.y > doc.page.height - 200) {
-          doc.addPage();
-        }
-        
-        doc.moveDown(0.5);
-        
-        // Create a compact table for this section's details
-        const startY = doc.y;
-        const colWidths = [200, 100, 100, 100];
-        const rowHeight = 20;
-        
-        const currentStartY = doc.y;
-        
-        // Header row
-        doc.rect(50, currentStartY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-           .fillAndStroke('#cccccc', '#000000');
-        
-        doc.fontSize(10).fillColor('#000000');
-        doc.text('Description', 55, currentStartY + 8, { width: colWidths[0] - 10 });
-        doc.text('Board Size', 55 + colWidths[0], currentStartY + 8, { width: colWidths[1] - 10 });
-        doc.text('Quantity', 55 + colWidths[0] + colWidths[1], currentStartY + 8, { width: colWidths[2] - 10 });
-        doc.text('Price', 55 + colWidths[0] + colWidths[1] + colWidths[2], currentStartY + 8, { width: colWidths[3] - 10 });
-        
-        // Data row
-        let currentY = currentStartY + rowHeight;
-        
-        doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-           .stroke();
-        doc.text(material ?? '-', 55, currentY + 8, { width: colWidths[0] - 10 });
-        doc.text(boardSize ?? '-', 55 + colWidths[0], currentY + 8, { width: colWidths[1] - 10 });
-        
-        const boardsNeededDisplay = boardsNeeded !== undefined && boardsNeeded !== null ? boardsNeeded.toString() : '-';
-        doc.text(boardsNeededDisplay, 55 + colWidths[0] + colWidths[1], currentY + 8, { width: colWidths[2] - 10 });
-        
-        const priceDisplay = pricePerBoard !== undefined && pricePerBoard !== null ? `R ${pricePerBoard.toFixed(2)}` : '-';
-        doc.text(priceDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-        
-        currentY += rowHeight;
-        
-        // Section total
-        doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-           .stroke();
-        
-        doc.fontSize(10).fillColor('#000000');
-        doc.text('Board Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-        const sectionTotalDisplay = sectionTotal !== undefined && sectionTotal !== null ? `R ${sectionTotal.toFixed(2)}` : '-';
-        doc.text(sectionTotalDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-        
-        currentY += rowHeight;
-        
-        // Add edging information if available
-        if (edging && edging.totalEdging > 0) {
-          doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-             .stroke();
-          
-          const edgingMeters = (edging.totalEdging / 1000).toFixed(2);
-          const edgingCost = section.edgingCost !== undefined 
-            ? section.edgingCost.toFixed(2) 
-            : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
-          
-          doc.fontSize(10).fillColor('#000000');
-          doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m):`, 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-          doc.text(`R ${edgingCost}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-          
-          currentY += rowHeight;
-          
-          // Combined section total (boards + edging)
-          doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-             .fillAndStroke('#e6e6e6', '#000000');
-             
-          doc.fontSize(10).fillColor('#000000');
-          doc.text('Section Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-          
-          const combinedTotal = (parseFloat(sectionTotal || '0') + parseFloat(edgingCost)).toFixed(2);
-          doc.text(`R ${combinedTotal}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-        }
-        
-        // Minimal spacing between sections
-        doc.moveDown(0.5);
-      });
-      
-      // Add invoice summary (same as quote PDF summary)
-      doc.moveDown(0.5);
+      // ===== INVOICE SUMMARY (SIMPLIFIED) =====
+      doc.moveDown(2);
       
       const pageWidth = doc.page.width - 100;
       doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
@@ -1317,31 +1228,12 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
 
       summaryY += summaryRowHeight;
 
-      // Calculate VAT breakdown from final total
-      const subtotalAmount = finalTotal / 1.15; // Remove VAT to get subtotal
-      const vatAmount = finalTotal - subtotalAmount; // Calculate VAT amount
-
-      // Subtotal row (pre-VAT)
-      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
-      doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
-      doc.text('Subtotal:', 60, summaryY + 8);
-      doc.text(`R ${subtotalAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-
-      summaryY += summaryRowHeight;
-
-      // VAT row (15%)
-      doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
-      doc.text('VAT (15%):', 60, summaryY + 8);
-      doc.text(`R ${vatAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-
-      summaryY += summaryRowHeight;
-
-      // Grand total row (VAT-inclusive)
+      // Grand total row (no VAT)
       doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
          .fillAndStroke('#003366', '#000000');
       
       doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-      doc.text('TOTAL (VAT Incl.):', 60, summaryY + 8);
+      doc.text('TOTAL:', 60, summaryY + 8);
       doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
       doc.font('Helvetica');
       
