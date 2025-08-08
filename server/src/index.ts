@@ -22,6 +22,7 @@ import invoiceRoutes from './routes/invoice.routes';
 import invoicePdfRoutes from './routes/invoice-pdf.routes';
 import emailTestRoutes from './routes/email-test.routes';
 import emailTestHardcodedRoutes from './routes/email-test-hardcoded.routes';
+import testEmailRoutes from './routes/test-email.routes';
 import testRoutes from './routes/test.routes';
 
 // Load environment variables
@@ -62,6 +63,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/invoice-pdf', invoicePdfRoutes);
 app.use('/api/email', emailTestRoutes);
 app.use('/api/email-hardcoded', emailTestHardcodedRoutes);
+app.use('/api/test-email', testEmailRoutes);
 app.use('/api/test', testRoutes);
 
 // Direct test endpoint for n8n integration

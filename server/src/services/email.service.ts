@@ -15,9 +15,11 @@ export interface EmailConfig {
 export interface PaymentConfirmationData {
   customerName: string;
   customerEmail: string;
+  customerPhone?: string;
   quoteNumber: string;
   amount: number;
-  invoicePath: string;
+  invoicePdfUrl?: string;
+  cutlistPdfUrl?: string;
   optimizationDetails: {
     totalBoards?: number;
     totalLength?: number;
@@ -57,21 +59,38 @@ export class EmailService {
       const mailOptions: any = {
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to: data.customerEmail,
-        subject: `Payment Confirmed - Invoice ${data.quoteNumber}`,
+        subject: `New Order - Payment Confirmed for Quote ${data.quoteNumber}`,
         html: this.generatePaymentConfirmationTemplate(data)
       };
 
-      // Only add attachment if invoice path exists
-      if (data.invoicePath && fs.existsSync(data.invoicePath)) {
-        mailOptions.attachments = [{
+      // Add PDF attachments from Supabase storage URLs
+      const attachments: any[] = [];
+      
+      // Add invoice PDF attachment
+      if (data.invoicePdfUrl) {
+        attachments.push({
           filename: `invoice-${data.quoteNumber}.pdf`,
-          path: data.invoicePath,
+          href: data.invoicePdfUrl,
           contentType: 'application/pdf'
-        }];
+        });
+      }
+      
+      // Add cutlist PDF attachment
+      if (data.cutlistPdfUrl) {
+        attachments.push({
+          filename: `cutlist-${data.quoteNumber}.pdf`,
+          href: data.cutlistPdfUrl,
+          contentType: 'application/pdf'
+        });
+      }
+      
+      if (attachments.length > 0) {
+        mailOptions.attachments = attachments;
       }
 
       const result = await this.transporter.sendMail(mailOptions);
       console.log('Payment confirmation email sent:', result.messageId);
+      console.log('Attachments included:', attachments.length);
     } catch (error) {
       console.error('Error sending payment confirmation email:', error);
       throw error;
@@ -83,18 +102,28 @@ export class EmailService {
     
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h2 style="color: #28a745; margin: 0;">Payment Confirmed!</h2>
+        <div style="background: #28a745; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="margin: 0;">🎉 New Order Received!</h2>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Payment has been confirmed</p>
         </div>
         
-        <p>Dear ${data.customerName},</p>
-        
-        <p>Your payment of <strong>R${data.amount.toFixed(2)}</strong> has been successfully processed.</p>
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #856404;">⚠️ ACTION REQUIRED</h3>
+          <p style="margin-bottom: 0; color: #856404;">A customer has paid for their quote. Please process this order and contact the customer to arrange production/delivery.</p>
+        </div>
         
         <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Payment Details</h3>
+          <h3 style="margin-top: 0;">Customer Information</h3>
+          <p><strong>Name:</strong> ${data.customerName}</p>
+          ${data.customerPhone ? `<p><strong>Contact Number:</strong> ${data.customerPhone}</p>` : ''}
+          <p><strong>Email:</strong> ${data.customerEmail}</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Order Details</h3>
           <p><strong>Quote Number:</strong> ${data.quoteNumber}</p>
           <p><strong>Amount Paid:</strong> R${data.amount.toFixed(2)}</p>
+          <p><strong>Payment Status:</strong> <span style="color: #28a745; font-weight: bold;">CONFIRMED</span></p>
         </div>
 
         <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
@@ -105,11 +134,24 @@ export class EmailService {
           ${optimization.cutlistUrl ? `<p><strong>Cutlist Link:</strong> <a href="${optimization.cutlistUrl}" style="color: #007bff;">View Online</a></p>` : ''}
         </div>
 
-        <p>Your detailed invoice is attached to this email.</p>
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #155724;">📎 Attachments</h3>
+          <p style="color: #155724; margin-bottom: 0;">This email includes the following attachments:</p>
+          <ul style="color: #155724; margin: 10px 0 0 20px;">
+            ${data.invoicePdfUrl ? '<li>Invoice PDF</li>' : ''}
+            ${data.cutlistPdfUrl ? '<li>Cutlist PDF</li>' : ''}
+          </ul>
+        </div>
         
         <div style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 30px; color: #6c757d; font-size: 14px;">
-          <p>Thank you for your business!</p>
-          <p><strong>HDS Group</strong></p>
+          <p><strong>Next Steps:</strong></p>
+          <ol style="margin: 10px 0;">
+            <li>Review the attached cutlist and invoice</li>
+            <li>Contact the customer to confirm order details</li>
+            <li>Schedule production and delivery</li>
+            <li>Update the customer on progress</li>
+          </ol>
+          <p><strong>HDS Group - Order Management System</strong></p>
         </div>
       </div>
     `;

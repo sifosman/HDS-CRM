@@ -599,12 +599,13 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                   
                   if (quoteData.success && quoteData.data) {
                     const customerName = quoteData.data.customer_name || 'Customer';
+                    const customerPhone = quoteData.data.customer_phone || '';
                     const quoteNumber = quoteData.data.quote_number || quoteId;
                     const amount = parseFloat(pfData.amount_gross || '0');
                     
-                    // Note: In serverless environments like Vercel, we can't generate PDF files directly
-                    // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
-                    const invoicePath = '';
+                    // Get PDF URLs from Supabase storage
+                    const invoicePdfUrl = quoteData.data.invoice_url || '';
+                    const cutlistPdfUrl = quoteData.data.cutlist_url || '';
                     
                     // Prepare optimization details
                     const optimizationDetails = {
@@ -617,19 +618,23 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                     // Send email to test address for production testing
                     console.log('📧 Attempting to send email with data:', {
                       customerName,
+                      customerPhone,
                       testEmail,
                       quoteNumber,
                       amount,
-                      invoicePath,
+                      invoicePdfUrl,
+                      cutlistPdfUrl,
                       optimizationDetails
                     });
                     
                     await emailService.sendPaymentConfirmationEmail({
                       customerName,
+                      customerPhone,
                       customerEmail: testEmail,
                       quoteNumber,
                       amount,
-                      invoicePath,
+                      invoicePdfUrl,
+                      cutlistPdfUrl,
                       optimizationDetails
                     });
                     
