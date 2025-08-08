@@ -916,6 +916,10 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       // Extract sections data (same as quote PDF)
       const sections = parsedQuoteData.sections || [];
       
+      // Debug: Log the sections data structure
+      console.log('🔍 DEBUG: Sections data:', JSON.stringify(sections, null, 2));
+      console.log('🔍 DEBUG: Number of sections found:', sections.length);
+      
       // Calculate totals using the same logic as quote PDF
       const EDGING_PRICE_PER_METER = 14; // R14 per meter
       let totalEdgingMeters = 0;
@@ -935,45 +939,69 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
         // Always calculate edging and cutting fees from sections data first
         if (sections && sections.length > 0) {
           console.log('💰 Calculating edging and cutting fees from sections...');
+          console.log('🔍 DEBUG: Processing', sections.length, 'sections');
           
           // Calculate sectionTotal for each section if not already calculated
-          sections.forEach((section: any) => {
+          sections.forEach((section: any, index: number) => {
+            console.log(`🔍 DEBUG: Section ${index}:`, {
+              material: section.material,
+              pricePerBoard: section.pricePerBoard,
+              boardsNeeded: section.boardsNeeded,
+              sectionTotal: section.sectionTotal,
+              edging: section.edging
+            });
+            
             if (!section.sectionTotal && section.pricePerBoard && section.boardsNeeded) {
               section.sectionTotal = parseFloat((section.pricePerBoard * section.boardsNeeded).toFixed(2));
             }
           });
 
           // Calculate edging costs for each section
-          sections.forEach((section: any) => {
+          sections.forEach((section: any, index: number) => {
+            console.log(`🔍 DEBUG: Processing edging for section ${index}`);
+            console.log(`🔍 DEBUG: Section edging data:`, section.edging);
+            
             if (section.edging && section.edging.totalEdging > 0) {
               // Convert from mm to meters
               const edgingMeters = section.edging.totalEdging / 1000;
               totalEdgingMeters += edgingMeters;
               
+              console.log(`🔍 DEBUG: Section ${index} edging: ${section.edging.totalEdging}mm = ${edgingMeters}m`);
+              
               // Use the already calculated cost from the controller if available
               if (section.edging.cost !== undefined) {
                 section.edgingCost = parseFloat(section.edging.cost);
                 totalEdgingCost += section.edgingCost;
+                console.log(`🔍 DEBUG: Using pre-calculated edging cost: R${section.edgingCost}`);
               } else {
                 // Fallback calculation if cost not provided
                 const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
                 section.edgingCost = parseFloat(edgingCost);
                 totalEdgingCost += section.edgingCost;
+                console.log(`🔍 DEBUG: Calculated edging cost: ${edgingMeters}m × R${EDGING_PRICE_PER_METER} = R${edgingCost}`);
               }
             } else {
               section.edgingCost = 0;
+              console.log(`🔍 DEBUG: Section ${index} has no edging`);
             }
           });
           
           // Round the total edging cost to 2 decimal places
           totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
+          console.log(`🔍 DEBUG: Total edging meters: ${totalEdgingMeters}m`);
+          console.log(`🔍 DEBUG: Total edging cost: R${totalEdgingCost}`);
           
           // Calculate cutting fee (R70 per board)
           const cuttingFeePerBoard = 70; // R70 per board
           const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
           totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
           
+          console.log(`🔍 DEBUG: Total boards used: ${totalBoardsUsed}`);
+          console.log(`🔍 DEBUG: Cutting fee: ${totalBoardsUsed} boards × R${cuttingFeePerBoard} = R${totalCuttingFee}`);
+          
           console.log('✅ Calculated fees - Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee);
+        } else {
+          console.log('⚠️ DEBUG: No sections found or sections array is empty');
         }
         
         // Now determine the base total amount
@@ -1110,25 +1138,32 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       doc.text(`Email: ${email}`, 50, doc.y + 5);
       console.log('🏢 Email displayed:', email);
       
-      // Invoice details (right side)
-      const rightColumnX = doc.page.width - 250;
+      // Invoice details (right side) - improved layout for long invoice numbers
+      const rightColumnX = doc.page.width - 280; // Increased width for longer content
       const topY = 120;
+      const labelWidth = 90; // Increased label width
+      const valueX = rightColumnX + labelWidth + 5; // 5px spacing between label and value
       
       doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
       doc.text('Invoice Details', rightColumnX, topY);
       
       doc.font('Helvetica').fontSize(10).fillColor('#333333');
-      doc.text('Invoice Number:', rightColumnX, topY + 20);
-      doc.text(invoiceNumber, rightColumnX + 80, topY + 20);
       
-      doc.text('Invoice Date:', rightColumnX, topY + 35);
-      doc.text(invoiceDate, rightColumnX + 80, topY + 35);
+      // Invoice Number - use flexible layout
+      doc.text('Invoice Number:', rightColumnX, topY + 20, { width: labelWidth });
+      doc.text(invoiceNumber, valueX, topY + 20, { width: 180 }); // Allow wrapping if needed
       
-      doc.text('Quote Number:', rightColumnX, topY + 50);
-      doc.text(quoteId, rightColumnX + 80, topY + 50);
+      // Invoice Date
+      doc.text('Invoice Date:', rightColumnX, topY + 35, { width: labelWidth });
+      doc.text(invoiceDate, valueX, topY + 35, { width: 180 });
       
-      doc.text('Quote Date:', rightColumnX, topY + 65);
-      doc.text(quoteDate, rightColumnX + 80, topY + 65);
+      // Quote Number - may also be long
+      doc.text('Quote Number:', rightColumnX, topY + 50, { width: labelWidth });
+      doc.text(quoteId, valueX, topY + 50, { width: 180 });
+      
+      // Quote Date
+      doc.text('Quote Date:', rightColumnX, topY + 65, { width: labelWidth });
+      doc.text(quoteDate, valueX, topY + 65, { width: 180 });
       
       // Customer details
       doc.y = topY + 100;

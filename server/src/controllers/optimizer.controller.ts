@@ -622,6 +622,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         customerEmail: req.body.customerEmail || req.body.email || '',
         projectName: projectName,
         quoteData: {
+          // Save the processed sections with all edging and cutting data for invoice generation
+          sections: processedSections || [],
           items: (pdfSections && Array.isArray(pdfSections)) ? pdfSections.map(section => ({
             description: `${section.material || 'Material'} - ${(section.pieces && section.pieces.length) || 0} pieces`,
             quantity: (section.pieces && Array.isArray(section.pieces)) 
@@ -660,6 +662,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         customerName: customerName || 'Unknown Customer',
         projectName: projectName || 'Unknown Project',
         quoteData: {
+          // Save the processed sections with all edging and cutting data for invoice generation
+          sections: processedSections || [],
           items: [{
             description: 'Quote Items',
             quantity: 1,
