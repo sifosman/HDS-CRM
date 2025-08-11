@@ -591,10 +591,6 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                   console.log('📧 EMAIL SENDING STARTED - This is where emails are sent!');
                   const emailService = new EmailService();
                   
-                  // TESTING: Send emails only to test email address for production testing
-                  const testEmail = 'sifosman@gmail.com';
-                  console.log('📧 Test email address:', testEmail);
-                  
                   // Get quote details for email
                   const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
                   
@@ -608,6 +604,28 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                     const invoicePdfUrl = quoteData.data.invoice_url || '';
                     const cutlistPdfUrl = quoteData.data.cutlist_url || '';
                     
+                    // Determine branch email from branches table using branch_name on quote
+                    let branchEmail: string | null = null;
+                    try {
+                      const branchName: string | undefined = quoteData.data.branch_name;
+                      if (branchName) {
+                        const branchRes = await SupabaseService.getBranchByTradingAs(branchName);
+                        if (branchRes.success && branchRes.data) {
+                          branchEmail = branchRes.data.email_address || branchRes.data.email || null;
+                        }
+                      } else {
+                        console.warn('⚠️ No branch_name on quote; cannot resolve branch email');
+                      }
+                    } catch (e) {
+                      console.error('Error resolving branch email:', e);
+                    }
+
+                    if (!branchEmail) {
+                      console.warn('⚠️ Branch email not found; skipping email send for quote:', quoteNumber);
+                    } else {
+                      console.log('📧 Resolved branch email:', branchEmail);
+                    }
+
                     // Prepare optimization details
                     const optimizationDetails = {
                       totalBoards: quoteData.data.total_boards,
@@ -616,30 +634,32 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                       cutlistUrl: quoteData.data.cutlist_url
                     };
                     
-                    // Send email to test address for production testing
-                    console.log('📧 Attempting to send email with data:', {
-                      customerName,
-                      customerPhone,
-                      testEmail,
-                      quoteNumber,
-                      amount,
-                      invoicePdfUrl,
-                      cutlistPdfUrl,
-                      optimizationDetails
-                    });
-                    
-                    await emailService.sendPaymentConfirmationEmail({
-                      customerName,
-                      customerPhone,
-                      customerEmail: testEmail,
-                      quoteNumber,
-                      amount,
-                      invoicePdfUrl,
-                      cutlistPdfUrl,
-                      optimizationDetails
-                    });
-                    
-                    console.log('✅ Payment confirmation email sent successfully to test email:', testEmail);
+                    if (branchEmail) {
+                      // Send email to branch email address
+                      console.log('📧 Attempting to send email with data:', {
+                        customerName,
+                        customerPhone,
+                        branchEmail,
+                        quoteNumber,
+                        amount,
+                        invoicePdfUrl,
+                        cutlistPdfUrl,
+                        optimizationDetails
+                      });
+
+                      await emailService.sendPaymentConfirmationEmail({
+                        customerName,
+                        customerPhone,
+                        customerEmail: branchEmail,
+                        quoteNumber,
+                        amount,
+                        invoicePdfUrl,
+                        cutlistPdfUrl,
+                        optimizationDetails
+                      });
+
+                      console.log('✅ Payment confirmation email sent successfully to branch email:', branchEmail);
+                    }
                     
                     /* ORIGINAL LOGIC - COMMENTED FOR TESTING
                     // Get customer email from database
