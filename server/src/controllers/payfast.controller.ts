@@ -40,7 +40,7 @@ const getPayFastConfig = (): PayFastConfig => {
     merchantId: process.env.PAYFAST_MERCHANT_ID || '10000100',
     merchantKey: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a',
     passphrase: process.env.PAYFAST_PASSPHRASE || 'jt7NOE43FZPn',
-    sandbox: process.env.PAYFAST_SANDBOX === 'true' || true, // Default to sandbox mode
+    sandbox: (process.env.PAYFAST_SANDBOX ?? 'true') === 'true', // Default true only if unset
     baseUrl: process.env.BASE_URL || 'http://localhost:5000'
   };
   
@@ -231,6 +231,7 @@ export const generatePaymentForm = async (req: Request, res: Response): Promise<
     const payfastUrl = config.sandbox 
       ? 'https://sandbox.payfast.co.za/eng/process'
       : 'https://www.payfast.co.za/eng/process';
+    console.log('Using PayFast endpoint:', payfastUrl, 'sandbox=', config.sandbox);
 
     // Generate HTML payment form
     const htmlForm = `
