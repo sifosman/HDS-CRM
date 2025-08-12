@@ -2,7 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import {
   generatePaymentForm,
   handlePaymentCancel,
-  handlePaymentNotification
+  handlePaymentNotification,
+  processItnJob
 } from '../controllers/payfast.controller';
 import { debugPayFastSignature } from '../controllers/payfast-debug.controller';
 import { testITN } from '../controllers/payfast-test-itn.controller';
@@ -45,6 +46,9 @@ router.get('/cancel', handlePaymentCancel);
 
 // Handle PayFast ITN (Instant Transaction Notification)
 router.post('/notify', handlePaymentNotification);
+
+// Internal background processing endpoint for ITN (invoice + email)
+router.post('/process-itn', processItnJob);
 
 // Debug endpoint to test signature generation
 router.get('/debug', debugPayFastSignature);

@@ -381,7 +381,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       length: undefined, // Changed from 500 to undefined for blank field
       quantity: 1,
       name: '',
-      edging: 1,
+      edging: 0,
       material: targetMaterial,
       lengthTick1: false,
       lengthTick2: false,

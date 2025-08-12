@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __rest = (this && this.__rest) || function (s, e) {
     var t = {};
     for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
@@ -47,23 +14,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handlePaymentCancel = exports.handlePaymentSuccess = exports.handlePaymentNotification = exports.generatePaymentForm = void 0;
+exports.handlePaymentCancel = exports.handlePaymentSuccess = exports.handlePaymentNotification = exports.processItnJob = exports.generatePaymentForm = void 0;
 const crypto_1 = __importDefault(require("crypto"));
-const https_1 = __importDefault(require("https"));
 const email_service_1 = require("../services/email.service");
+const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 // Get PayFast configuration from environment variables
 const getPayFastConfig = () => {
+    var _a;
     console.log('Environment variables:');
     console.log('PAYFAST_MERCHANT_ID:', process.env.PAYFAST_MERCHANT_ID);
     console.log('PAYFAST_MERCHANT_KEY:', process.env.PAYFAST_MERCHANT_KEY);
-    console.log('PAYFAST_PASSPHRASE:', process.env.PAYFAST_PASSPHRASE);
+    console.log('PAYFAST_PASSPHRASE set:', typeof process.env.PAYFAST_PASSPHRASE === 'string' && process.env.PAYFAST_PASSPHRASE.length > 0);
     console.log('PAYFAST_SANDBOX:', process.env.PAYFAST_SANDBOX);
     console.log('BASE_URL:', process.env.BASE_URL);
     const config = {
         merchantId: process.env.PAYFAST_MERCHANT_ID || '10000100',
         merchantKey: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a',
-        passphrase: process.env.PAYFAST_PASSPHRASE || 'jt7NOE43FZPn',
-        sandbox: process.env.PAYFAST_SANDBOX === 'true' || true, // Default to sandbox mode
+        passphrase: process.env.PAYFAST_PASSPHRASE || '',
+        sandbox: ((_a = process.env.PAYFAST_SANDBOX) !== null && _a !== void 0 ? _a : 'true') === 'true', // Default true only if unset
         baseUrl: process.env.BASE_URL || 'http://localhost:5000'
     };
     console.log('PayFast Config:', JSON.stringify(config, null, 2));
@@ -73,10 +41,7 @@ const getPayFastConfig = () => {
 const generateSignature = (data, passphrase) => {
     console.log('🔐 Starting PayFast signature generation...');
     console.log('📋 Input data:', JSON.stringify(data, null, 2));
-    console.log('🔑 Passphrase provided:', !!passphrase);
-    if (passphrase) {
-        console.log('🔑 Passphrase value:', passphrase);
-    }
+    console.log('🔑 Passphrase provided:', !!(passphrase && passphrase.trim() !== ''));
     // Remove existing signature if present
     const { signature: existingSignature } = data, dataForSignature = __rest(data, ["signature"]);
     console.log('📋 Data for signature (after removing existing signature):', JSON.stringify(dataForSignature, null, 2));
@@ -192,13 +157,15 @@ const generatePaymentForm = async (req, res) => {
             amount: parseFloat(amount.toString()).toFixed(2),
             item_name: `HDS Quote ${quoteId}`
         };
-        // Add URLs only if we have a base URL configured
-        if (config.baseUrl && config.baseUrl !== 'http://localhost:5000') {
-            // Include quoteId in the return URL so we can access it in the success page
-            paymentData.return_url = `${config.baseUrl}/api/payfast/success?quoteId=${encodeURIComponent(quoteId.toString())}`;
-            paymentData.cancel_url = `${config.baseUrl}/api/payfast/cancel`;
-            paymentData.notify_url = `${config.baseUrl}/api/payfast/notify`;
-        }
+        // Always set URLs. If BASE_URL is not configured or is localhost, infer from request
+        const forwardedProto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.get('host');
+        const inferredBaseUrl = `${forwardedProto}://${host}`;
+        const baseUrlToUse = (config.baseUrl && config.baseUrl !== 'http://localhost:5000') ? config.baseUrl : inferredBaseUrl;
+        // Include quoteId in the return URL so we can access it in the success page
+        paymentData.return_url = `${baseUrlToUse}/api/payfast/success?quoteId=${encodeURIComponent(quoteId.toString())}`;
+        paymentData.cancel_url = `${baseUrlToUse}/api/payfast/cancel`;
+        paymentData.notify_url = `${baseUrlToUse}/api/payfast/notify`;
         // Add payment ID
         if (paymentId) {
             paymentData.m_payment_id = paymentId;
@@ -225,6 +192,7 @@ const generatePaymentForm = async (req, res) => {
         const payfastUrl = config.sandbox
             ? 'https://sandbox.payfast.co.za/eng/process'
             : 'https://www.payfast.co.za/eng/process';
+        console.log('Using PayFast endpoint:', payfastUrl, 'sandbox=', config.sandbox);
         // Generate HTML payment form
         const htmlForm = `
     <!DOCTYPE html>
@@ -362,340 +330,148 @@ const generatePaymentForm = async (req, res) => {
     }
 };
 exports.generatePaymentForm = generatePaymentForm;
+// Internal background processing endpoint for ITN (invoice + email)
+// NOTE: This is a minimal implementation to enable async flow without timeouts.
+// Heavy processing (invoice creation, PDF generation, email sending) should run here.
+const processItnJob = async (req, res) => {
+    try {
+        const token = req.headers['x-internal-token'];
+        const expected = process.env.ITN_PROCESS_TOKEN || 'local-dev-token';
+        if (!token || token !== expected) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+        const { pfData } = req.body || {};
+        if (!pfData) {
+            res.status(400).json({ error: 'Missing pfData' });
+            return;
+        }
+        const startTs = Date.now();
+        const triggerSource = req.headers['x-trigger-source'] || 'itn';
+        console.log('🧰 Received ITN for background processing (source:', triggerSource + '):', pfData);
+        // Only handle complete payments
+        if (pfData.payment_status !== 'COMPLETE') {
+            console.log('⏭️ Skipping ITN processing: payment_status is not COMPLETE:', pfData.payment_status);
+            res.status(200).json({ ok: true, skipped: true, reason: 'Not COMPLETE' });
+            return;
+        }
+        // Extract quoteId (reuse logic similar to success handler)
+        let quoteId = '';
+        if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
+            const parts = pfData.m_payment_id.split('-');
+            if (parts.length >= 3 && parts[0] === 'QUOTE') {
+                if (parts.length === 5) {
+                    quoteId = `${parts[1]}-${parts[2]}-${parts[3]}`;
+                }
+                else if (parts.length === 6) {
+                    quoteId = `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}`;
+                }
+                else if (parts.length > 6) {
+                    const quoteParts = parts.slice(1, -1);
+                    quoteId = quoteParts.join('-');
+                }
+            }
+        }
+        if (!quoteId && pfData.item_name && typeof pfData.item_name === 'string') {
+            const match = pfData.item_name.match(/HDS Quote (Q-\d{8}-\d{4}(?:-[A-Z]{1,10})?)/);
+            if (match)
+                quoteId = match[1];
+        }
+        console.log('🧾 Extracted quoteId:', quoteId);
+        // Resolve recipient (branch email first, then customer, then default)
+        let recipient = '';
+        try {
+            if (quoteId) {
+                console.log('🔎 Resolving best recipient for quote:', quoteId);
+                const best = await supabase_service_1.default.getBestEmailForQuote(quoteId);
+                if (best)
+                    recipient = best;
+            }
+        }
+        catch (e) {
+            console.error('Error resolving best email for quote:', e);
+        }
+        const hardcodedTest = process.env.TEST_NOTIFICATION_EMAIL; // optional testing override
+        const defaultRecipient = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
+        const customerEmail = pfData.email_address || '';
+        recipient = (hardcodedTest && hardcodedTest.trim()) || recipient || customerEmail || defaultRecipient;
+        if (!recipient) {
+            console.warn('⚠️ No recipient email resolved. Set DEFAULT_NOTIFICATION_EMAIL or ensure branch/customer email present.');
+        }
+        console.log('📨 Resolved recipient:', recipient || '(none)');
+        // Compute amount (fallback to PayFast amount_gross)
+        let amount = 0;
+        if (pfData.amount_gross) {
+            const parsed = parseFloat(String(pfData.amount_gross));
+            if (!Number.isNaN(parsed))
+                amount = parsed;
+        }
+        console.log('💰 Email amount (gross fallback):', amount);
+        // Prepare email data
+        const customerName = [pfData.name_first, pfData.name_last].filter(Boolean).join(' ').trim() || 'Customer';
+        const emailService = new email_service_1.EmailService();
+        try {
+            console.log('📧 Sending payment confirmation email...');
+            await emailService.sendPaymentConfirmationEmail({
+                customerName,
+                customerEmail: recipient,
+                quoteNumber: quoteId || (pfData.m_payment_id || 'UNKNOWN'),
+                amount,
+                optimizationDetails: {}
+            });
+            console.log('✅ Email sent successfully to', recipient);
+        }
+        catch (mailErr) {
+            console.error('❌ Email send failed:', mailErr);
+            // Do not fail the HTTP response due to email failure; just log
+        }
+        const ms = Date.now() - startTs;
+        console.log(`🏁 ITN background job finished in ${ms}ms`);
+        res.status(200).json({ ok: true, received: true, tookMs: ms });
+    }
+    catch (err) {
+        console.error('processItnJob error:', err);
+        res.status(500).json({ error: 'Failed to process ITN job' });
+    }
+};
+exports.processItnJob = processItnJob;
 // Handle PayFast ITN (Instant Transaction Notification)
 const handlePaymentNotification = async (req, res) => {
     try {
-        console.log('🔔 PayFast ITN Handler Started - Email sending happens here!');
-        console.log('📋 Request Method:', req.method);
-        console.log('📋 Request Headers:', req.headers);
-        console.log('📋 Request Body:', req.body);
-        console.log('📋 Raw Body Available:', !!req.rawBody);
-        console.log('PayFast ITN received:', req.body);
-        // Validate the ITN
-        const config = getPayFastConfig();
-        const pfData = req.body;
-        console.log('PayFast ITN data received:', pfData);
-        // Step 1: Validate signature
-        // Extract signature and prepare data for validation
-        const receivedSignature = pfData.signature;
-        // Log the raw data received from PayFast
-        console.log('Raw PayFast ITN data received:', JSON.stringify(pfData, null, 2));
-        // NEW: Use raw body for signature validation if available
-        if (req.rawBody) {
-            console.log('Using raw body for signature validation');
-            console.log('Raw body:', req.rawBody);
-            // Parse raw body to get the exact data that was sent
-            const rawBody = req.rawBody;
-            const rawParams = new URLSearchParams(rawBody);
-            const rawData = {};
-            // Convert URLSearchParams to object
-            for (const [key, value] of rawParams.entries()) {
-                rawData[key] = value;
-            }
-            console.log('Parsed raw data:', rawData);
-            // Use raw data for signature validation
-            const dataForSignature = Object.assign({}, rawData);
-            const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
-            console.log('Received signature:', receivedSignature);
-            console.log('Calculated signature (from raw):', calculatedSignature);
-            if (receivedSignature !== calculatedSignature) {
-                console.error('PayFast ITN signature validation failed (using raw data)');
-                console.error('Expected:', calculatedSignature);
-                console.error('Received:', receivedSignature);
-                // Log the data that was used for signature generation
-                console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
-                console.error('All raw data received:', JSON.stringify(rawData, null, 2));
-                res.status(400).send('Invalid signature');
-                return;
-            }
-        }
-        else {
-            // Fallback to existing method
-            console.log('Using parsed body for signature validation');
-            // Generate signature for validation using the same method
-            // Create a copy of the data to avoid modifying the original
-            const dataForSignature = Object.assign({}, pfData);
-            const calculatedSignature = generateSignature(dataForSignature, config.passphrase);
-            console.log('Received signature:', receivedSignature);
-            console.log('Calculated signature (from parsed):', calculatedSignature);
-            if (receivedSignature !== calculatedSignature) {
-                console.error('PayFast ITN signature validation failed (using parsed data)');
-                console.error('Expected:', calculatedSignature);
-                console.error('Received:', receivedSignature);
-                // Log the data that was used for signature generation
-                console.error('Data used for signature generation:', JSON.stringify(dataForSignature, null, 2));
-                console.error('All data received:', JSON.stringify(pfData, null, 2));
-                res.status(400).send('Invalid signature');
-                return;
-            }
-        }
-        // Step 2: Validate against PayFast server (recommended by PayFast documentation)
-        // Create validation data (remove signature and paymentId from pfData)
-        const validationData = Object.assign({}, pfData);
-        delete validationData.signature;
-        // Add validate route to validation data
-        validationData['ptp'] = 'yes'; // Ping PayFast to validate
-        // Convert validation data to query string
-        const validationParams = Object.entries(validationData)
-            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-            .join('&');
-        console.log('Validation data:', JSON.stringify(validationData, null, 2));
-        console.log('Validation params:', validationParams);
-        // Determine validation URL based on environment
-        const validationUrl = config.sandbox
-            ? 'https://sandbox.payfast.co.za/eng/query/validate'
-            : 'https://www.payfast.co.za/eng/query/validate';
-        console.log('Validating against PayFast server:', validationUrl);
-        // Send validation request to PayFast
-        const validationOptions = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Content-Length': validationParams.length
-            }
-        };
-        const validationReq = https_1.default.request(validationUrl, validationOptions, (validationRes) => {
-            console.log('PayFast validation request sent');
-            let responseData = '';
-            validationRes.on('data', (chunk) => {
-                responseData += chunk;
-            });
-            validationRes.on('end', async () => {
-                var _a, _b;
-                console.log('PayFast validation response received:', responseData);
-                console.log('Response length:', responseData.length);
-                console.log('Response type:', typeof responseData);
-                // Trim the response data as it might have whitespace
-                const trimmedResponse = responseData.trim();
-                console.log('Trimmed response:', trimmedResponse);
-                console.log('Trimmed response length:', trimmedResponse.length);
-                if (trimmedResponse !== 'VALID') {
-                    console.error('PayFast ITN server validation failed');
-                    console.error('Expected: VALID');
-                    console.error('Received:', trimmedResponse);
-                    console.error('Received length:', trimmedResponse.length);
-                    // Even if validation fails, we still process the payment if signature is valid
-                    // This is to prevent losing payments due to network issues
-                    console.warn('Continuing with local validation only');
-                }
-                else {
-                    console.log('PayFast ITN server validation succeeded');
-                }
-                // Process the payment notification
-                console.log('Processing PayFast ITN:', {
-                    payment_status: pfData.payment_status,
-                    m_payment_id: pfData.m_payment_id,
-                    pf_payment_id: pfData.pf_payment_id,
-                    amount_gross: pfData.amount_gross
-                });
-                // Process successful payment
-                if (pfData.payment_status === 'COMPLETE') {
+        console.log('🔔 PayFast ITN Handler Started');
+        // Always ACK immediately to prevent Vercel timeouts
+        res.status(200).send('OK');
+        const pfData = req.body || {};
+        // Trigger background processing asynchronously without blocking the handler
+        setTimeout(() => {
+            try {
+                const forwardedProto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+                const host = req.get('host');
+                const baseUrl = `${forwardedProto}://${host}`;
+                const processUrl = `${baseUrl}/api/payfast/process-itn`;
+                const payload = JSON.stringify({ pfData });
+                const token = process.env.ITN_PROCESS_TOKEN || 'local-dev-token';
+                void fetch(processUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-internal-token': token,
+                        'x-trigger-source': 'itn'
+                    },
+                    body: payload
+                }).then(async (r) => {
                     try {
-                        // Extract quote ID from payment ID (format: QUOTE-{quoteId}-{timestamp})
-                        let quoteId = '';
-                        if (pfData.m_payment_id && typeof pfData.m_payment_id === 'string') {
-                            const parts = pfData.m_payment_id.split('-');
-                            if (parts.length >= 3 && parts[0] === 'QUOTE') {
-                                // Extract the quote ID which is everything between QUOTE- and the timestamp
-                                // e.g., QUOTE-Q-20250805-4235-HDSEMPA-1722845798000
-                                // quoteId should be Q-20250805-4235-HDSEMPA
-                                quoteId = parts.slice(1, parts.length - 1).join('-');
-                            }
-                        }
-                        if (quoteId) {
-                            console.log('Creating invoice for successful payment, quote ID:', quoteId);
-                            // Import SupabaseService here to avoid circular dependencies
-                            const SupabaseService = (await Promise.resolve().then(() => __importStar(require('../services/supabase.service')))).default;
-                            // Use the quoteId directly (which is the quote_number) to create the invoice
-                            console.log('Using quote ID as quote number:', quoteId);
-                            // Prepare payment details for invoice creation
-                            const paymentDetails = {
-                                method: 'PayFast',
-                                reference: pfData.pf_payment_id,
-                                date: new Date().toISOString(),
-                                amount: parseFloat(pfData.amount_gross || '0'),
-                                status: 'paid'
-                            };
-                            // Create invoice record using the quote ID (which is the quote_number)
-                            const invoiceResult = await SupabaseService.createInvoice(quoteId, paymentDetails);
-                            if (invoiceResult.success) {
-                                console.log('Invoice created successfully:', (_a = invoiceResult.data) === null || _a === void 0 ? void 0 : _a.invoiceNumber);
-                                // Update invoice status to paid
-                                if ((_b = invoiceResult.data) === null || _b === void 0 ? void 0 : _b.invoiceNumber) {
-                                    await SupabaseService.updateInvoiceStatus(invoiceResult.data.invoiceNumber, 'paid');
-                                    console.log('Invoice status updated to paid');
-                                    // Generate and upload invoice PDF
-                                    try {
-                                        console.log('Starting invoice PDF generation for quote:', quoteId, 'invoice number:', invoiceResult.data.invoiceNumber);
-                                        const pdfResult = await SupabaseService.generateAndUploadInvoicePdf(quoteId, invoiceResult.data.invoiceNumber);
-                                        if (pdfResult.success && pdfResult.publicUrl) {
-                                            console.log('Invoice PDF generated and uploaded successfully:', pdfResult.publicUrl);
-                                        }
-                                        else {
-                                            console.error('Failed to generate or upload invoice PDF:', pdfResult.error);
-                                        }
-                                    }
-                                    catch (pdfError) {
-                                        console.error('Error generating/uploading invoice PDF:', pdfError);
-                                    }
-                                }
-                                // Update quote status to approved
-                                await SupabaseService.updateQuoteStatus(quoteId, 'approved');
-                                console.log('Quote status updated to approved');
-                                // NEW: Send email notification after successful payment
-                                try {
-                                    console.log('📧 EMAIL SENDING STARTED - This is where emails are sent!');
-                                    const emailService = new email_service_1.EmailService();
-                                    // TESTING: Send emails only to test email address for production testing
-                                    const testEmail = 'sifosman@gmail.com';
-                                    console.log('📧 Test email address:', testEmail);
-                                    // Get quote details for email
-                                    const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
-                                    if (quoteData.success && quoteData.data) {
-                                        const customerName = quoteData.data.customer_name || 'Customer';
-                                        const customerPhone = quoteData.data.customer_phone || '';
-                                        const quoteNumber = quoteData.data.quote_number || quoteId;
-                                        // Calculate the correct total amount to match the quote PDF
-                                        // This ensures the email total matches the PDF total exactly
-                                        let calculatedAmount = 0;
-                                        try {
-                                            // Parse the quote data to get sections and calculate total
-                                            const parsedQuoteData = typeof quoteData.data.data === 'string'
-                                                ? JSON.parse(quoteData.data.data)
-                                                : quoteData.data.data;
-                                            let boardTotal = 0;
-                                            let totalEdgingCost = 0;
-                                            let totalCuttingFee = 0;
-                                            if (parsedQuoteData && parsedQuoteData.sections) {
-                                                const sections = parsedQuoteData.sections;
-                                                // Calculate board total from sections
-                                                boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
-                                                boardTotal = parseFloat(boardTotal.toFixed(2));
-                                                // Calculate edging costs
-                                                sections.forEach((section) => {
-                                                    if (section.edging && section.edging.totalEdging > 0) {
-                                                        const edgingMeters = section.edging.totalEdging / 1000;
-                                                        const edgingCost = section.edging.cost !== undefined
-                                                            ? parseFloat(section.edging.cost)
-                                                            : (edgingMeters * 14); // R14 per meter default
-                                                        totalEdgingCost += edgingCost;
-                                                    }
-                                                });
-                                                totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
-                                                // Calculate cutting fee (R70 per board)
-                                                const totalBoardsUsed = sections.reduce((sum, section) => sum + (section.boardsNeeded || 0), 0);
-                                                totalCuttingFee = parseFloat((totalBoardsUsed * 70).toFixed(2));
-                                                // Calculate final total (same as quote PDF)
-                                                calculatedAmount = boardTotal + totalEdgingCost + totalCuttingFee;
-                                                console.log('📧 EMAIL TOTAL CALCULATION:');
-                                                console.log('  Board Total:', boardTotal);
-                                                console.log('  Edging Cost:', totalEdgingCost);
-                                                console.log('  Cutting Fee:', totalCuttingFee);
-                                                console.log('  Final Total:', calculatedAmount);
-                                                console.log('  PayFast Amount:', parseFloat(pfData.amount_gross || '0'));
-                                            }
-                                        }
-                                        catch (parseError) {
-                                            console.error('❌ Error calculating email amount from quote data:', parseError);
-                                        }
-                                        // Use calculated amount if available, otherwise fallback to PayFast amount
-                                        const amount = calculatedAmount > 0 ? calculatedAmount : parseFloat(pfData.amount_gross || '0');
-                                        console.log('📧 Using email amount:', amount, '(calculated:', calculatedAmount > 0, ')');
-                                        // Get PDF URLs from Supabase storage
-                                        const invoicePdfUrl = quoteData.data.invoice_url || '';
-                                        const cutlistPdfUrl = quoteData.data.cutlist_url || '';
-                                        // Prepare optimization details
-                                        const optimizationDetails = {
-                                            totalBoards: quoteData.data.total_boards,
-                                            totalLength: quoteData.data.total_length,
-                                            wastage: quoteData.data.wastage_percentage,
-                                            cutlistUrl: quoteData.data.cutlist_url
-                                        };
-                                        // Send email to test address for production testing
-                                        console.log('📧 Attempting to send email with data:', {
-                                            customerName,
-                                            customerPhone,
-                                            testEmail,
-                                            quoteNumber,
-                                            amount,
-                                            invoicePdfUrl,
-                                            cutlistPdfUrl,
-                                            optimizationDetails
-                                        });
-                                        await emailService.sendPaymentConfirmationEmail({
-                                            customerName,
-                                            customerPhone,
-                                            customerEmail: testEmail,
-                                            quoteNumber,
-                                            amount,
-                                            invoicePdfUrl,
-                                            cutlistPdfUrl,
-                                            optimizationDetails
-                                        });
-                                        console.log('✅ Payment confirmation email sent successfully to test email:', testEmail);
-                                        /* ORIGINAL LOGIC - COMMENTED FOR TESTING
-                                        // Get customer email from database
-                                        const customerEmail = await SupabaseService.getBestEmailForQuote(quoteId);
-                                        
-                                        if (customerEmail) {
-                                          // Send email notification to branch/customer
-                                          await emailService.sendPaymentConfirmationEmail({
-                                            customerName,
-                                            customerEmail,
-                                            quoteNumber,
-                                            amount,
-                                            invoicePath,
-                                            optimizationDetails
-                                          });
-                                          
-                                          console.log('Payment confirmation email sent successfully to:', customerEmail);
-                                        } else {
-                                          console.warn('No email address found for quote:', quoteId);
-                                        }
-                                        */
-                                    }
-                                }
-                                catch (emailError) {
-                                    console.error('❌ EMAIL SENDING FAILED:', emailError);
-                                    console.error('❌ Email error details:', {
-                                        message: emailError === null || emailError === void 0 ? void 0 : emailError.message,
-                                        stack: emailError === null || emailError === void 0 ? void 0 : emailError.stack,
-                                        name: emailError === null || emailError === void 0 ? void 0 : emailError.name
-                                    });
-                                    // Don't fail the payment processing if email fails
-                                }
-                            }
-                            else {
-                                console.error('Failed to create invoice:', invoiceResult.error);
-                            }
-                        }
-                        else {
-                            console.warn('Could not extract quote ID from payment ID:', pfData.m_payment_id);
-                        }
+                        const t = await r.text();
+                        console.log('Background ITN processing response:', r.status, t);
                     }
-                    catch (error) {
-                        console.error('Error processing successful payment:', error);
-                    }
-                }
-                res.status(200).send('OK');
-            });
-        });
-        validationReq.on('error', (error) => {
-            console.error('PayFast validation request error:', error);
-            // Even if validation fails, we still process the payment if signature is valid
-            // This is to prevent losing payments due to network issues
-            console.warn('Continuing with local validation only');
-            // Still process successful payments even if validation fails
-            if (pfData.payment_status === 'COMPLETE') {
-                console.log('Processing payment despite validation error');
-                // The payment processing logic would be duplicated here if needed
+                    catch (_a) { }
+                }).catch((e) => console.error('Background ITN processing error:', e));
             }
-            res.status(200).send('OK');
-        });
-        console.log('Sending validation request with params:', validationParams);
-        console.log('Validation params length:', validationParams.length);
-        validationReq.write(validationParams);
-        validationReq.end();
+            catch (bgErr) {
+                console.error('Failed to trigger background ITN processing:', bgErr);
+            }
+        }, 0);
+        return;
     }
     catch (error) {
         console.error('PayFast ITN handler error:', error);
@@ -706,6 +482,7 @@ const handlePaymentNotification = async (req, res) => {
 exports.handlePaymentNotification = handlePaymentNotification;
 // Handle successful payment return from PayFast
 const handlePaymentSuccess = async (req, res) => {
+    var _a, _b, _c, _d, _e, _f;
     try {
         console.log('PayFast payment success callback received');
         console.log('Query parameters:', req.query);
@@ -804,6 +581,47 @@ const handlePaymentSuccess = async (req, res) => {
             amount_gross,
             m_payment_id
         });
+        // Optional fallback: trigger background email/invoice processing from success route
+        // Controlled by env TRIGGER_ITN_FROM_SUCCESS to avoid duplicates if ITN also arrives
+        if ((process.env.TRIGGER_ITN_FROM_SUCCESS || 'false') === 'true') {
+            try {
+                const forwardedProto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+                const host = req.get('host');
+                const baseUrl = `${forwardedProto}://${host}`;
+                const processUrl = `${baseUrl}/api/payfast/process-itn`;
+                const pfData = {
+                    payment_status: 'COMPLETE',
+                    m_payment_id: m_payment_id || (quoteId ? `QUOTE-${quoteId}-${Date.now()}` : undefined),
+                    item_name: item_name || (quoteId ? `HDS Quote ${quoteId}` : undefined),
+                    email_address: ((_a = req.query) === null || _a === void 0 ? void 0 : _a.email) || ((_b = req.body) === null || _b === void 0 ? void 0 : _b.email) || undefined,
+                    name_first: ((_c = req.query) === null || _c === void 0 ? void 0 : _c.name_first) || ((_d = req.body) === null || _d === void 0 ? void 0 : _d.name_first) || undefined,
+                    name_last: ((_e = req.query) === null || _e === void 0 ? void 0 : _e.name_last) || ((_f = req.body) === null || _f === void 0 ? void 0 : _f.name_last) || undefined,
+                    amount_gross: amount_gross || undefined
+                };
+                const token = process.env.ITN_PROCESS_TOKEN || 'local-dev-token';
+                // Fire-and-forget; do not await to keep success page fast
+                // Node 18+ on Vercel has global fetch
+                void fetch(processUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-internal-token': token,
+                        'x-trigger-source': 'success'
+                    },
+                    body: JSON.stringify({ pfData })
+                }).then(async (r) => {
+                    try {
+                        const t = await r.text();
+                        console.log('🔁 Success fallback trigger response:', r.status, t);
+                    }
+                    catch (_a) { }
+                }).catch((e) => console.error('Success fallback trigger failed:', e));
+                console.log('🔁 Success handler triggered background process-itn (fallback)');
+            }
+            catch (e) {
+                console.error('Failed to trigger background from success handler:', e);
+            }
+        }
         // Skip database lookup - quote details will be handled by invoice controller
         // The success page only needs the quote ID for download functionality
         // Create simplified success page HTML with just success message and buttons

@@ -1140,6 +1140,25 @@ const SupabaseService = {
                        locationCode.toLowerCase().includes(branchName);
               });
             }
+
+            // New heuristic: use first 6 letters token from locationCode against trading_as (normalized)
+            if (!matchedBranch && locationCode && locationCode.length >= 4) {
+              const sixToken = locationCode.substring(0, Math.min(6, locationCode.length)).toUpperCase();
+              const normalize = (s: string) => s
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '')
+                .replace(/^HDS/, '');
+              console.log(`🔎 6-letter matching token derived: ${sixToken}`);
+              matchedBranch = allBranches.find(b => {
+                const norm = normalize(b.trading_as);
+                return norm.includes(sixToken) || sixToken.includes(norm.substring(0, Math.min(6, norm.length)));
+              });
+              if (matchedBranch) {
+                console.log(`✅ Matched branch via 6-letter token '${sixToken}': ${matchedBranch.trading_as}`);
+              } else {
+                console.log(`⚠️ No branch matched via 6-letter token '${sixToken}'`);
+              }
+            }
           }
           
           if (matchedBranch) {

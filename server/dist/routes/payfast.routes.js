@@ -39,6 +39,8 @@ router.post('/success', (req, res) => payfast_success_enhanced_controller_1.defa
 router.get('/cancel', payfast_controller_1.handlePaymentCancel);
 // Handle PayFast ITN (Instant Transaction Notification)
 router.post('/notify', payfast_controller_1.handlePaymentNotification);
+// Internal background processing endpoint for ITN (invoice + email)
+router.post('/process-itn', payfast_controller_1.processItnJob);
 // Debug endpoint to test signature generation
 router.get('/debug', payfast_debug_controller_1.debugPayFastSignature);
 // Test endpoint to manually trigger ITN and email sending
