@@ -601,7 +601,61 @@ export const handlePaymentNotification = async (req: Request, res: Response): Pr
                     const customerName = quoteData.data.customer_name || 'Customer';
                     const customerPhone = quoteData.data.customer_phone || '';
                     const quoteNumber = quoteData.data.quote_number || quoteId;
-                    const amount = parseFloat(pfData.amount_gross || '0');
+                    
+                    // Calculate the correct total amount to match the quote PDF
+                    // This ensures the email total matches the PDF total exactly
+                    let calculatedAmount = 0;
+                    
+                    try {
+                      // Parse the quote data to get sections and calculate total
+                      const parsedQuoteData = typeof quoteData.data.data === 'string' 
+                        ? JSON.parse(quoteData.data.data) 
+                        : quoteData.data.data;
+                      
+                      let boardTotal = 0;
+                      let totalEdgingCost = 0;
+                      let totalCuttingFee = 0;
+                      
+                      if (parsedQuoteData && parsedQuoteData.sections) {
+                        const sections = parsedQuoteData.sections;
+                        
+                        // Calculate board total from sections
+                        boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
+                        boardTotal = parseFloat(boardTotal.toFixed(2));
+                        
+                        // Calculate edging costs
+                        sections.forEach((section: any) => {
+                          if (section.edging && section.edging.totalEdging > 0) {
+                            const edgingMeters = section.edging.totalEdging / 1000;
+                            const edgingCost = section.edging.cost !== undefined 
+                              ? parseFloat(section.edging.cost)
+                              : (edgingMeters * 14); // R14 per meter default
+                            totalEdgingCost += edgingCost;
+                          }
+                        });
+                        totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
+                        
+                        // Calculate cutting fee (R70 per board)
+                        const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
+                        totalCuttingFee = parseFloat((totalBoardsUsed * 70).toFixed(2));
+                        
+                        // Calculate final total (same as quote PDF)
+                        calculatedAmount = boardTotal + totalEdgingCost + totalCuttingFee;
+                        
+                        console.log('📧 EMAIL TOTAL CALCULATION:');
+                        console.log('  Board Total:', boardTotal);
+                        console.log('  Edging Cost:', totalEdgingCost);
+                        console.log('  Cutting Fee:', totalCuttingFee);
+                        console.log('  Final Total:', calculatedAmount);
+                        console.log('  PayFast Amount:', parseFloat(pfData.amount_gross || '0'));
+                      }
+                    } catch (parseError) {
+                      console.error('❌ Error calculating email amount from quote data:', parseError);
+                    }
+                    
+                    // Use calculated amount if available, otherwise fallback to PayFast amount
+                    const amount = calculatedAmount > 0 ? calculatedAmount : parseFloat(pfData.amount_gross || '0');
+                    console.log('📧 Using email amount:', amount, '(calculated:', calculatedAmount > 0, ')');
                     
                     // Get PDF URLs from Supabase storage
                     const invoicePdfUrl = quoteData.data.invoice_url || '';

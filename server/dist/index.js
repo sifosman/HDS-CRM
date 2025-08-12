@@ -25,6 +25,7 @@ const invoice_routes_1 = __importDefault(require("./routes/invoice.routes"));
 const invoice_pdf_routes_1 = __importDefault(require("./routes/invoice-pdf.routes"));
 const email_test_routes_1 = __importDefault(require("./routes/email-test.routes"));
 const email_test_hardcoded_routes_1 = __importDefault(require("./routes/email-test-hardcoded.routes"));
+const test_email_routes_1 = __importDefault(require("./routes/test-email.routes"));
 const test_routes_1 = __importDefault(require("./routes/test.routes"));
 // Load environment variables
 dotenv_1.default.config();
@@ -59,6 +60,7 @@ app.use('/api/invoices', invoice_routes_1.default);
 app.use('/api/invoice-pdf', invoice_pdf_routes_1.default);
 app.use('/api/email', email_test_routes_1.default);
 app.use('/api/email-hardcoded', email_test_hardcoded_routes_1.default);
+app.use('/api/test-email', test_email_routes_1.default);
 app.use('/api/test', test_routes_1.default);
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {

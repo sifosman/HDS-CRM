@@ -89,7 +89,8 @@ const testITN = async (req, res) => {
                         customerEmail: testEmail,
                         quoteNumber,
                         amount,
-                        invoicePath,
+                        invoicePdfUrl: invoicePath,
+                        cutlistPdfUrl: './test-cutlist.pdf',
                         optimizationDetails
                     });
                     console.log('✅ Payment confirmation email sent successfully to test email:', testEmail);

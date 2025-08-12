@@ -553,11 +553,57 @@ const handlePaymentNotification = async (req, res) => {
                                     const quoteData = await SupabaseService.fetchQuoteByNumber(quoteId);
                                     if (quoteData.success && quoteData.data) {
                                         const customerName = quoteData.data.customer_name || 'Customer';
+                                        const customerPhone = quoteData.data.customer_phone || '';
                                         const quoteNumber = quoteData.data.quote_number || quoteId;
-                                        const amount = parseFloat(pfData.amount_gross || '0');
-                                        // Note: In serverless environments like Vercel, we can't generate PDF files directly
-                                        // The invoice PDF should be generated and stored in Supabase storage or sent as an attachment
-                                        const invoicePath = '';
+                                        // Calculate the correct total amount to match the quote PDF
+                                        // This ensures the email total matches the PDF total exactly
+                                        let calculatedAmount = 0;
+                                        try {
+                                            // Parse the quote data to get sections and calculate total
+                                            const parsedQuoteData = typeof quoteData.data.data === 'string'
+                                                ? JSON.parse(quoteData.data.data)
+                                                : quoteData.data.data;
+                                            let boardTotal = 0;
+                                            let totalEdgingCost = 0;
+                                            let totalCuttingFee = 0;
+                                            if (parsedQuoteData && parsedQuoteData.sections) {
+                                                const sections = parsedQuoteData.sections;
+                                                // Calculate board total from sections
+                                                boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
+                                                boardTotal = parseFloat(boardTotal.toFixed(2));
+                                                // Calculate edging costs
+                                                sections.forEach((section) => {
+                                                    if (section.edging && section.edging.totalEdging > 0) {
+                                                        const edgingMeters = section.edging.totalEdging / 1000;
+                                                        const edgingCost = section.edging.cost !== undefined
+                                                            ? parseFloat(section.edging.cost)
+                                                            : (edgingMeters * 14); // R14 per meter default
+                                                        totalEdgingCost += edgingCost;
+                                                    }
+                                                });
+                                                totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
+                                                // Calculate cutting fee (R70 per board)
+                                                const totalBoardsUsed = sections.reduce((sum, section) => sum + (section.boardsNeeded || 0), 0);
+                                                totalCuttingFee = parseFloat((totalBoardsUsed * 70).toFixed(2));
+                                                // Calculate final total (same as quote PDF)
+                                                calculatedAmount = boardTotal + totalEdgingCost + totalCuttingFee;
+                                                console.log('📧 EMAIL TOTAL CALCULATION:');
+                                                console.log('  Board Total:', boardTotal);
+                                                console.log('  Edging Cost:', totalEdgingCost);
+                                                console.log('  Cutting Fee:', totalCuttingFee);
+                                                console.log('  Final Total:', calculatedAmount);
+                                                console.log('  PayFast Amount:', parseFloat(pfData.amount_gross || '0'));
+                                            }
+                                        }
+                                        catch (parseError) {
+                                            console.error('❌ Error calculating email amount from quote data:', parseError);
+                                        }
+                                        // Use calculated amount if available, otherwise fallback to PayFast amount
+                                        const amount = calculatedAmount > 0 ? calculatedAmount : parseFloat(pfData.amount_gross || '0');
+                                        console.log('📧 Using email amount:', amount, '(calculated:', calculatedAmount > 0, ')');
+                                        // Get PDF URLs from Supabase storage
+                                        const invoicePdfUrl = quoteData.data.invoice_url || '';
+                                        const cutlistPdfUrl = quoteData.data.cutlist_url || '';
                                         // Prepare optimization details
                                         const optimizationDetails = {
                                             totalBoards: quoteData.data.total_boards,
@@ -568,18 +614,22 @@ const handlePaymentNotification = async (req, res) => {
                                         // Send email to test address for production testing
                                         console.log('📧 Attempting to send email with data:', {
                                             customerName,
+                                            customerPhone,
                                             testEmail,
                                             quoteNumber,
                                             amount,
-                                            invoicePath,
+                                            invoicePdfUrl,
+                                            cutlistPdfUrl,
                                             optimizationDetails
                                         });
                                         await emailService.sendPaymentConfirmationEmail({
                                             customerName,
+                                            customerPhone,
                                             customerEmail: testEmail,
                                             quoteNumber,
                                             amount,
-                                            invoicePath,
+                                            invoicePdfUrl,
+                                            cutlistPdfUrl,
                                             optimizationDetails
                                         });
                                         console.log('✅ Payment confirmation email sent successfully to test email:', testEmail);

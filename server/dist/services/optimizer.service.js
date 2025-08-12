@@ -750,6 +750,9 @@ const generateInvoicePdf = (quoteData, branchData) => {
             }
             // Extract sections data (same as quote PDF)
             const sections = parsedQuoteData.sections || [];
+            // Debug: Log the sections data structure
+            console.log('🔍 DEBUG: Sections data:', JSON.stringify(sections, null, 2));
+            console.log('🔍 DEBUG: Number of sections found:', sections.length);
             // Calculate totals using the same logic as quote PDF
             const EDGING_PRICE_PER_METER = 14; // R14 per meter
             let totalEdgingMeters = 0;
@@ -762,13 +765,77 @@ const generateInvoicePdf = (quoteData, branchData) => {
             try {
                 const parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
                 console.log('📊 Parsed quote data keys:', Object.keys(parsedQuoteData));
+                // Always calculate edging and cutting fees from sections data first
+                if (sections && sections.length > 0) {
+                    console.log('💰 Calculating edging and cutting fees from sections...');
+                    console.log('🔍 DEBUG: Processing', sections.length, 'sections');
+                    // Calculate sectionTotal for each section if not already calculated
+                    sections.forEach((section, index) => {
+                        console.log(`🔍 DEBUG: Section ${index}:`, {
+                            material: section.material,
+                            pricePerBoard: section.pricePerBoard,
+                            boardsNeeded: section.boardsNeeded,
+                            sectionTotal: section.sectionTotal,
+                            edging: section.edging
+                        });
+                        if (!section.sectionTotal && section.pricePerBoard && section.boardsNeeded) {
+                            section.sectionTotal = parseFloat((section.pricePerBoard * section.boardsNeeded).toFixed(2));
+                        }
+                    });
+                    // Calculate edging costs for each section
+                    sections.forEach((section, index) => {
+                        console.log(`🔍 DEBUG: Processing edging for section ${index}`);
+                        console.log(`🔍 DEBUG: Section edging data:`, section.edging);
+                        if (section.edging && section.edging.totalEdging > 0) {
+                            // Convert from mm to meters
+                            const edgingMeters = section.edging.totalEdging / 1000;
+                            totalEdgingMeters += edgingMeters;
+                            console.log(`🔍 DEBUG: Section ${index} edging: ${section.edging.totalEdging}mm = ${edgingMeters}m`);
+                            // Use the already calculated cost from the controller if available
+                            if (section.edging.cost !== undefined) {
+                                section.edgingCost = parseFloat(section.edging.cost);
+                                totalEdgingCost += section.edgingCost;
+                                console.log(`🔍 DEBUG: Using pre-calculated edging cost: R${section.edgingCost}`);
+                            }
+                            else {
+                                // Fallback calculation if cost not provided
+                                const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
+                                section.edgingCost = parseFloat(edgingCost);
+                                totalEdgingCost += section.edgingCost;
+                                console.log(`🔍 DEBUG: Calculated edging cost: ${edgingMeters}m × R${EDGING_PRICE_PER_METER} = R${edgingCost}`);
+                            }
+                        }
+                        else {
+                            section.edgingCost = 0;
+                            console.log(`🔍 DEBUG: Section ${index} has no edging`);
+                        }
+                    });
+                    // Round the total edging cost to 2 decimal places
+                    totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
+                    console.log(`🔍 DEBUG: Total edging meters: ${totalEdgingMeters}m`);
+                    console.log(`🔍 DEBUG: Total edging cost: R${totalEdgingCost}`);
+                    // Calculate cutting fee (R70 per board)
+                    const cuttingFeePerBoard = 70; // R70 per board
+                    const totalBoardsUsed = sections.reduce((sum, section) => sum + (section.boardsNeeded || 0), 0);
+                    totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+                    console.log(`🔍 DEBUG: Total boards used: ${totalBoardsUsed}`);
+                    console.log(`🔍 DEBUG: Cutting fee: ${totalBoardsUsed} boards × R${cuttingFeePerBoard} = R${totalCuttingFee}`);
+                    console.log('✅ Calculated fees - Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee);
+                }
+                else {
+                    console.log('⚠️ DEBUG: No sections found or sections array is empty');
+                }
+                // Now determine the base total amount
                 if (parsedQuoteData.totals) {
                     // Use the totals from the quote data
                     const quoteTotals = parsedQuoteData.totals;
                     console.log('💰 Found totals in quote data:', quoteTotals);
                     // The quote already has calculated totals - use the subtotal as our base
                     finalTotal = parseFloat(quoteTotals.subtotal || quoteTotals.finalTotal || 0);
-                    boardTotal = finalTotal; // For display purposes, treat the subtotal as board total
+                    // Calculate board total by subtracting fees from final total
+                    boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
+                    if (boardTotal < 0)
+                        boardTotal = finalTotal; // Fallback if calculation doesn't make sense
                     console.log('✅ Using quote subtotal as base amount:', finalTotal);
                 }
                 else if (parsedQuoteData.items && Array.isArray(parsedQuoteData.items)) {
@@ -779,49 +846,17 @@ const generateInvoicePdf = (quoteData, branchData) => {
                             finalTotal += parseFloat(item.total);
                         }
                     });
-                    boardTotal = finalTotal;
+                    boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
+                    if (boardTotal < 0)
+                        boardTotal = finalTotal;
                     console.log('✅ Calculated total from items:', finalTotal);
                 }
-                // If we still don't have amounts, try to use sections data (fallback)
-                if (finalTotal === 0 && sections && sections.length > 0) {
-                    console.log('⚠️ No amounts in quote data, trying sections fallback...');
-                    // Calculate sectionTotal for each section if not already calculated
-                    sections.forEach((section) => {
-                        if (!section.sectionTotal && section.pricePerBoard && section.boardsNeeded) {
-                            section.sectionTotal = parseFloat((section.pricePerBoard * section.boardsNeeded).toFixed(2));
-                        }
-                    });
+                else if (sections && sections.length > 0) {
+                    // Calculate from sections data
+                    console.log('📦 Calculating from sections...');
                     // Calculate initial grand total from board costs
                     boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
                     boardTotal = parseFloat(boardTotal.toFixed(2));
-                    // Calculate edging costs for each section
-                    sections.forEach((section) => {
-                        if (section.edging && section.edging.totalEdging > 0) {
-                            // Convert from mm to meters
-                            const edgingMeters = section.edging.totalEdging / 1000;
-                            totalEdgingMeters += edgingMeters;
-                            // Use the already calculated cost from the controller if available
-                            if (section.edging.cost !== undefined) {
-                                section.edgingCost = parseFloat(section.edging.cost);
-                                totalEdgingCost += section.edgingCost;
-                            }
-                            else {
-                                // Fallback calculation if cost not provided
-                                const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
-                                section.edgingCost = parseFloat(edgingCost);
-                                totalEdgingCost += section.edgingCost;
-                            }
-                        }
-                        else {
-                            section.edgingCost = 0;
-                        }
-                    });
-                    // Round the total edging cost to 2 decimal places
-                    totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
-                    // Calculate cutting fee (R70 per board)
-                    const cuttingFeePerBoard = 70; // R70 per board
-                    const totalBoardsUsed = sections.reduce((sum, section) => sum + (section.boardsNeeded || 0), 0);
-                    totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
                     // Calculate final grand total with edging and cutting fee included
                     finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
                     console.log('✅ Calculated from sections - Board:', boardTotal, 'Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee, 'Total:', finalTotal);
@@ -833,11 +868,27 @@ const generateInvoicePdf = (quoteData, branchData) => {
                 finalTotal = 0;
                 boardTotal = 0;
             }
-            // Ensure we have some amount to display (never show R0.00 if quote has a total)
-            if (finalTotal === 0 && quoteData.total && !isNaN(quoteData.total)) {
-                console.log('⚠️ Using quote.total as fallback:', quoteData.total);
+            // PRIORITY FIX: Calculate board total directly from sections (same as quote PDF)
+            if (sections && sections.length > 0) {
+                // Calculate board total from sections (same as quote PDF logic)
+                boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
+                boardTotal = parseFloat(boardTotal.toFixed(2));
+                console.log('✅ Board total calculated from sections:', boardTotal);
+                // Calculate final total as: board total + edging + cutting fee
+                finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
+                console.log('✅ Final total calculated as board + edging + cutting:', finalTotal);
+            }
+            else if (quoteData.total && !isNaN(quoteData.total)) {
+                console.log('⚠️ No sections data, using database quote.total as fallback:', quoteData.total);
                 finalTotal = parseFloat(quoteData.total);
-                boardTotal = finalTotal;
+                // Estimate board total (fallback only)
+                boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
+                if (boardTotal < 0)
+                    boardTotal = finalTotal * 0.8;
+            }
+            else {
+                console.log('⚠️ No sections or quote.total found, using calculated amounts');
+                // Keep the calculated amounts from above logic
             }
             // Define variables needed for PDF display
             const cuttingFeePerBoard = 70; // R70 per board (for display purposes)
@@ -902,20 +953,26 @@ const generateInvoicePdf = (quoteData, branchData) => {
             const email = effectiveBranchData.email_address || 'info@hdsgroup.co.za';
             doc.text(`Email: ${email}`, 50, doc.y + 5);
             console.log('🏢 Email displayed:', email);
-            // Invoice details (right side)
-            const rightColumnX = doc.page.width - 250;
+            // Invoice details (right side) - improved layout for long invoice numbers
+            const rightColumnX = doc.page.width - 280; // Increased width for longer content
             const topY = 120;
+            const labelWidth = 90; // Increased label width
+            const valueX = rightColumnX + labelWidth + 5; // 5px spacing between label and value
             doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
             doc.text('Invoice Details', rightColumnX, topY);
             doc.font('Helvetica').fontSize(10).fillColor('#333333');
-            doc.text('Invoice Number:', rightColumnX, topY + 20);
-            doc.text(invoiceNumber, rightColumnX + 80, topY + 20);
-            doc.text('Invoice Date:', rightColumnX, topY + 35);
-            doc.text(invoiceDate, rightColumnX + 80, topY + 35);
-            doc.text('Quote Number:', rightColumnX, topY + 50);
-            doc.text(quoteId, rightColumnX + 80, topY + 50);
-            doc.text('Quote Date:', rightColumnX, topY + 65);
-            doc.text(quoteDate, rightColumnX + 80, topY + 65);
+            // Invoice Number - use flexible layout with extra spacing
+            doc.text('Invoice Number:', rightColumnX, topY + 20, { width: labelWidth });
+            doc.text(invoiceNumber, valueX, topY + 20, { width: 180 }); // Allow wrapping if needed
+            // Invoice Date - increased spacing to prevent overlap with long invoice numbers
+            doc.text('Invoice Date:', rightColumnX, topY + 45, { width: labelWidth }); // Was topY + 35
+            doc.text(invoiceDate, valueX, topY + 45, { width: 180 });
+            // Quote Number - may also be long, increased spacing
+            doc.text('Quote Number:', rightColumnX, topY + 65, { width: labelWidth }); // Was topY + 50
+            doc.text(quoteId, valueX, topY + 65, { width: 180 });
+            // Quote Date - increased spacing
+            doc.text('Quote Date:', rightColumnX, topY + 85, { width: labelWidth }); // Was topY + 65
+            doc.text(quoteDate, valueX, topY + 85, { width: 180 });
             // Customer details
             doc.y = topY + 100;
             doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
@@ -924,73 +981,8 @@ const generateInvoicePdf = (quoteData, branchData) => {
             doc.text(customerName, 50, doc.y + 15);
             doc.text(projectName, 50, doc.y + 15);
             doc.moveDown(2);
-            // ===== INVOICE ITEMS TABLE (using same structure as quote PDF) =====
-            doc.moveDown(1);
-            // For each material section (same as quote PDF)
-            sections.forEach((section, index) => {
-                const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
-                // Check if we need a new page for this section
-                if (doc.y > doc.page.height - 200) {
-                    doc.addPage();
-                }
-                doc.moveDown(0.5);
-                // Create a compact table for this section's details
-                const startY = doc.y;
-                const colWidths = [200, 100, 100, 100];
-                const rowHeight = 20;
-                const currentStartY = doc.y;
-                // Header row
-                doc.rect(50, currentStartY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                    .fillAndStroke('#cccccc', '#000000');
-                doc.fontSize(10).fillColor('#000000');
-                doc.text('Description', 55, currentStartY + 8, { width: colWidths[0] - 10 });
-                doc.text('Board Size', 55 + colWidths[0], currentStartY + 8, { width: colWidths[1] - 10 });
-                doc.text('Quantity', 55 + colWidths[0] + colWidths[1], currentStartY + 8, { width: colWidths[2] - 10 });
-                doc.text('Price', 55 + colWidths[0] + colWidths[1] + colWidths[2], currentStartY + 8, { width: colWidths[3] - 10 });
-                // Data row
-                let currentY = currentStartY + rowHeight;
-                doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                    .stroke();
-                doc.text(material !== null && material !== void 0 ? material : '-', 55, currentY + 8, { width: colWidths[0] - 10 });
-                doc.text(boardSize !== null && boardSize !== void 0 ? boardSize : '-', 55 + colWidths[0], currentY + 8, { width: colWidths[1] - 10 });
-                const boardsNeededDisplay = boardsNeeded !== undefined && boardsNeeded !== null ? boardsNeeded.toString() : '-';
-                doc.text(boardsNeededDisplay, 55 + colWidths[0] + colWidths[1], currentY + 8, { width: colWidths[2] - 10 });
-                const priceDisplay = pricePerBoard !== undefined && pricePerBoard !== null ? `R ${pricePerBoard.toFixed(2)}` : '-';
-                doc.text(priceDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-                currentY += rowHeight;
-                // Section total
-                doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                    .stroke();
-                doc.fontSize(10).fillColor('#000000');
-                doc.text('Board Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-                const sectionTotalDisplay = sectionTotal !== undefined && sectionTotal !== null ? `R ${sectionTotal.toFixed(2)}` : '-';
-                doc.text(sectionTotalDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-                currentY += rowHeight;
-                // Add edging information if available
-                if (edging && edging.totalEdging > 0) {
-                    doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                        .stroke();
-                    const edgingMeters = (edging.totalEdging / 1000).toFixed(2);
-                    const edgingCost = section.edgingCost !== undefined
-                        ? section.edgingCost.toFixed(2)
-                        : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
-                    doc.fontSize(10).fillColor('#000000');
-                    doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m):`, 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-                    doc.text(`R ${edgingCost}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-                    currentY += rowHeight;
-                    // Combined section total (boards + edging)
-                    doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                        .fillAndStroke('#e6e6e6', '#000000');
-                    doc.fontSize(10).fillColor('#000000');
-                    doc.text('Section Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-                    const combinedTotal = (parseFloat(sectionTotal || '0') + parseFloat(edgingCost)).toFixed(2);
-                    doc.text(`R ${combinedTotal}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-                }
-                // Minimal spacing between sections
-                doc.moveDown(0.5);
-            });
-            // Add invoice summary (same as quote PDF summary)
-            doc.moveDown(0.5);
+            // ===== INVOICE SUMMARY (SIMPLIFIED) =====
+            doc.moveDown(2);
             const pageWidth = doc.page.width - 100;
             doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
             doc.text('Invoice Summary', 50, doc.y, { align: 'center', width: pageWidth });
@@ -1024,33 +1016,33 @@ const generateInvoicePdf = (quoteData, branchData) => {
             doc.text(`Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, 60, summaryY + 8);
             doc.text(`R ${totalCuttingFee.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
             summaryY += summaryRowHeight;
-            // Subtotal row (before VAT)
-            doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
-                .fillAndStroke('#f0f0f0', '#000000');
-            doc.fontSize(11).fillColor('#000000').font('Helvetica-Bold');
-            doc.text('SUBTOTAL (Excl. VAT):', 60, summaryY + 8);
-            doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-            summaryY += summaryRowHeight;
-            // VAT calculation (15.5%)
-            const VAT_RATE = 0.155; // 15.5%
-            const vatAmount = finalTotal * VAT_RATE;
-            // VAT row
-            doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
-                .stroke('#000000');
-            doc.fontSize(11).fillColor('#000000').font('Helvetica');
-            doc.text('VAT (15.5%):', 60, summaryY + 8);
-            doc.text(`R ${vatAmount.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-            summaryY += summaryRowHeight;
-            // Total including VAT
-            const totalIncludingVAT = finalTotal + vatAmount;
-            // Grand total row (including VAT)
+            // Grand total row (no VAT)
             doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
                 .fillAndStroke('#003366', '#000000');
             doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-            doc.text('TOTAL (Incl. VAT):', 60, summaryY + 8);
-            doc.text(`R ${totalIncludingVAT.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+            doc.text('TOTAL:', 60, summaryY + 8);
+            doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
             doc.font('Helvetica');
-            // Payment details section removed per user request
+            // Payment Status Section
+            doc.moveDown(1);
+            // Payment status box
+            const paymentBoxY = doc.y + 10;
+            const paymentBoxWidth = doc.page.width - 100;
+            const paymentBoxHeight = 40;
+            // Green background for paid status
+            doc.rect(50, paymentBoxY, paymentBoxWidth, paymentBoxHeight)
+                .fillAndStroke('#d4edda', '#28a745');
+            // Payment status text
+            doc.fontSize(14).fillColor('#155724').font('Helvetica-Bold');
+            doc.text('✓ PAYMENT RECEIVED', 50, paymentBoxY + 12, {
+                align: 'center',
+                width: paymentBoxWidth
+            });
+            doc.fontSize(10).fillColor('#155724').font('Helvetica');
+            doc.text('This invoice has been paid in full', 50, paymentBoxY + 28, {
+                align: 'center',
+                width: paymentBoxWidth
+            });
             // Footer
             doc.fontSize(8).fillColor('#666666');
             doc.text('Thank you for your business!', 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
@@ -1760,13 +1752,20 @@ exports.generateQuotePdf = generateQuotePdf;
  * @param layout Layout algorithm type
  * @returns Promise with the public URL and ID of the uploaded PDF
  */
-const generateAndUploadOptimizationPdf = async (solution, unit, cutWidth = 3, layout = 0) => {
+const generateAndUploadOptimizationPdf = async (solution, unit, cutWidth = 3, layout = 0, cutlistId) => {
     try {
         // Generate PDF buffer using existing generatePdfWithBuffer function
         const pdfResult = await (0, exports.generatePdfWithBuffer)(solution, unit, cutWidth, layout);
-        // Create filename with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const fileName = `solution_${pdfResult.id}.pdf`;
+        // Create filename using cutlistId if provided, otherwise use UUID format
+        let fileName;
+        if (cutlistId) {
+            fileName = `${cutlistId}.pdf`;
+            console.log('✅ Using cutlistId for PDF filename:', fileName);
+        }
+        else {
+            fileName = `solution_${pdfResult.id}.pdf`;
+            console.log('⚠️ Using UUID format for PDF filename (no cutlistId provided):', fileName);
+        }
         // Import Supabase service dynamically to avoid circular dependencies
         const SupabaseService = (await Promise.resolve().then(() => __importStar(require('./supabase.service')))).default;
         // Upload to Supabase cutlists bucket
@@ -1947,10 +1946,10 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
     doc.text(cutWidthConverted.toString(), summaryStartX + summaryColWidths[0] + 5, currentSummaryY + 8, { width: summaryColWidths[1] });
     doc.text('Saw blade thickness', summaryStartX + summaryColWidths[0] + summaryColWidths[1] + 5, currentSummaryY + 8, { width: summaryColWidths[2] });
     doc.moveDown(3);
-    // CRITICAL FIX: Disable detailed diagrams completely to prevent excessive pages
-    const MAX_DETAILED_PAGES = 0; // Completely disabled - only show summary table
-    const stockPiecesToShow = 0; // No detailed diagrams
-    console.log(`📄 PDF Generation: Limiting to ${stockPiecesToShow} of ${solution.stockPieces.length} detailed diagrams`);
+    // BALANCED APPROACH: Include comprehensive cut pieces table + limited detailed diagrams
+    const MAX_DETAILED_PAGES = 5; // Show first 5 stock pieces with detailed diagrams
+    const stockPiecesToShow = Math.min(solution.stockPieces.length, MAX_DETAILED_PAGES);
+    console.log(`📄 PDF Generation: Including comprehensive cut pieces table + ${stockPiecesToShow} of ${solution.stockPieces.length} detailed diagrams`);
     // Add comprehensive summary table for ALL stock pieces first
     doc.addPage(); // Start detailed content on new page to prevent overlap
     // Title for complete summary
@@ -2017,11 +2016,147 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
         doc.text(`${wastePercentage}%`, allStockTableStartX + allStockColWidths[0] + allStockColWidths[1] + allStockColWidths[2] + allStockColWidths[3] + allStockColWidths[4] + 5, currentRowY + 5, { width: allStockColWidths[5] });
         currentRowY += allStockRowHeight;
     });
-    // Detailed diagrams completely disabled to prevent excessive pages
-    // All information is available in the summary table above
-    console.log(`📄 PDF Generation Complete: Summary table only, no detailed diagrams`);
-    // All detailed diagram code has been completely removed to prevent excessive page generation
-    // Summary table is now at the beginning of the PDF - no duplicate needed
+    // ADD COMPREHENSIVE CUT PIECES TABLE - showing ALL individual cut pieces with details
+    doc.addPage(); // New page for cut pieces table
+    // Title for cut pieces table
+    doc.rect(50, 50, doc.page.width - 100, 40)
+        .fillAndStroke('#003366', '#000000');
+    doc.fontSize(16)
+        .fillColor('#FFFFFF')
+        .text('Complete Cut Pieces Details', 50, 60, { align: 'center', width: doc.page.width - 100 });
+    doc.moveDown(2);
+    // Create detailed cut pieces table
+    const cutPiecesTableStartX = 50;
+    const cutPiecesTableStartY = doc.y;
+    const cutPiecesColWidths = [40, 50, 60, 60, 50, 50, 80, 80]; // ID, Stock, Width, Length, X, Y, Area, Label
+    const cutPiecesRowHeight = 16;
+    // Draw cut pieces table header
+    doc.rect(cutPiecesTableStartX, cutPiecesTableStartY, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
+        .fillAndStroke('#e0e0e0', '#000000');
+    doc.fontSize(8).fillColor('#000000');
+    doc.text('ID', cutPiecesTableStartX + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[0] });
+    doc.text('Stock', cutPiecesTableStartX + cutPiecesColWidths[0] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[1] });
+    doc.text('Width', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[2] });
+    doc.text('Length', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[3] });
+    doc.text('X Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[4] });
+    doc.text('Y Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[5] });
+    doc.text('Area', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[6] });
+    doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[7] });
+    // Draw data rows for ALL cut pieces
+    let cutPiecesCurrentRowY = cutPiecesTableStartY + cutPiecesRowHeight;
+    const cutPiecesMaxRowsPerPage = 40; // More rows per page for cut pieces
+    let cutPieceRowCount = 0;
+    solution.stockPieces.forEach((stockPiece, stockIndex) => {
+        stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
+            // Add new page if we exceed the row limit
+            if (cutPieceRowCount > 0 && cutPieceRowCount % cutPiecesMaxRowsPerPage === 0) {
+                doc.addPage();
+                cutPiecesCurrentRowY = 80; // Reset Y position for new page
+                // Redraw header on new page
+                doc.rect(cutPiecesTableStartX, cutPiecesCurrentRowY - cutPiecesRowHeight, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
+                    .fillAndStroke('#e0e0e0', '#000000');
+                doc.fontSize(8).fillColor('#000000');
+                doc.text('ID', cutPiecesTableStartX + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[0] });
+                doc.text('Stock', cutPiecesTableStartX + cutPiecesColWidths[0] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[1] });
+                doc.text('Width', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[2] });
+                doc.text('Length', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[3] });
+                doc.text('X Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[4] });
+                doc.text('Y Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[5] });
+                doc.text('Area', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[6] });
+                doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[7] });
+            }
+            // Calculate values for this cut piece
+            const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
+            const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
+            const cutX = convertUnit(cutPiece.x, 0, unit).toFixed(1);
+            const cutY = convertUnit(cutPiece.y, 0, unit).toFixed(1);
+            const cutAreaFormatted = (parseFloat(cutWidth) * parseFloat(cutLength)).toFixed(1);
+            const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `P${stockIndex + 1}-${cutIndex + 1}`;
+            // Draw row
+            doc.rect(cutPiecesTableStartX, cutPiecesCurrentRowY, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
+                .stroke();
+            doc.fontSize(7).fillColor('#000000');
+            doc.text(`${cutPieceRowCount + 1}`, cutPiecesTableStartX + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[0] });
+            doc.text(`${stockIndex + 1}`, cutPiecesTableStartX + cutPiecesColWidths[0] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[1] });
+            doc.text(`${cutWidth}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[2] });
+            doc.text(`${cutLength}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[3] });
+            doc.text(`${cutX}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[4] });
+            doc.text(`${cutY}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[5] });
+            doc.text(`${cutAreaFormatted}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[6] });
+            doc.text(`${cutLabel}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[7] });
+            cutPiecesCurrentRowY += cutPiecesRowHeight;
+            cutPieceRowCount++;
+        });
+    });
+    console.log(`📄 Cut Pieces Table Complete: Added ${cutPieceRowCount} individual cut pieces with full details`);
+    // ADD LIMITED DETAILED DIAGRAMS for first 5 stock pieces
+    console.log(`📄 Adding detailed diagrams for first ${stockPiecesToShow} stock pieces`);
+    solution.stockPieces.slice(0, stockPiecesToShow).forEach((stockPiece, index) => {
+        // Add page for each stock piece
+        doc.addPage();
+        // Title for this stock piece
+        doc.rect(50, 50, doc.page.width - 100, 40)
+            .fillAndStroke('#003366', '#000000');
+        doc.fontSize(16)
+            .fillColor('#FFFFFF')
+            .text(`Stock Piece ${index + 1} - Detailed Layout`, 50, 60, { align: 'center', width: doc.page.width - 100 });
+        doc.moveDown(2);
+        // Stock piece dimensions
+        const stockWidth = convertUnit(stockPiece.width, 0, unit);
+        const stockLength = convertUnit(stockPiece.length, 0, unit);
+        const unitLabel = unit === 0 ? 'mm' : unit === 1 ? 'in' : 'ft';
+        doc.fontSize(12).fillColor('#000000');
+        doc.text(`Stock Dimensions: ${stockWidth.toFixed(1)} × ${stockLength.toFixed(1)} ${unitLabel}`, 50, doc.y + 10);
+        doc.text(`Cut Pieces: ${stockPiece.cutPieces.length}`, 50, doc.y + 5);
+        doc.moveDown(1);
+        // Calculate scale to fit diagram on page
+        const diagramMaxWidth = 400;
+        const diagramMaxHeight = 300;
+        const scaleX = diagramMaxWidth / stockPiece.width;
+        const scaleY = diagramMaxHeight / stockPiece.length;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+        const diagramStartX = 100;
+        const diagramStartY = doc.y + 20;
+        const scaledWidth = stockPiece.width * scale;
+        const scaledLength = stockPiece.length * scale;
+        // Draw stock piece outline
+        doc.rect(diagramStartX, diagramStartY, scaledWidth, scaledLength)
+            .stroke('#000000');
+        // Draw cut pieces
+        stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
+            const scaledX = cutPiece.x * scale;
+            const scaledY = cutPiece.y * scale;
+            const scaledCutWidth = cutPiece.width * scale;
+            const scaledCutLength = cutPiece.length * scale;
+            // Draw cut piece rectangle
+            doc.rect(diagramStartX + scaledX, diagramStartY + scaledY, scaledCutWidth, scaledCutLength)
+                .fillAndStroke('#e6f3ff', '#0066cc');
+            // Add cut piece label if there's space
+            if (scaledCutWidth > 30 && scaledCutLength > 15) {
+                const cutLabel = cutPiece.externalId ? `${cutPiece.externalId}` : `${cutIndex + 1}`;
+                doc.fontSize(8).fillColor('#000000');
+                doc.text(cutLabel, diagramStartX + scaledX + 2, diagramStartY + scaledY + 2, { width: scaledCutWidth - 4, height: scaledCutLength - 4 });
+            }
+        });
+        // Add dimensions to diagram
+        doc.fontSize(10).fillColor('#666666');
+        doc.text(`${stockWidth.toFixed(1)}${unitLabel}`, diagramStartX, diagramStartY + scaledLength + 10);
+        doc.text(`${stockLength.toFixed(1)}${unitLabel}`, diagramStartX + scaledWidth + 10, diagramStartY);
+        // Add cut pieces list below diagram
+        doc.moveDown(8);
+        doc.fontSize(10).fillColor('#000000');
+        doc.text('Cut Pieces in this Stock:', 50, doc.y);
+        doc.moveDown(0.5);
+        stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
+            const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
+            const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
+            const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `Piece ${cutIndex + 1}`;
+            doc.fontSize(8);
+            doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`, 70, doc.y);
+            doc.moveDown(0.3);
+        });
+    });
+    console.log(`📄 Detailed Diagrams Complete: Added ${stockPiecesToShow} detailed cutting layouts`);
     // Add simple footer without page switching to avoid buffer errors
     console.log(`Adding simple footer to current page only.`);
     try {

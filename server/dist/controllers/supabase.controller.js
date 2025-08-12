@@ -246,7 +246,8 @@ const supabaseController = {
                             customerEmail: recipientEmail,
                             quoteNumber: quoteNumberFromData,
                             amount,
-                            invoicePath,
+                            invoicePdfUrl: invoicePath,
+                            cutlistPdfUrl: './test-cutlist.pdf',
                             optimizationDetails
                         });
                         console.log('Payment confirmation email sent successfully to:', recipientEmail);

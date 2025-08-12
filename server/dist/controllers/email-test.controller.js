@@ -42,7 +42,8 @@ const testPaymentEmail = async (req, res) => {
             customerEmail,
             quoteNumber,
             amount: parseFloat(amount),
-            invoicePath: invoicePath || './test-invoice.pdf',
+            invoicePdfUrl: invoicePath || './test-invoice.pdf',
+            cutlistPdfUrl: './test-cutlist.pdf',
             optimizationDetails: optimizationDetails || {
                 totalBoards: 5,
                 totalLength: 2400,

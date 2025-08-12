@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const payfast_controller_1 = require("../controllers/payfast.controller");
 const payfast_debug_controller_1 = require("../controllers/payfast-debug.controller");
 const payfast_test_itn_controller_1 = require("../controllers/payfast-test-itn.controller");
+const payfast_manual_itn_controller_1 = require("../controllers/payfast-manual-itn.controller");
 // Import the enhanced PayFast success controller
 const payfast_success_enhanced_controller_1 = __importDefault(require("../controllers/payfast-success-enhanced.controller"));
 const router = express_1.default.Router();
@@ -42,6 +43,8 @@ router.post('/notify', payfast_controller_1.handlePaymentNotification);
 router.get('/debug', payfast_debug_controller_1.debugPayFastSignature);
 // Test endpoint to manually trigger ITN and email sending
 router.get('/test-itn', payfast_test_itn_controller_1.testITN);
+// Manual test endpoint to simulate PayFast ITN for real quotes
+router.get('/simulate-itn', payfast_manual_itn_controller_1.simulatePayFastITN);
 // Test endpoint for signature verification
 router.get('/test-signature', (req, res) => {
     const testData = {

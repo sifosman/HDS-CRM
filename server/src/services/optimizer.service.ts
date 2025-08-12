@@ -2355,11 +2355,11 @@ export const generatePdfWithBuffer = async (
 
   doc.moveDown(3);
 
-  // CRITICAL FIX: Disable detailed diagrams completely to prevent excessive pages
-  const MAX_DETAILED_PAGES = 0; // Completely disabled - only show summary table
-  const stockPiecesToShow = 0; // No detailed diagrams
+  // BALANCED APPROACH: Include comprehensive cut pieces table + limited detailed diagrams
+  const MAX_DETAILED_PAGES = 5; // Show first 5 stock pieces with detailed diagrams
+  const stockPiecesToShow = Math.min(solution.stockPieces.length, MAX_DETAILED_PAGES);
   
-  console.log(`📄 PDF Generation: Limiting to ${stockPiecesToShow} of ${solution.stockPieces.length} detailed diagrams`);
+  console.log(`📄 PDF Generation: Including comprehensive cut pieces table + ${stockPiecesToShow} of ${solution.stockPieces.length} detailed diagrams`);
   
   // Add comprehensive summary table for ALL stock pieces first
   doc.addPage(); // Start detailed content on new page to prevent overlap
@@ -2442,15 +2442,185 @@ export const generatePdfWithBuffer = async (
     
     currentRowY += allStockRowHeight;
   });
+
+  // ADD COMPREHENSIVE CUT PIECES TABLE - showing ALL individual cut pieces with details
+  doc.addPage(); // New page for cut pieces table
   
-  // Detailed diagrams completely disabled to prevent excessive pages
-  // All information is available in the summary table above
+  // Title for cut pieces table
+  doc.rect(50, 50, doc.page.width - 100, 40)
+     .fillAndStroke('#003366', '#000000');
   
-  console.log(`📄 PDF Generation Complete: Summary table only, no detailed diagrams`);
+  doc.fontSize(16)
+     .fillColor('#FFFFFF')
+     .text('Complete Cut Pieces Details', 50, 60, { align: 'center', width: doc.page.width - 100 });
   
-  // All detailed diagram code has been completely removed to prevent excessive page generation
+  doc.moveDown(2);
   
-  // Summary table is now at the beginning of the PDF - no duplicate needed
+  // Create detailed cut pieces table
+  const cutPiecesTableStartX = 50;
+  const cutPiecesTableStartY = doc.y;
+  const cutPiecesColWidths = [40, 50, 60, 60, 50, 50, 80, 80]; // ID, Stock, Width, Length, X, Y, Area, Label
+  const cutPiecesRowHeight = 16;
+  
+  // Draw cut pieces table header
+  doc.rect(cutPiecesTableStartX, cutPiecesTableStartY, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
+     .fillAndStroke('#e0e0e0', '#000000');
+  
+  doc.fontSize(8).fillColor('#000000');
+  doc.text('ID', cutPiecesTableStartX + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[0] });
+  doc.text('Stock', cutPiecesTableStartX + cutPiecesColWidths[0] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[1] });
+  doc.text('Width', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[2] });
+  doc.text('Length', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[3] });
+  doc.text('X Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[4] });
+  doc.text('Y Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[5] });
+  doc.text('Area', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[6] });
+  doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[7] });
+  
+  // Draw data rows for ALL cut pieces
+  let cutPiecesCurrentRowY = cutPiecesTableStartY + cutPiecesRowHeight;
+  const cutPiecesMaxRowsPerPage = 40; // More rows per page for cut pieces
+  let cutPieceRowCount = 0;
+  
+  solution.stockPieces.forEach((stockPiece, stockIndex) => {
+    stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
+      // Add new page if we exceed the row limit
+      if (cutPieceRowCount > 0 && cutPieceRowCount % cutPiecesMaxRowsPerPage === 0) {
+        doc.addPage();
+        cutPiecesCurrentRowY = 80; // Reset Y position for new page
+        
+        // Redraw header on new page
+        doc.rect(cutPiecesTableStartX, cutPiecesCurrentRowY - cutPiecesRowHeight, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
+           .fillAndStroke('#e0e0e0', '#000000');
+        
+        doc.fontSize(8).fillColor('#000000');
+        doc.text('ID', cutPiecesTableStartX + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[0] });
+        doc.text('Stock', cutPiecesTableStartX + cutPiecesColWidths[0] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[1] });
+        doc.text('Width', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[2] });
+        doc.text('Length', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[3] });
+        doc.text('X Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[4] });
+        doc.text('Y Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[5] });
+        doc.text('Area', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[6] });
+        doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[7] });
+      }
+      
+      // Calculate values for this cut piece
+      const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
+      const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
+      const cutX = convertUnit(cutPiece.x, 0, unit).toFixed(1);
+      const cutY = convertUnit(cutPiece.y, 0, unit).toFixed(1);
+      const cutAreaFormatted = (parseFloat(cutWidth) * parseFloat(cutLength)).toFixed(1);
+      const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `P${stockIndex + 1}-${cutIndex + 1}`;
+      
+      // Draw row
+      doc.rect(cutPiecesTableStartX, cutPiecesCurrentRowY, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
+         .stroke();
+      
+      doc.fontSize(7).fillColor('#000000');
+      doc.text(`${cutPieceRowCount + 1}`, cutPiecesTableStartX + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[0] });
+      doc.text(`${stockIndex + 1}`, cutPiecesTableStartX + cutPiecesColWidths[0] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[1] });
+      doc.text(`${cutWidth}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[2] });
+      doc.text(`${cutLength}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[3] });
+      doc.text(`${cutX}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[4] });
+      doc.text(`${cutY}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[5] });
+      doc.text(`${cutAreaFormatted}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[6] });
+      doc.text(`${cutLabel}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[7] });
+      
+      cutPiecesCurrentRowY += cutPiecesRowHeight;
+      cutPieceRowCount++;
+    });
+  });
+
+  console.log(`📄 Cut Pieces Table Complete: Added ${cutPieceRowCount} individual cut pieces with full details`);
+
+  // ADD LIMITED DETAILED DIAGRAMS for first 5 stock pieces
+  console.log(`📄 Adding detailed diagrams for first ${stockPiecesToShow} stock pieces`);
+  
+  solution.stockPieces.slice(0, stockPiecesToShow).forEach((stockPiece, index) => {
+    // Add page for each stock piece
+    doc.addPage();
+
+    // Title for this stock piece
+    doc.rect(50, 50, doc.page.width - 100, 40)
+       .fillAndStroke('#003366', '#000000');
+    
+    doc.fontSize(16)
+       .fillColor('#FFFFFF')
+       .text(`Stock Piece ${index + 1} - Detailed Layout`, 50, 60, { align: 'center', width: doc.page.width - 100 });
+    
+    doc.moveDown(2);
+
+    // Stock piece dimensions
+    const stockWidth = convertUnit(stockPiece.width, 0, unit);
+    const stockLength = convertUnit(stockPiece.length, 0, unit);
+    const unitLabel = unit === 0 ? 'mm' : unit === 1 ? 'in' : 'ft';
+    
+    doc.fontSize(12).fillColor('#000000');
+    doc.text(`Stock Dimensions: ${stockWidth.toFixed(1)} × ${stockLength.toFixed(1)} ${unitLabel}`, 50, doc.y + 10);
+    doc.text(`Cut Pieces: ${stockPiece.cutPieces.length}`, 50, doc.y + 5);
+    doc.moveDown(1);
+
+    // Calculate scale to fit diagram on page
+    const diagramMaxWidth = 400;
+    const diagramMaxHeight = 300;
+    const scaleX = diagramMaxWidth / stockPiece.width;
+    const scaleY = diagramMaxHeight / stockPiece.length;
+    const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+
+    const diagramStartX = 100;
+    const diagramStartY = doc.y + 20;
+    const scaledWidth = stockPiece.width * scale;
+    const scaledLength = stockPiece.length * scale;
+
+    // Draw stock piece outline
+    doc.rect(diagramStartX, diagramStartY, scaledWidth, scaledLength)
+       .stroke('#000000');
+
+    // Draw cut pieces
+    stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
+      const scaledX = cutPiece.x * scale;
+      const scaledY = cutPiece.y * scale;
+      const scaledCutWidth = cutPiece.width * scale;
+      const scaledCutLength = cutPiece.length * scale;
+
+      // Draw cut piece rectangle
+      doc.rect(diagramStartX + scaledX, diagramStartY + scaledY, scaledCutWidth, scaledCutLength)
+         .fillAndStroke('#e6f3ff', '#0066cc');
+
+      // Add cut piece label if there's space
+      if (scaledCutWidth > 30 && scaledCutLength > 15) {
+        const cutLabel = cutPiece.externalId ? `${cutPiece.externalId}` : `${cutIndex + 1}`;
+        doc.fontSize(8).fillColor('#000000');
+        doc.text(cutLabel, 
+          diagramStartX + scaledX + 2, 
+          diagramStartY + scaledY + 2, 
+          { width: scaledCutWidth - 4, height: scaledCutLength - 4 }
+        );
+      }
+    });
+
+    // Add dimensions to diagram
+    doc.fontSize(10).fillColor('#666666');
+    doc.text(`${stockWidth.toFixed(1)}${unitLabel}`, diagramStartX, diagramStartY + scaledLength + 10);
+    doc.text(`${stockLength.toFixed(1)}${unitLabel}`, diagramStartX + scaledWidth + 10, diagramStartY);
+
+    // Add cut pieces list below diagram
+    doc.moveDown(8);
+    doc.fontSize(10).fillColor('#000000');
+    doc.text('Cut Pieces in this Stock:', 50, doc.y);
+    doc.moveDown(0.5);
+
+    stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
+      const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
+      const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
+      const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `Piece ${cutIndex + 1}`;
+      
+      doc.fontSize(8);
+      doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`, 70, doc.y);
+      doc.moveDown(0.3);
+    });
+  });
+
+  console.log(`📄 Detailed Diagrams Complete: Added ${stockPiecesToShow} detailed cutting layouts`);
 
   // Add simple footer without page switching to avoid buffer errors
   console.log(`Adding simple footer to current page only.`);
