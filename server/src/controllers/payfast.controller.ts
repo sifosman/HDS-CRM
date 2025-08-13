@@ -469,6 +469,13 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
         const quoteRes = await SupabaseService.fetchQuoteByNumber(quoteId);
         if (quoteRes.success && quoteRes.data) {
           const q = quoteRes.data;
+          console.log('🔎 Quote record URL fields:', {
+            pdf_url: q.pdf_url,
+            quote_pdf_url: q.quote_pdf_url,
+            cutlist_pdf_url: q.cutlist_pdf_url,
+            cutlist_url: q.cutlist_url,
+            quote_number: q.quote_number
+          });
           quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
           // Use only the real cutlist PDF URL from the cutlists bucket (do not fall back to cutlist_url which may be a quote link)
           cutlistPdfUrl = q.cutlist_pdf_url || undefined;
@@ -478,9 +485,23 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
             wastage: q.wastage_percentage ?? undefined,
             cutlistUrl: q.cutlist_url ?? undefined
           };
+          // Fallback: if cutlistPdfUrl not present, construct public URL based on standard naming: cutlist-<quote_number lowercased>.pdf
+          if (!cutlistPdfUrl) {
+            const supabaseUrl = process.env.SUPABASE_URL || '';
+            const qn = (q.quote_number || quoteId || '').toString();
+            if (supabaseUrl && qn) {
+              cutlistPdfUrl = `${supabaseUrl}/storage/v1/object/public/cutlists/cutlist-${qn.toLowerCase()}.pdf`;
+              console.log('ℹ️ Using constructed cutlist PDF URL fallback:', cutlistPdfUrl);
+            }
+          }
         }
         const invRes = await SupabaseService.fetchInvoiceByQuoteId(quoteId);
         if (invRes.success && invRes.data) {
+          console.log('🔎 Invoice record URL fields:', {
+            pdf_url: invRes.data.pdf_url,
+            invoice_pdf_url: invRes.data.invoice_pdf_url,
+            invoice_number: invRes.data.invoice_number
+          });
           // Support possible schema variations for invoice PDF URL
           invoicePdfUrl = invRes.data.pdf_url || invRes.data.invoice_pdf_url || undefined;
         }
@@ -491,6 +512,11 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
 
     try {
       console.log('📧 Sending payment confirmation email...');
+      console.log('📎 Final PDF URLs for email:', {
+        quotePdfUrl,
+        invoicePdfUrl,
+        cutlistPdfUrl
+      });
       await emailService.sendPaymentConfirmationEmail({
         customerName,
         customerEmail: recipient,
