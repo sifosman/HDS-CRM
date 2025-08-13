@@ -882,31 +882,75 @@ const SupabaseService = {
         (quoteData.trading_as as string) ||
         (quoteData.branch as string) ||
         (quoteData.branch_trading_as as string);
+      console.log('📧 Branch email resolution: quote fields', {
+        quoteId,
+        filename: quoteData.filename,
+        quote_number: quoteData.quote_number,
+        trading_as: quoteData.trading_as,
+        branch: quoteData.branch,
+        branch_trading_as: quoteData.branch_trading_as,
+      });
 
-      // 2) Fallback: attempt to extract code from filename or quote_number (Q-YYYYMMDD-NNNN-BRANCH)
-      if (!branchName) {
-        const identifier = (quoteData.filename || quoteData.quote_number || '') as string;
-        const parts = identifier.split('-');
-        if (parts.length >= 4) {
-          const branchCode = parts[3];
-          // Try to match branches whose trading_as contains the code
-          const { data: approx, error: approxErr } = await supabase
-            .from('branches')
-            .select('email_address, trading_as')
-            .ilike('trading_as', `%${branchCode}%`)
-            .limit(1)
-            .maybeSingle();
-          if (!approxErr && approx) {
-            return approx.email_address || null;
+      // 2) Attempt to extract branch code from identifier (Q-YYYYMMDD-NNNN-BRANCH) and match by abbreviation
+      const identifier = (quoteData.filename || quoteData.quote_number || quoteId || '') as string;
+      const parts = identifier.split('-');
+      if (parts.length >= 4) {
+        const branchCodeRaw = parts[3] as string;
+        const branchCode = (branchCodeRaw || '').toUpperCase();
+        console.log('📧 Branch email resolution: derived code from identifier', {
+          identifier,
+          branchCodeRaw,
+          branchCode,
+        });
+
+        // Strategy A: match by derived abbreviation from trading_as (3 letters per word, concatenated)
+        const { data: allBranches, error: listErr } = await supabase
+          .from('branches')
+          .select('email_address, trading_as');
+        if (!listErr && allBranches && allBranches.length > 0) {
+          const deriveAbbr = (name: string) => name
+            .split(/\s+/)
+            .map(w => w.substring(0, 3))
+            .join('')
+            .replace(/[^a-z]/gi, '')
+            .toUpperCase();
+
+          // Try exact abbr match (with and without leading 'HDS ' prefix considered)
+          let matched = allBranches.find(b => deriveAbbr(b.trading_as) === branchCode);
+          if (!matched) {
+            matched = allBranches.find(b => deriveAbbr(b.trading_as.replace(/^HDS\s+/i, '')) === branchCode);
           }
+          if (matched) {
+            console.log('📧 Branch email resolution: matched by abbreviation', {
+              matchedTradingAs: matched.trading_as,
+              email: matched.email_address,
+            });
+            return matched.email_address || null;
+          }
+        }
+
+        // Strategy B: partial name include fallback using branch code fragment
+        const { data: approx, error: approxErr } = await supabase
+          .from('branches')
+          .select('email_address, trading_as')
+          .ilike('trading_as', `%${branchCodeRaw}%`)
+          .limit(1)
+          .maybeSingle();
+        if (!approxErr && approx) {
+          console.log('📧 Branch email resolution: matched by partial name', {
+            matchedTradingAs: approx.trading_as,
+            email: approx.email_address,
+          });
+          return approx.email_address || null;
         }
       }
 
       if (!branchName) {
+        console.warn('📧 Branch email resolution: no branch name derived for quote', { quoteId });
         return null;
       }
 
-      // Final: exact match on branches by trading_as
+      // Final: exact match on branches by trading_as if available
       const { data: branchRow, error: branchErr } = await supabase
         .from('branches')
         .select('email_address')
@@ -917,6 +961,10 @@ const SupabaseService = {
         console.error('Error fetching branch email from branches table:', branchErr);
         return null;
       }
+      console.log('📧 Branch email resolution: exact match by trading_as', {
+        branchName,
+        email: branchRow?.email_address,
+      });
       return branchRow?.email_address || null;
     } catch (error) {
       console.error('Error in getBranchEmailByQuote:', error);
@@ -933,6 +981,11 @@ const SupabaseService = {
       if (branchEmail) return branchEmail;
 
       const customerEmail = await this.getCustomerEmailFromQuote(quoteId);
+      if (!customerEmail) {
+        console.warn('📧 Best email resolution failed for quote. Neither branch nor customer email found.', { quoteId });
+      } else {
+        console.log('📧 Best email resolution fell back to customer email', { quoteId, customerEmail });
+      }
       return customerEmail;
     } catch (error) {
       console.error('Error in getBestEmailForQuote:', error);
