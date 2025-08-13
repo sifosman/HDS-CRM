@@ -504,6 +504,26 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
           });
           // Support possible schema variations for invoice PDF URL
           invoicePdfUrl = invRes.data.pdf_url || invRes.data.invoice_pdf_url || undefined;
+          // Fallback: derive latest invoice PDF public URL from storage if DB fields are missing
+          if (!invoicePdfUrl && invRes.data.invoice_number) {
+            try {
+              const listRes = await SupabaseService.listInvoicePdfs(invRes.data.invoice_number);
+              if (listRes.success && Array.isArray(listRes.data) && listRes.data.length > 0) {
+                const files = listRes.data.slice();
+                files.sort((a: any, b: any) => b.name.localeCompare(a.name));
+                const latest = files[0];
+                const supabaseUrl = process.env.SUPABASE_URL || '';
+                if (supabaseUrl) {
+                  invoicePdfUrl = `${supabaseUrl}/storage/v1/object/public/invoices/${latest.name}`;
+                  console.log('ℹ️ Using constructed invoice PDF URL fallback:', invoicePdfUrl);
+                }
+              } else {
+                console.log('ℹ️ No invoice PDFs found in storage for invoice_number:', invRes.data.invoice_number);
+              }
+            } catch (e) {
+              console.warn('⚠️ Invoice PDF fallback construction failed:', e);
+            }
+          }
         }
       } catch (enrichErr) {
         console.warn('⚠️ Email enrichment (PDF URLs) failed:', enrichErr);
