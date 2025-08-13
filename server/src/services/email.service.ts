@@ -18,6 +18,7 @@ export interface PaymentConfirmationData {
   customerPhone?: string;
   quoteNumber: string;
   amount: number;
+  quotePdfUrl?: string;
   invoicePdfUrl?: string;
   cutlistPdfUrl?: string;
   optimizationDetails: {
@@ -116,6 +117,13 @@ export class EmailService {
           <h3 style="margin-top: 0; color: #155724;">📎 Download Documents</h3>
           <p style="color: #155724; margin-bottom: 10px;">Click the links below to download the required documents:</p>
           <div style="margin: 15px 0;">
+            ${data.quotePdfUrl ? `
+              <div style="margin: 10px 0;">
+                <a href="${data.quotePdfUrl}" style="display: inline-block; background: #fd7e14; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  📝 Download Quote PDF
+                </a>
+              </div>
+            ` : ''}
             ${data.invoicePdfUrl ? `
               <div style="margin: 10px 0;">
                 <a href="${data.invoicePdfUrl}" style="display: inline-block; background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
@@ -130,7 +138,7 @@ export class EmailService {
                 </a>
               </div>
             ` : ''}
-            ${!data.invoicePdfUrl && !data.cutlistPdfUrl ? '<p style="color: #856404;">Documents will be available shortly.</p>' : ''}
+            ${!data.quotePdfUrl && !data.invoicePdfUrl && !data.cutlistPdfUrl ? '<p style="color: #856404;">Documents will be available shortly.</p>' : ''}
           </div>
         </div>
         

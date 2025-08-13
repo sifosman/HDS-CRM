@@ -458,6 +458,35 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
     const customerName = [pfData.name_first, pfData.name_last].filter(Boolean).join(' ').trim() || 'Customer';
     const emailService = new EmailService();
 
+    // Enrich email with PDF URLs and optimization details when possible
+    let quotePdfUrl: string | undefined;
+    let invoicePdfUrl: string | undefined;
+    let cutlistPdfUrl: string | undefined;
+    let optimizationDetails: { totalBoards?: number; totalLength?: number; wastage?: number; cutlistUrl?: string } = {};
+
+    if (quoteId) {
+      try {
+        const quoteRes = await SupabaseService.fetchQuoteByNumber(quoteId);
+        if (quoteRes.success && quoteRes.data) {
+          const q = quoteRes.data;
+          quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
+          cutlistPdfUrl = q.cutlist_pdf_url || q.cutlist_url || undefined;
+          optimizationDetails = {
+            totalBoards: q.total_boards ?? undefined,
+            totalLength: q.total_length ?? undefined,
+            wastage: q.wastage_percentage ?? undefined,
+            cutlistUrl: q.cutlist_url ?? undefined
+          };
+        }
+        const invRes = await SupabaseService.fetchInvoiceByQuoteId(quoteId);
+        if (invRes.success && invRes.data) {
+          invoicePdfUrl = invRes.data.pdf_url || undefined;
+        }
+      } catch (enrichErr) {
+        console.warn('⚠️ Email enrichment (PDF URLs) failed:', enrichErr);
+      }
+    }
+
     try {
       console.log('📧 Sending payment confirmation email...');
       await emailService.sendPaymentConfirmationEmail({
@@ -465,7 +494,10 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
         customerEmail: recipient,
         quoteNumber: quoteId || (pfData.m_payment_id || 'UNKNOWN'),
         amount,
-        optimizationDetails: {}
+        quotePdfUrl,
+        invoicePdfUrl,
+        cutlistPdfUrl,
+        optimizationDetails
       });
       console.log('✅ Email sent successfully to', recipient);
     } catch (mailErr) {
