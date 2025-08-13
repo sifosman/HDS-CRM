@@ -14,21 +14,10 @@ import payFastSuccessEnhancedController from '../controllers/payfast-success-enh
 
 const router = express.Router();
 
-// Middleware to capture raw body for PayFast notifications
-const rawBodyMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  if (req.originalUrl.endsWith('/notify')) {
-    // Capture raw body for signature validation
-    let rawBody = '';
-    req.on('data', (chunk: Buffer) => {
-      rawBody += chunk.toString();
-    });
-    req.on('end', () => {
-      (req as any).rawBody = rawBody;
-      next();
-    });
-  } else {
-    next();
-  }
+// Middleware placeholder (do not consume body for /notify). If raw body is ever needed,
+// implement using express.raw on a separate route or reconstruct from req.body.
+const rawBodyMiddleware = (_req: Request, _res: Response, next: NextFunction) => {
+  next();
 };
 
 // Apply raw body middleware
@@ -45,7 +34,8 @@ router.post('/success', (req: Request, res: Response) => payFastSuccessEnhancedC
 router.get('/cancel', handlePaymentCancel);
 
 // Handle PayFast ITN (Instant Transaction Notification)
-router.post('/notify', handlePaymentNotification);
+// Ensure x-www-form-urlencoded bodies are parsed for PayFast posts
+router.post('/notify', express.urlencoded({ extended: false }), handlePaymentNotification);
 
 // Internal background processing endpoint for ITN (invoice + email)
 router.post('/process-itn', processItnJob);
