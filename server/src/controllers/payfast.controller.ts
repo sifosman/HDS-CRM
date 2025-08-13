@@ -470,7 +470,8 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
         if (quoteRes.success && quoteRes.data) {
           const q = quoteRes.data;
           quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
-          cutlistPdfUrl = q.cutlist_pdf_url || q.cutlist_url || undefined;
+          // Use only the real cutlist PDF URL from the cutlists bucket (do not fall back to cutlist_url which may be a quote link)
+          cutlistPdfUrl = q.cutlist_pdf_url || undefined;
           optimizationDetails = {
             totalBoards: q.total_boards ?? undefined,
             totalLength: q.total_length ?? undefined,
@@ -480,7 +481,8 @@ export const processItnJob = async (req: Request, res: Response): Promise<void> 
         }
         const invRes = await SupabaseService.fetchInvoiceByQuoteId(quoteId);
         if (invRes.success && invRes.data) {
-          invoicePdfUrl = invRes.data.pdf_url || undefined;
+          // Support possible schema variations for invoice PDF URL
+          invoicePdfUrl = invRes.data.pdf_url || invRes.data.invoice_pdf_url || undefined;
         }
       } catch (enrichErr) {
         console.warn('⚠️ Email enrichment (PDF URLs) failed:', enrichErr);
