@@ -836,21 +836,27 @@ const SupabaseService = {
   },
 
   /**
-   * Get customer email from quote
+   * Get customer email from quote using quote number/filename resolution
    */
   async getCustomerEmailFromQuote(quoteId: string): Promise<string | null> {
     try {
+      // Prefer resilient lookup via filename/quote_number
+      const resolved = await this.fetchQuoteByNumber(quoteId);
+      if (resolved?.success && resolved.data) {
+        return resolved.data.customer_email || null;
+      }
+
+      // Fallback: direct by quote_number
       const { data, error } = await supabase
         .from('quotes')
         .select('customer_email')
-        .eq('id', quoteId)
+        .eq('quote_number', quoteId)
         .single();
 
       if (error) {
-        console.error('Error fetching customer email from quote:', error);
+        console.error('Error fetching customer email from quote (by quote_number):', error);
         return null;
       }
-
       return data?.customer_email || null;
     } catch (error) {
       console.error('Error in getCustomerEmailFromQuote:', error);
@@ -859,37 +865,59 @@ const SupabaseService = {
   },
 
   /**
-   * Get branch email from branch_details table
+   * Get branch email for a quote. Attempts to resolve branch from quote fields or filename suffix.
    */
   async getBranchEmailByQuote(quoteId: string): Promise<string | null> {
     try {
-      // First, get the quote to find the branch/trading name
-      const { data: quoteData, error: quoteError } = await supabase
-        .from('quotes')
-        .select('customer_name, branch_name')
-        .eq('id', quoteId)
-        .single();
-
-      if (quoteError) {
-        console.error('Error fetching quote for branch email:', quoteError);
+      // Resolve the quote using resilient lookup first
+      const quoteRes = await this.fetchQuoteByNumber(quoteId);
+      const quoteData = quoteRes?.success ? quoteRes.data : null;
+      if (!quoteData) {
+        console.warn('Could not resolve quote for branch email using quoteId:', quoteId);
         return null;
       }
 
-      // Try to get branch details using customer_name or branch_name
-      const branchName = quoteData.branch_name || quoteData.customer_name;
-      
-      const { data: branchData, error: branchError } = await supabase
-        .from('branch_details')
-        .select('email')
+      // 1) Try explicit branch fields on quotes
+      let branchName: string | undefined =
+        (quoteData.trading_as as string) ||
+        (quoteData.branch as string) ||
+        (quoteData.branch_trading_as as string);
+
+      // 2) Fallback: attempt to extract code from filename or quote_number (Q-YYYYMMDD-NNNN-BRANCH)
+      if (!branchName) {
+        const identifier = (quoteData.filename || quoteData.quote_number || '') as string;
+        const parts = identifier.split('-');
+        if (parts.length >= 4) {
+          const branchCode = parts[3];
+          // Try to match branches whose trading_as contains the code
+          const { data: approx, error: approxErr } = await supabase
+            .from('branches')
+            .select('email_address, trading_as')
+            .ilike('trading_as', `%${branchCode}%`)
+            .limit(1)
+            .maybeSingle();
+          if (!approxErr && approx) {
+            return approx.email_address || null;
+          }
+        }
+      }
+
+      if (!branchName) {
+        return null;
+      }
+
+      // Final: exact match on branches by trading_as
+      const { data: branchRow, error: branchErr } = await supabase
+        .from('branches')
+        .select('email_address')
         .eq('trading_as', branchName)
         .single();
 
-      if (branchError) {
-        console.error('Error fetching branch email:', branchError);
+      if (branchErr) {
+        console.error('Error fetching branch email from branches table:', branchErr);
         return null;
       }
-
-      return branchData?.email || null;
+      return branchRow?.email_address || null;
     } catch (error) {
       console.error('Error in getBranchEmailByQuote:', error);
       return null;
@@ -901,13 +929,9 @@ const SupabaseService = {
    */
   async getBestEmailForQuote(quoteId: string): Promise<string | null> {
     try {
-      // Try branch email first
       const branchEmail = await this.getBranchEmailByQuote(quoteId);
-      if (branchEmail) {
-        return branchEmail;
-      }
+      if (branchEmail) return branchEmail;
 
-      // Fallback to customer email
       const customerEmail = await this.getCustomerEmailFromQuote(quoteId);
       return customerEmail;
     } catch (error) {
