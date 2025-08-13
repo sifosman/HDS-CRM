@@ -44,19 +44,67 @@ export class EmailService {
       fromName: process.env.FROM_NAME || 'HDS Group'
     };
 
-    this.transporter = nodemailer.createTransport({
+    // Default fromEmail to SMTP user if not explicitly provided
+    if (!this.config.fromEmail && this.config.user) {
+      this.config.fromEmail = this.config.user;
+    }
+
+    // Log effective email config (excluding password) for diagnostics
+    console.log('[EmailService] SMTP config:', {
       host: this.config.host,
       port: this.config.port,
       secure: this.config.secure,
+      user: this.config.user ? '(set)' : '(empty)',
+      fromEmail: this.config.fromEmail,
+      fromName: this.config.fromName
+    });
+
+    // Use stricter defaults: port 465 => secure TLS; port 587 => STARTTLS
+    const useSecure = this.config.secure || this.config.port === 465;
+    const isServerless = !!(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL);
+    const requireTls = process.env.SMTP_REQUIRE_TLS ? process.env.SMTP_REQUIRE_TLS === 'true' : !useSecure;
+    const enablePool = process.env.SMTP_POOL === 'true' && !isServerless;
+
+    this.transporter = nodemailer.createTransport({
+      host: this.config.host,
+      port: this.config.port,
+      secure: useSecure,
       auth: {
         user: this.config.user,
         pass: this.config.pass
+      },
+      // Connection pool can improve reliability with some SMTP servers
+      pool: enablePool,
+      maxConnections: 2,
+      maxMessages: 50,
+      // Optional verbose debugging
+      logger: process.env.SMTP_DEBUG === 'true',
+      debug: process.env.SMTP_DEBUG === 'true',
+      // Enforce STARTTLS when not on implicit TLS
+      requireTLS: requireTls,
+      // Allow disabling STARTTLS negotiation entirely if provider expects plain 587
+      ignoreTLS: process.env.SMTP_IGNORE_TLS === 'true',
+      // Helpful timeouts to avoid hanging sockets
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 30000,
+      // Some hosted SMTPs present non-standard cert chains
+      tls: {
+        // Keep strict by default; if you face cert issues, set SMTP_TLS_INSECURE=true
+        rejectUnauthorized: process.env.SMTP_TLS_INSECURE === 'true' ? false : true
       }
-    });
+    } as any);
   }
 
   async sendPaymentConfirmationEmail(data: PaymentConfirmationData): Promise<void> {
     try {
+      // Verify connection before sending to catch networking/cert issues early
+      try {
+        await this.transporter.verify();
+        console.log('[EmailService] SMTP verify succeeded');
+      } catch (verr) {
+        console.warn('[EmailService] SMTP verify failed, attempting to send anyway:', verr);
+      }
       const mailOptions: any = {
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to: data.customerEmail,
@@ -67,9 +115,29 @@ export class EmailService {
       // Note: Using download links instead of attachments for better reliability
       // PDF files will be linked in the email template for branch staff to download
 
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('Payment confirmation email sent:', result.messageId);
-      console.log('Email includes download links for PDFs');
+      // Retry transient errors once
+      const isTransient = (err: any) => {
+        const msg = (err && (err.code || err.message || '')) + '';
+        return /ETIMEDOUT|ECONNRESET|ECONNREFUSED|EPIPE|Unexpected socket close/i.test(msg);
+      };
+      let attempt = 0;
+      const maxAttempts = 2;
+      while (true) {
+        try {
+          attempt++;
+          const result = await this.transporter.sendMail(mailOptions);
+          console.log('Payment confirmation email sent:', result.messageId);
+          console.log('Email includes download links for PDFs');
+          break;
+        } catch (sendErr) {
+          console.warn(`[EmailService] send attempt ${attempt} failed:`, sendErr);
+          if (attempt >= maxAttempts || !isTransient(sendErr)) {
+            throw sendErr;
+          }
+          // backoff
+          await new Promise(res => setTimeout(res, 1500));
+        }
+      }
     } catch (error) {
       console.error('Error sending payment confirmation email:', error);
       throw error;
