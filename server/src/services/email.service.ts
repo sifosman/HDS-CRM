@@ -109,7 +109,16 @@ export class EmailService {
         from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
         to: data.customerEmail,
         subject: `New Order - Payment Confirmed for Quote ${data.quoteNumber}`,
-        html: this.generatePaymentConfirmationTemplate(data)
+        html: this.generatePaymentConfirmationTemplate(data),
+        // Plain-text alternative improves deliverability for business mail servers
+        text: this.generatePlainTextPaymentConfirmation(data),
+        // Align SMTP envelope MAIL FROM with visible From to satisfy DMARC alignment
+        envelope: {
+          from: this.config.fromEmail,
+          to: data.customerEmail
+        },
+        // Allow configuring a Reply-To distinct from the SMTP sender
+        replyTo: process.env.REPLY_TO_EMAIL || this.config.fromEmail
       };
 
       // Note: Using download links instead of attachments for better reliability
@@ -222,6 +231,46 @@ export class EmailService {
         </div>
       </div>
     `;
+  }
+
+  // Text-only fallback to accompany the HTML version
+  private generatePlainTextPaymentConfirmation(data: PaymentConfirmationData): string {
+    const optimization = data.optimizationDetails || {};
+    const lines: string[] = [];
+    lines.push('New Order Received - Payment Confirmed');
+    lines.push('');
+    lines.push('ACTION REQUIRED: A customer has paid for their quote. Please process this order and contact the customer.');
+    lines.push('');
+    lines.push('Customer Information');
+    lines.push(`Name: ${data.customerName}`);
+    if (data.customerPhone) lines.push(`Contact Number: ${data.customerPhone}`);
+    lines.push(`Email: ${data.customerEmail}`);
+    lines.push('');
+    lines.push('Order Details');
+    lines.push(`Quote Number: ${data.quoteNumber}`);
+    lines.push(`Amount Paid: R${data.amount.toFixed(2)}`);
+    lines.push('Payment Status: CONFIRMED');
+    lines.push('');
+    lines.push('Accepted Quotation');
+    if (optimization.totalBoards !== undefined) lines.push(`Total Boards: ${optimization.totalBoards}`);
+    if (optimization.totalLength !== undefined) lines.push(`Total Length: ${optimization.totalLength}mm`);
+    if (optimization.wastage !== undefined) lines.push(`Wastage: ${optimization.wastage}%`);
+    if (optimization.cutlistUrl) lines.push(`Quote Link: ${optimization.cutlistUrl}`);
+    lines.push('');
+    lines.push('Download Documents');
+    if (data.quotePdfUrl) lines.push(`Quote PDF: ${data.quotePdfUrl}`);
+    if (data.invoicePdfUrl) lines.push(`Invoice PDF: ${data.invoicePdfUrl}`);
+    if (data.cutlistPdfUrl) lines.push(`Cutlist PDF: ${data.cutlistPdfUrl}`);
+    if (!data.quotePdfUrl && !data.invoicePdfUrl && !data.cutlistPdfUrl) lines.push('Documents will be available shortly.');
+    lines.push('');
+    lines.push('Next Steps:');
+    lines.push('1) Review the cutlist and invoice');
+    lines.push('2) Contact the customer to confirm order details');
+    lines.push('3) Schedule production and delivery');
+    lines.push('4) Update the customer on progress');
+    lines.push('');
+    lines.push('HDS Group - Order Management System');
+    return lines.join('\n');
   }
 
   async testConnection(): Promise<boolean> {
