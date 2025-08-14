@@ -490,7 +490,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     setSnackbarOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate all piece fields
     if (cutPieces.some(p => !p.separator && (!p.length || !p.width || !p.quantity))) {
       setSnackbarMessage('Please fill in all dimensions and quantity for each piece.');
@@ -715,7 +715,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     setDimensionErrors(prev => {
       const next = { ...prev };
       for (const piece of piecesInSection) {
-        if (piece.separator) continue as any;
+        if (piece.separator) continue;
         const errs = validatePieceAgainstLimits(piece, limitsForValidation);
         if (errs.length || errs.width) next[piece.id] = errs; else delete next[piece.id];
       }
