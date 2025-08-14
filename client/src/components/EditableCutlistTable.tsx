@@ -83,6 +83,11 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const [highQuantityDialogOpen, setHighQuantityDialogOpen] = useState<boolean>(false);
   const [pendingHighQuantityPieces, setPendingHighQuantityPieces] = useState<Array<{id: string, quantity: number}>>([]);
   
+  // Dimension validation state
+  const [materialSizeCache, setMaterialSizeCache] = useState<Record<string, { maxLength: number; maxWidth: number; raw: string }>>({});
+  const [dimensionErrors, setDimensionErrors] = useState<Record<string, { length?: string; width?: string }>>({});
+  const [showDimensionValidation, setShowDimensionValidation] = useState<boolean>(false);
+  
   // Default material options as fallback
   const DEFAULT_MATERIAL_CATEGORIES = [
     "White Melamine",
@@ -493,6 +498,56 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       setSnackbarOpen(true);
       return;
     }
+    
+    // Dimension validation across sections (length/width vs material size limits)
+    try {
+      const sectionsForValidation = sections.filter(s => s.material && s.material.trim() !== '');
+      let firstInvalid: { piece: CutPiece; field: 'length' | 'width'; limits?: { maxLength: number; maxWidth: number } } | null = null;
+      for (const section of sectionsForValidation) {
+        const limits = await ensureMaterialSizes(section.material);
+        const limitsForValidation = limits ? { maxLength: limits.maxLength, maxWidth: limits.maxWidth } : null;
+        // If no limits available, skip validation for this material
+        if (!limitsForValidation) continue;
+        // Validate pieces and collect errors
+        for (const piece of section.pieces) {
+          const errs = validatePieceAgainstLimits(piece, limitsForValidation);
+          if (errs.length || errs.width) {
+            if (!firstInvalid) firstInvalid = { piece, field: errs.length ? 'length' as const : 'width' as const, limits: limitsForValidation };
+          }
+        }
+        // Update error state for this section
+        await validateAndSetErrorsForSection(section.material, section.pieces);
+      }
+      if (firstInvalid) {
+        setIsValidating(true);
+        setShowDimensionValidation(true);
+        const targetId = `${firstInvalid.field}-field-${firstInvalid.piece.id}`;
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.boxShadow = '0 0 8px 2px rgba(244, 67, 54, 0.6)';
+          setTimeout(() => {
+            const input = el.querySelector('input') as HTMLInputElement | null;
+            if (input) {
+              input.focus();
+              input.select?.();
+              input.animate([
+                { boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.7)' },
+                { boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)' },
+              ], { duration: 1500, iterations: 3 });
+            }
+            setTimeout(() => { el.style.boxShadow = ''; setIsValidating(false); }, 4500);
+          }, 400);
+        }
+        const lim = firstInvalid.limits;
+        setSnackbarMessage(`⚠️ Some dimensions exceed sheet size${lim ? ` (${lim.maxLength} x ${lim.maxWidth} ${unit})` : ''}. Please adjust.`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.error('Dimension validation failed:', e);
+    }
     // Material required validation
     if (requireMaterialValidation) {
       const sections = getSections();
@@ -585,8 +640,90 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     setSnackbarSeverity('info');
     setSnackbarOpen(true);
   };
+  
+  // ---------------------------
+  // Dimension validation helpers
+  // ---------------------------
+  const parseSizesString = (sizes: string | null | undefined): { maxLength: number; maxWidth: number } | null => {
+    if (!sizes || typeof sizes !== 'string') return null;
+    const pairs: Array<{ a: number; b: number }> = [];
+    const regex = /(\d{2,5})\s*[xX×*]\s*(\d{2,5})/g;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(sizes)) !== null) {
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      if (!isNaN(a) && !isNaN(b)) {
+        pairs.push({ a, b });
+      }
+    }
+    if (pairs.length === 0) return null;
+    // Take the maximum across all size options to be permissive
+    let maxA = 0, maxB = 0;
+    for (const p of pairs) {
+      maxA = Math.max(maxA, p.a);
+      maxB = Math.max(maxB, p.b);
+    }
+    // Normalize: ensure maxLength is the larger side
+    const maxLength = Math.max(maxA, maxB);
+    const maxWidth = Math.min(maxA, maxB);
+    return { maxLength, maxWidth };
+  };
+  
+  const ensureMaterialSizes = async (materialName?: string): Promise<{ maxLength: number; maxWidth: number; raw: string } | null> => {
+    const key = (materialName || '').trim();
+    if (!key) return null;
+    if (materialSizeCache[key]) return materialSizeCache[key];
+    try {
+      const result = await getProductPricing(key);
+      if (result?.success && result?.data) {
+        const sizesRaw: string | null = result.data.sizes ?? null;
+        const parsed = parseSizesString(sizesRaw);
+        if (parsed) {
+          const cacheEntry = { ...parsed, raw: sizesRaw || '' };
+          setMaterialSizeCache(prev => ({ ...prev, [key]: cacheEntry }));
+          return cacheEntry;
+        }
+        // Cache a marker to avoid refetching sizes that don't have limits
+        setMaterialSizeCache(prev => ({ ...prev, [key]: { maxLength: Number.MAX_SAFE_INTEGER, maxWidth: Number.MAX_SAFE_INTEGER, raw: sizesRaw || '' } }));
+        return { maxLength: Number.MAX_SAFE_INTEGER, maxWidth: Number.MAX_SAFE_INTEGER, raw: sizesRaw || '' };
+      }
+    } catch (e) {
+      console.error('Failed to fetch material sizes for', key, e);
+    }
+    return null;
+  };
+  
+  const validatePieceAgainstLimits = (piece: CutPiece, limits: { maxLength: number; maxWidth: number } | null): { length?: string; width?: string } => {
+    const errs: { length?: string; width?: string } = {};
+    if (!limits) return errs; // No limits => no errors
+    const len = typeof piece.length === 'number' ? piece.length : Number(piece.length);
+    const wid = typeof piece.width === 'number' ? piece.width : Number(piece.width);
+    if (!len || !wid) return errs; // Require both to validate
+    const { maxLength, maxWidth } = limits;
+    const fits = (len <= maxLength && wid <= maxWidth) || (len <= maxWidth && wid <= maxLength);
+    if (!fits) {
+      const msg = `Exceeds sheet size (${maxLength} x ${maxWidth} ${unit})`;
+      errs.length = msg;
+      errs.width = msg;
+    }
+    return errs;
+  };
+  
+  const validateAndSetErrorsForSection = async (materialName: string, piecesInSection: CutPiece[]) => {
+    const limits = await ensureMaterialSizes(materialName);
+    const limitsForValidation = limits ? { maxLength: limits.maxLength, maxWidth: limits.maxWidth } : null;
+    setDimensionErrors(prev => {
+      const next = { ...prev };
+      for (const piece of piecesInSection) {
+        if (piece.separator) continue as any;
+        const errs = validatePieceAgainstLimits(piece, limitsForValidation);
+        if (errs.length || errs.width) next[piece.id] = errs; else delete next[piece.id];
+      }
+      return next;
+    });
+  };
 
-  const handleCalculate = () => {
+  const handleCalculate = async () => {
     // Validate data
     if (cutPieces.length === 0) {
       setSnackbarMessage('Please add cut pieces first');
@@ -755,6 +892,56 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       return;
     }
     
+    // Dimension validation across sections (length/width vs material size limits)
+    try {
+      const sectionsForValidation = sections.filter(s => s.material && s.material.trim() !== '');
+      let firstInvalid: { piece: CutPiece; field: 'length' | 'width'; limits?: { maxLength: number; maxWidth: number } } | null = null;
+      for (const section of sectionsForValidation) {
+        const limits = await ensureMaterialSizes(section.material);
+        const limitsForValidation = limits ? { maxLength: limits.maxLength, maxWidth: limits.maxWidth } : null;
+        // If no limits available, skip validation for this material
+        if (!limitsForValidation) continue;
+        // Validate pieces and record first invalid
+        for (const piece of section.pieces) {
+          const errs = validatePieceAgainstLimits(piece, limitsForValidation);
+          if (errs.length || errs.width) {
+            if (!firstInvalid) firstInvalid = { piece, field: errs.length ? 'length' as const : 'width' as const, limits: limitsForValidation };
+          }
+        }
+        // Update error state for this section
+        await validateAndSetErrorsForSection(section.material, section.pieces);
+      }
+      if (firstInvalid) {
+        setIsValidating(true);
+        setShowDimensionValidation(true);
+        const targetId = `${firstInvalid.field}-field-${firstInvalid.piece.id}`;
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.boxShadow = '0 0 8px 2px rgba(244, 67, 54, 0.6)';
+          setTimeout(() => {
+            const input = el.querySelector('input') as HTMLInputElement | null;
+            if (input) {
+              input.focus();
+              input.select?.();
+              input.animate([
+                { boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.7)' },
+                { boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)' },
+              ], { duration: 1500, iterations: 3 });
+            }
+            setTimeout(() => { el.style.boxShadow = ''; setIsValidating(false); }, 4500);
+          }, 400);
+        }
+        const lim = firstInvalid.limits;
+        setSnackbarMessage(`⚠️ Some dimensions exceed sheet size${lim ? ` (${lim.maxLength} x ${lim.maxWidth} ${unit})` : ''}. Please adjust.`);
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.error('Dimension validation failed:', e);
+    }
+
     // Enhanced validation for high quantities (>100)
     const highQuantityPiecesFound = cutPieces.filter(piece => piece.quantity > 100);
     
@@ -1247,7 +1434,7 @@ Thank you for your business!
                       <InputLabel>Material</InputLabel>
                       <Select
                         value={section.material || ''}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const newMaterial = e.target.value;
                           const updatedPieces = [...cutPieces];
                           // Update the separator piece name and remove requiresSelection flag
@@ -1265,6 +1452,8 @@ Thank you for your business!
                             }
                           });
                           setCutPieces(updatedPieces);
+                          // Fetch size limits and validate this section
+                          await validateAndSetErrorsForSection(String(newMaterial), section.pieces);
                         }}
                         disabled={isConfirmed || loadingMaterials}
                       >
@@ -1536,8 +1725,8 @@ Thank you for your business!
                     <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
                       <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
                       <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
-                        <TextField label={`Length (${unit})`} type="number" value={piece.length ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'length', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
-                        <TextField label={`Width (${unit})`} type="number" value={piece.width ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'width', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} />
+                        <TextField id={`length-field-${piece.id}`} label={`Length (${unit})`} type="number" value={piece.length ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'length', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} error={!!dimensionErrors[piece.id]?.length && showDimensionValidation} helperText={showDimensionValidation && dimensionErrors[piece.id]?.length ? dimensionErrors[piece.id]?.length : ''} />
+                        <TextField id={`width-field-${piece.id}`} label={`Width (${unit})`} type="number" value={piece.width ?? ''} onChange={(e) => handleCutPieceChange(piece.id, 'width', e.target.value)} variant="outlined" size="small" disabled={isConfirmed} error={!!dimensionErrors[piece.id]?.width && showDimensionValidation} helperText={showDimensionValidation && dimensionErrors[piece.id]?.width ? dimensionErrors[piece.id]?.width : ''} />
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
                         <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
@@ -1767,12 +1956,14 @@ Thank you for your business!
                           <InputLabel>Material</InputLabel>
                           <Select
                             value={section.material || ''}
-                            onChange={(e) => {
-                              const newMaterial = e.target.value;
+                            onChange={async (e) => {
+                              const newMaterial = e.target.value as string;
                               const updatedPieces = [...cutPieces];
-                              // Update the separator piece name
+                              // Update the separator piece name and material, and clear requiresSelection flag
                               if (updatedPieces[section.separatorIndex] && updatedPieces[section.separatorIndex].separator) {
                                 updatedPieces[section.separatorIndex].name = newMaterial;
+                                updatedPieces[section.separatorIndex].material = newMaterial;
+                                delete (updatedPieces[section.separatorIndex] as any).requiresSelection;
                               }
                               // Update material for all pieces in this section
                               section.pieces.forEach((piece: any) => {
@@ -1782,6 +1973,8 @@ Thank you for your business!
                                 }
                               });
                               setCutPieces(updatedPieces);
+                              // Fetch sheet size limits and validate this section immediately
+                              await validateAndSetErrorsForSection(String(newMaterial), section.pieces);
                             }}
                             disabled={isConfirmed || loadingMaterials}
                             label="Material"
@@ -1845,6 +2038,7 @@ Thank you for your business!
                             <TableRow key={piece.id}>
                               <TableCell>
                                 <TextField
+                                  id={`width-field-${piece.id}`}
                                   type="number"
                                   value={piece.width || ''}
                                   onChange={(e) => handleCutPieceChange(piece.id, 'width', parseFloat(e.target.value))}
@@ -1852,10 +2046,13 @@ Thank you for your business!
                                   size="small"
                                   inputProps={{ min: 1 }}
                                   disabled={isConfirmed}
+                                  error={!!dimensionErrors[piece.id]?.width && showDimensionValidation}
+                                  helperText={showDimensionValidation && dimensionErrors[piece.id]?.width ? dimensionErrors[piece.id]?.width : ''}
                                 />
                               </TableCell>
                               <TableCell>
                                 <TextField
+                                  id={`length-field-${piece.id}`}
                                   type="number"
                                   value={piece.length || ''}
                                   onChange={(e) => handleCutPieceChange(piece.id, 'length', parseFloat(e.target.value))}
@@ -1863,6 +2060,8 @@ Thank you for your business!
                                   size="small"
                                   inputProps={{ min: 1 }}
                                   disabled={isConfirmed}
+                                  error={!!dimensionErrors[piece.id]?.length && showDimensionValidation}
+                                  helperText={showDimensionValidation && dimensionErrors[piece.id]?.length ? dimensionErrors[piece.id]?.length : ''}
                                 />
                               </TableCell>
                               <TableCell>
@@ -2069,16 +2268,23 @@ Thank you for your business!
                         <InputLabel>Material</InputLabel>
                         <Select
                           value={section.material || ''}
-                          onChange={(e) => {
-                            const newMaterial = e.target.value;
+                          onChange={async (e) => {
+                            const newMaterial = e.target.value as string;
                             const updatedPieces = [...cutPieces];
-                            updatedPieces[section.headingIdx].name = newMaterial;
+                            // Update section header
+                            if (updatedPieces[section.headingIdx]) {
+                              updatedPieces[section.headingIdx].name = newMaterial;
+                              updatedPieces[section.headingIdx].material = newMaterial as any;
+                              delete (updatedPieces[section.headingIdx] as any).requiresSelection;
+                            }
                             // Update material for all pieces in this section
                             for (let i = section.headingIdx + 1; i < updatedPieces.length; i++) {
-                              if (updatedPieces[i].separator) break;
-                              updatedPieces[i].material = newMaterial;
+                              if ((updatedPieces[i] as any).separator) break;
+                              updatedPieces[i].material = newMaterial as any;
                             }
                             setCutPieces(updatedPieces);
+                            // Validate this section's pieces against material limits
+                            await validateAndSetErrorsForSection(String(newMaterial), section.pieces);
                           }}
                           disabled={isConfirmed || loadingMaterials}
                           label="Material"
@@ -2189,22 +2395,28 @@ Thank you for your business!
                               </TableCell>
                               <TableCell align="right">
                                 <TextField
+                                  id={`width-field-${piece.id}`}
                                   variant="standard"
                                   value={piece.width || ''}
                                   onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
                                   type="number"
                                   InputProps={{ inputProps: { min: 0, step: 1 } }}
                                   disabled={isConfirmed}
+                                  error={!!dimensionErrors[piece.id]?.width && showDimensionValidation}
+                                  helperText={showDimensionValidation && dimensionErrors[piece.id]?.width ? dimensionErrors[piece.id]?.width : ''}
                                 />
                               </TableCell>
                               <TableCell align="right">
                                 <TextField
+                                  id={`length-field-${piece.id}`}
                                   variant="standard"
                                   value={piece.length || ''}
                                   onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
                                   type="number"
                                   InputProps={{ inputProps: { min: 0, step: 1 } }}
                                   disabled={isConfirmed}
+                                  error={!!dimensionErrors[piece.id]?.length && showDimensionValidation}
+                                  helperText={showDimensionValidation && dimensionErrors[piece.id]?.length ? dimensionErrors[piece.id]?.length : ''}
                                 />
                               </TableCell>
                               <TableCell align="right">
