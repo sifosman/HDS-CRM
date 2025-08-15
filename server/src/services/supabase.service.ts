@@ -323,16 +323,35 @@ const SupabaseService = {
       if (quoteData.total !== undefined) {
         quote.total = quoteData.total;
       }
-      if (quoteData.status) {
-        quote.status = quoteData.status;
-      }
-      if (quoteData.cutlistUrl) {
-        quote.cutlist_url = quoteData.cutlistUrl;
-      }
-      
-      console.log('Inserting quote with quote_number field populated:', JSON.stringify(quote));
 
-      // Insert quote into database
+      // Extract and set branch fields explicitly on the quote for reliable email resolution
+      try {
+        const payloadBranchData = (quoteData as any)?.branchData
+          || (quoteData as any)?.quoteData?.branchData
+          || (quoteData as any)?.quoteData?.data?.branchData;
+
+        if (payloadBranchData && typeof payloadBranchData === 'object') {
+          const tradingAs = (payloadBranchData as any).trading_as || (payloadBranchData as any).tradingAs;
+          const branch = (payloadBranchData as any).branch;
+          const branchTradingAs = (payloadBranchData as any).branch_trading_as || (payloadBranchData as any).branchTradingAs;
+
+          if (tradingAs) quote.trading_as = tradingAs;
+          if (branch) quote.branch = branch;
+          if (branchTradingAs) quote.branch_trading_as = branchTradingAs;
+
+          console.log('createQuote: set branch fields on quote', {
+            trading_as: quote.trading_as,
+            branch: quote.branch,
+            branch_trading_as: quote.branch_trading_as
+          });
+        } else {
+          console.log('createQuote: no branchData found on payload');
+        }
+      } catch (e) {
+        console.warn('createQuote: non-fatal error extracting branchData', e);
+      }
+
+      // Insert into database
       const { data, error } = await supabase
         .from('quotes')
         .insert([quote])
@@ -890,6 +909,22 @@ const SupabaseService = {
         branch: quoteData.branch,
         branch_trading_as: quoteData.branch_trading_as,
       });
+
+      // 1a) Fallback: parse branch from quote_data JSON if not present in explicit columns
+      if (!branchName) {
+        try {
+          const parsed = typeof quoteData.quote_data === 'string'
+            ? JSON.parse(quoteData.quote_data || '{}')
+            : (quoteData.quote_data || {});
+          const jsonBranch = parsed?.branchData?.trading_as;
+          if (jsonBranch && typeof jsonBranch === 'string') {
+            branchName = jsonBranch;
+            console.log('📧 Branch email resolution: found branch in quote_data JSON', { branchName });
+          }
+        } catch (e) {
+          console.log('📧 Branch email resolution: failed to parse quote_data JSON for branch');
+        }
+      }
 
       // 2) Attempt to extract branch code from identifier (Q-YYYYMMDD-NNNN-BRANCH) and match by abbreviation
       const identifier = (quoteData.filename || quoteData.quote_number || quoteId || '') as string;

@@ -978,6 +978,14 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       setSnackbarSeverity('info');
       setSnackbarOpen(true);
       
+      // Require a branch to be selected to ensure correct email/banking resolution downstream
+      if (!branchData || !branchData.trading_as) {
+        setSnackbarMessage('Please select a branch before generating the quote.');
+        setSnackbarSeverity('warning');
+        setSnackbarOpen(true);
+        return;
+      }
+
       // Group the cutlist pieces by material section
       const sections = getSections();
       

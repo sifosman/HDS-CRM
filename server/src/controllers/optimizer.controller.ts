@@ -648,7 +648,9 @@ export const generateQuote = async (req: Request, res: Response) => {
             subtotal: grandTotal,
             tax: grandTotal * 0.15, // 15% VAT
             finalTotal: grandTotal * 1.15
-          }
+          },
+          // Include explicit branch info for downstream consumers (invoice/email)
+          branchData: branchData || null
         },
         subtotal: grandTotal,
         tax: grandTotal * 0.15,
@@ -679,7 +681,9 @@ export const generateQuote = async (req: Request, res: Response) => {
             subtotal: grandTotal,
             tax: grandTotal * 0.15,
             finalTotal: grandTotal * 1.15
-          }
+          },
+          // Include explicit branch info if available even in fallback
+          branchData: branchData || null
         },
         subtotal: grandTotal,
         tax: grandTotal * 0.15,
