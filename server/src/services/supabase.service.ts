@@ -352,11 +352,33 @@ const SupabaseService = {
       }
 
       // Insert into database
-      const { data, error } = await supabase
-        .from('quotes')
-        .insert([quote])
-        .select()
-        .single();
+      const doInsert = async (payload: any) => {
+        return await supabase
+          .from('quotes')
+          .insert([payload])
+          .select()
+          .single();
+      };
+
+      let insertResult = await doInsert(quote);
+      let { data, error } = insertResult as { data: any; error: any };
+
+      // Fallback: if branch columns don't exist in quotes table, retry without them
+      if (
+        error && (
+          (typeof error.code === 'string' && error.code === 'PGRST204') ||
+          (typeof error.message === 'string' && /trading_as|branch_trading_as|\bbranch\b/.test(error.message))
+        )
+      ) {
+        const fallbackQuote = { ...quote };
+        delete (fallbackQuote as any).trading_as;
+        delete (fallbackQuote as any).branch_trading_as;
+        delete (fallbackQuote as any).branch;
+        console.warn("quotes table missing one or more branch columns (trading_as/branch/branch_trading_as). Retrying insert without these fields.");
+        const retry = await doInsert(fallbackQuote);
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         console.error('Error creating quote:', error);
