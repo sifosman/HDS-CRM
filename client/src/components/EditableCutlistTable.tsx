@@ -204,17 +204,33 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const [loadingMaterials, setLoadingMaterials] = useState<boolean>(true);
   
   // Helper: max board side for a given material from stock pieces (considers rotation)
+  // Falls back to global max across all stock pieces when no exact material match is found
   const getMaxBoardSideForMaterial = useCallback((material?: string) => {
-    // If no material, cannot compute
-    if (!material || material.trim() === '') return null;
-    // Consider only stock pieces matching the material
-    const candidates = stockPieces.filter(sp => sp.material === material);
-    if (candidates.length === 0) return null;
-    let maxSide = 0;
-    for (const sp of candidates) {
-      maxSide = Math.max(maxSide, Number(sp.length) || 0, Number(sp.width) || 0);
+    // Compute a global max once per call as a safe fallback
+    const globalMax = stockPieces.reduce((acc, sp) => {
+      const len = Number(sp.length) || 0;
+      const wid = Number(sp.width) || 0;
+      return Math.max(acc, len, wid);
+    }, 0);
+
+    // If no stock pieces at all, we cannot validate reliably
+    if (stockPieces.length === 0) return null;
+
+    // Try to compute per-material max first
+    const materialKey = (material || '').trim();
+    if (materialKey) {
+      const candidates = stockPieces.filter(sp => sp.material === materialKey);
+      if (candidates.length > 0) {
+        let maxSide = 0;
+        for (const sp of candidates) {
+          maxSide = Math.max(maxSide, Number(sp.length) || 0, Number(sp.width) || 0);
+        }
+        if (maxSide > 0) return maxSide;
+      }
     }
-    return maxSide > 0 ? maxSide : null;
+
+    // Fallback: use the largest available board side across all stock pieces
+    return globalMax > 0 ? globalMax : null;
   }, [stockPieces]);
   
   // State for managing material selections for each section
@@ -1466,6 +1482,15 @@ Thank you for your business!
                               type="number"
                               value={piece.length ?? ''}
                               onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                              onBlur={() => {
+                                const ms = getMaxBoardSideForMaterial(section.material);
+                                const val = Number(piece.length);
+                                if (ms && !isNaN(val) && val > ms) {
+                                  setShowDimensionValidation(true);
+                                  setIsValidating(true);
+                                  setTimeout(() => setIsValidating(false), 4000);
+                                }
+                              }}
                               variant="outlined"
                               size="small"
                               disabled={isConfirmed}
@@ -1478,6 +1503,15 @@ Thank you for your business!
                               type="number"
                               value={piece.width ?? ''}
                               onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                              onBlur={() => {
+                                const ms = getMaxBoardSideForMaterial(section.material);
+                                const val = Number(piece.width);
+                                if (ms && !isNaN(val) && val > ms) {
+                                  setShowDimensionValidation(true);
+                                  setIsValidating(true);
+                                  setTimeout(() => setIsValidating(false), 4000);
+                                }
+                              }}
                               variant="outlined"
                               size="small"
                               disabled={isConfirmed}
@@ -1705,6 +1739,15 @@ Thank you for your business!
                           type="number"
                           value={piece.length ?? ''}
                           onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                          onBlur={() => {
+                            const ms = getMaxBoardSideForMaterial(section.material);
+                            const val = Number(piece.length);
+                            if (ms && !isNaN(val) && val > ms) {
+                              setShowDimensionValidation(true);
+                              setIsValidating(true);
+                              setTimeout(() => setIsValidating(false), 4000);
+                            }
+                          }}
                           variant="outlined"
                           size="small"
                           disabled={isConfirmed}
@@ -1717,6 +1760,15 @@ Thank you for your business!
                           type="number"
                           value={piece.width ?? ''}
                           onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                          onBlur={() => {
+                            const ms = getMaxBoardSideForMaterial(section.material);
+                            const val = Number(piece.width);
+                            if (ms && !isNaN(val) && val > ms) {
+                              setShowDimensionValidation(true);
+                              setIsValidating(true);
+                              setTimeout(() => setIsValidating(false), 4000);
+                            }
+                          }}
                           variant="outlined"
                           size="small"
                           disabled={isConfirmed}
@@ -2375,11 +2427,20 @@ Thank you for your business!
                               <TableCell align="right">
                                 <TextField
                                   id={`width-field-${piece.id}`}
-                                  variant="standard"
-                                  value={piece.width || ''}
-                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                                  label={`Width (mm)`}
                                   type="number"
-                                  InputProps={{ inputProps: { min: 0, step: 1 } }}
+                                  value={piece.width ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.width);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="standard"
                                   disabled={isConfirmed}
                                   error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
                                   helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
@@ -2388,11 +2449,20 @@ Thank you for your business!
                               <TableCell align="right">
                                 <TextField
                                   id={`length-field-${piece.id}`}
-                                  variant="standard"
-                                  value={piece.length || ''}
-                                  onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                                  label={`Length (mm)`}
                                   type="number"
-                                  InputProps={{ inputProps: { min: 0, step: 1 } }}
+                                  value={piece.length ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.length);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="standard"
                                   disabled={isConfirmed}
                                   error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
                                   helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
