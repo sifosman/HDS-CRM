@@ -33,6 +33,7 @@ import {
   Checkbox,
   FormControlLabel
 } from '@mui/material';
+import { InputAdornment } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -203,9 +204,19 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const [materialDescriptions, setMaterialDescriptions] = useState<Record<string, string[]>>({});
   const [loadingMaterials, setLoadingMaterials] = useState<boolean>(true);
   
+  // Cache: max allowed dimensions per material (from HDS_prices "sizes"/dimensions)
+  const [materialMaxDims, setMaterialMaxDims] = useState<Record<string, { maxLength: number; maxWidth: number }>>({});
+  // Per-piece field errors for instant validation feedback
+  const [fieldErrors, setFieldErrors] = useState<Record<string, { length?: string; width?: string }>>({});
+  
   // Helper: max board side for a given material from stock pieces (considers rotation)
-  // Falls back to global max across all stock pieces when no exact material match is found
+  // Fallbacks:
+  // 1) Exact material match
+  // 2) Global max across all stock pieces
+  // 3) Sensible DEFAULT when no stock is available
   const getMaxBoardSideForMaterial = useCallback((material?: string) => {
+    const DEFAULT_MAX_BOARD_SIDE_MM = 3000; // used when no stock available
+
     // Compute a global max once per call as a safe fallback
     const globalMax = stockPieces.reduce((acc, sp) => {
       const len = Number(sp.length) || 0;
@@ -213,8 +224,8 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       return Math.max(acc, len, wid);
     }, 0);
 
-    // If no stock pieces at all, we cannot validate reliably
-    if (stockPieces.length === 0) return null;
+    // If no stock pieces at all, use DEFAULT to still enforce upper bound
+    if (stockPieces.length === 0) return DEFAULT_MAX_BOARD_SIDE_MM;
 
     // Try to compute per-material max first
     const materialKey = (material || '').trim();
@@ -229,9 +240,82 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       }
     }
 
-    // Fallback: use the largest available board side across all stock pieces
-    return globalMax > 0 ? globalMax : null;
+    // Fallback: use the largest available board side across all stock pieces, or DEFAULT if none > 0
+    return globalMax > 0 ? globalMax : DEFAULT_MAX_BOARD_SIDE_MM;
   }, [stockPieces]);
+
+  // Helper: get max dims for a material from cache or fallback stock
+  const getMaxDimsForMaterial = useCallback((material?: string): { maxLength?: number; maxWidth?: number } => {
+    const key = (material || '').trim();
+    if (key && materialMaxDims[key]) return materialMaxDims[key];
+    const ms = getMaxBoardSideForMaterial(key);
+    return ms ? { maxLength: ms, maxWidth: ms } : {};
+  }, [materialMaxDims, getMaxBoardSideForMaterial]);
+
+  // Helper: parse a dimension string like "2730x1810x16mm" or "2730 x 1810"
+  const parseDimsFromString = (raw?: string): { maxLength?: number; maxWidth?: number } => {
+    if (!raw || typeof raw !== 'string') return {};
+    // Look for two largest numbers that look like board sides (ignore thickness)
+    const match = raw.match(/(\d{3,4})\s*[xX×]\s*(\d{3,4})/);
+    if (match) {
+      const a = Number(match[1]);
+      const b = Number(match[2]);
+      if (isFinite(a) && isFinite(b)) {
+        // Convention: treat larger as length
+        const maxLength = Math.max(a, b);
+        const maxWidth = Math.min(a, b);
+        return { maxLength, maxWidth };
+      }
+    }
+    return {};
+  };
+
+  // Fetch max dims for a material from backend (HDS_prices), cache result
+  const fetchAndCacheMaterialMaxDims = useCallback(async (materialName?: string) => {
+    const key = (materialName || '').trim();
+    if (!key) return;
+    if (materialMaxDims[key]) return; // already cached
+    try {
+      const res = await getProductPricing(key);
+      // Try several likely fields for sizes/dimensions
+      const sizesStr = res?.data?.sizes || res?.data?.dimensions || res?.data?.size || res?.sizes || res?.dimensions || '';
+      const { maxLength, maxWidth } = parseDimsFromString(String(sizesStr || ''));
+      if (maxLength && maxWidth) {
+        setMaterialMaxDims(prev => ({ ...prev, [key]: { maxLength, maxWidth } }));
+      }
+    } catch (e) {
+      console.warn('Failed to fetch product pricing for', key, e);
+    }
+  }, [materialMaxDims]);
+
+  // Validate a single piece's field instantly against material limits
+  const validatePieceDimension = useCallback((pieceId: string, sectionMaterial?: string, nextLength?: number | null, nextWidth?: number | null) => {
+    const matKey = (sectionMaterial || '').trim();
+    // Determine max dims: prefer DB cache; fallback to stock pieces single-side limit
+    let maxLen: number | undefined;
+    let maxWid: number | undefined;
+    const cached = matKey ? materialMaxDims[matKey] : undefined;
+    if (cached) {
+      maxLen = cached.maxLength;
+      maxWid = cached.maxWidth;
+    } else {
+      const ms = getMaxBoardSideForMaterial(matKey);
+      if (ms) { maxLen = ms; maxWid = ms; }
+    }
+
+    setFieldErrors(prev => {
+      const next = { ...(prev[pieceId] || {}) };
+      // Length
+      if (typeof nextLength === 'number' && isFinite(nextLength) && maxLen) {
+        next.length = nextLength > maxLen ? `The max value for Length(mm) is ${maxLen} — please enter a lower value.` : undefined;
+      }
+      // Width
+      if (typeof nextWidth === 'number' && isFinite(nextWidth) && maxWid) {
+        next.width = nextWidth > maxWid ? `The max value for Width(mm) is ${maxWid} — please enter a lower value.` : undefined;
+      }
+      return { ...prev, [pieceId]: next };
+    });
+  }, [materialMaxDims, getMaxBoardSideForMaterial]);
   
   // State for managing material selections for each section
   interface SectionMaterial {
@@ -348,6 +432,24 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       if (showDimensionValidation) {
         setShowDimensionValidation(false);
         setIsValidating(false);
+      }
+      // Instant validate using current section material and new value
+      const piece = cutPieces.find(p => p.id === id);
+      if (piece) {
+        // Find section material for this piece by scanning back to its separator
+        let sectionMaterial: string | undefined = piece.material;
+        const idx = cutPieces.findIndex(p => p.id === id);
+        if (idx > -1) {
+          for (let i = idx; i >= 0; i--) {
+            if (cutPieces[i].separator) {
+              sectionMaterial = cutPieces[i].name || cutPieces[i].material || sectionMaterial;
+              break;
+            }
+          }
+        }
+        const nextLength = field === 'length' ? Number(value) : (typeof piece.length === 'number' ? piece.length : undefined);
+        const nextWidth = field === 'width' ? Number(value) : (typeof piece.width === 'number' ? piece.width : undefined);
+        validatePieceDimension(id, sectionMaterial, nextLength as number | null, nextWidth as number | null);
       }
     }
   };
@@ -1422,6 +1524,8 @@ Thank you for your business!
                             }
                           });
                           setCutPieces(updatedPieces);
+                          // Preload max dims for the selected material
+                          fetchAndCacheMaterialMaxDims(String(newMaterial));
                         }}
                         disabled={isConfirmed || loadingMaterials}
                       >
@@ -1493,9 +1597,11 @@ Thank you for your business!
                               }}
                               variant="outlined"
                               size="small"
+                              placeholder={(() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? `≤ ${d.maxLength}mm` : undefined; })()}
+                              InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
                               disabled={isConfirmed}
-                              error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
-                              helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                              error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
+                              helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
                             />
                             <TextField
                               id={`width-field-${piece.id}`}
@@ -1514,9 +1620,11 @@ Thank you for your business!
                               }}
                               variant="outlined"
                               size="small"
+                              placeholder={(() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? `≤ ${d.maxWidth}mm` : undefined; })()}
+                              InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
                               disabled={isConfirmed}
-                              error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
-                              helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                              error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
+                              helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
                             />
                           </Box>
                           <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
@@ -1678,6 +1786,8 @@ Thank you for your business!
                                 updatedPieces[i].material = newMaterial;
                             }
                             setCutPieces(updatedPieces);
+                            // Preload max dims for the selected material
+                            fetchAndCacheMaterialMaxDims(String(newMaterial));
                         }}
                         disabled={isConfirmed || loadingMaterials}
                     >
@@ -1750,9 +1860,11 @@ Thank you for your business!
                           }}
                           variant="outlined"
                           size="small"
+                          placeholder={() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? `≤ ${d.maxLength}mm` : undefined; }}
+                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
                           disabled={isConfirmed}
-                          error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
-                          helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                          error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
+                          helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
                         />
                         <TextField
                           id={`width-field-${piece.id}`}
@@ -1771,9 +1883,11 @@ Thank you for your business!
                           }}
                           variant="outlined"
                           size="small"
+                          placeholder={() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? `≤ ${d.maxWidth}mm` : undefined; }}
+                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
                           disabled={isConfirmed}
-                          error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
-                          helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                          error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
+                          helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
                         />
                       </Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
@@ -1967,7 +2081,7 @@ Thank you for your business!
                         {/* Material dropdown for sequential sections */}
                         <FormControl 
                           required={showMaterialValidation || requireMaterialValidation} 
-                          error={(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material))}
+                          error={(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '')}
                           id={`material-dropdown-${sectionIndex}`}
                           sx={{
                             minWidth: 200,
@@ -2027,7 +2141,7 @@ Thank you for your business!
                               <MenuItem key={description} value={description}>{description}</MenuItem>
                             ))}
                           </Select>
-                          {(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material)) && (
+                          {(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '') && (
                             <Box sx={{ 
                               position: 'absolute',
                               top: '100%',
@@ -2063,8 +2177,7 @@ Thank you for your business!
                         <DeleteIcon />
                       </IconButton>
                     </Box>
-                    
-                    {/* Table content for this section */}
+                                        {/* Table content for this section */}
                     <TableContainer>
                       <Table size="small">
                         <TableHead>
@@ -2082,24 +2195,50 @@ Thank you for your business!
                             <TableRow key={piece.id}>
                               <TableCell>
                                 <TextField
+                                  id={`width-field-${piece.id}`}
+                                  label={`Width (${unit})`}
                                   type="number"
-                                  value={piece.width || ''}
-                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', parseFloat(e.target.value))}
+                                  value={piece.width ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.width);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
                                   variant="outlined"
                                   size="small"
                                   inputProps={{ min: 1 }}
                                   disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
                                 />
                               </TableCell>
                               <TableCell>
                                 <TextField
+                                  id={`length-field-${piece.id}`}
+                                  label={`Length (${unit})`}
                                   type="number"
-                                  value={piece.length || ''}
-                                  onChange={(e) => handleCutPieceChange(piece.id, 'length', parseFloat(e.target.value))}
+                                  value={piece.length ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.length);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
                                   variant="outlined"
                                   size="small"
                                   inputProps={{ min: 1 }}
                                   disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
                                 />
                               </TableCell>
                               <TableCell>
@@ -2324,7 +2463,7 @@ Thank you for your business!
                             <MenuItem key={description} value={description}>{description}</MenuItem>
                           ))}
                         </Select>
-                        {(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material)) && (
+                        {(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '') && (
                           <Box sx={{ 
                             position: 'absolute',
                             top: '100%',
