@@ -215,7 +215,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   // 2) Global max across all stock pieces
   // 3) Sensible DEFAULT when no stock is available
   const getMaxBoardSideForMaterial = useCallback((material?: string) => {
-    const DEFAULT_MAX_BOARD_SIDE_MM = 3000; // used when no stock available
+    const DEFAULT_MAX_BOARD_SIDE_MM = 2750; // changed from 3000 to 2750
 
     // Compute a global max once per call as a safe fallback
     const globalMax = stockPieces.reduce((acc, sp) => {
@@ -1597,7 +1597,6 @@ Thank you for your business!
                               }}
                               variant="outlined"
                               size="small"
-                              InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
                               disabled={isConfirmed}
                               error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
                               helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
@@ -1619,7 +1618,6 @@ Thank you for your business!
                               }}
                               variant="outlined"
                               size="small"
-                              InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
                               disabled={isConfirmed}
                               error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
                               helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
@@ -1858,7 +1856,6 @@ Thank you for your business!
                           }}
                           variant="outlined"
                           size="small"
-                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
                           disabled={isConfirmed}
                           error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
                           helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
@@ -1880,7 +1877,6 @@ Thank you for your business!
                           }}
                           variant="outlined"
                           size="small"
-                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
                           disabled={isConfirmed}
                           error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
                           helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
