@@ -248,9 +248,9 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const getMaxDimsForMaterial = useCallback((material?: string): { maxLength?: number; maxWidth?: number } => {
     const key = (material || '').trim();
     if (key && materialMaxDims[key]) return materialMaxDims[key];
-    const ms = getMaxBoardSideForMaterial(key);
-    return ms ? { maxLength: ms, maxWidth: ms } : {};
-  }, [materialMaxDims, getMaxBoardSideForMaterial]);
+    // No DB dims yet: do not fallback to arbitrary defaults to avoid wrong limits
+    return {};
+  }, [materialMaxDims]);
 
   // Helper: parse a dimension string like "2730x1810x16mm" or "2730 x 1810"
   const parseDimsFromString = (raw?: string): { maxLength?: number; maxWidth?: number } => {
@@ -288,19 +288,36 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     }
   }, [materialMaxDims]);
 
+  // Prefetch DB max dimensions for materials present in current sections (mobile-first UX)
+  useEffect(() => {
+    const materials = new Set<string>();
+    for (let i = 0; i < cutPieces.length; i++) {
+      const p = cutPieces[i];
+      if (p.separator) {
+        const m = (p.material || p.name || '').trim();
+        if (m) materials.add(m);
+      }
+    }
+    // If there are no explicit separators (e.g., manual list), gather from piece materials
+    if (materials.size === 0) {
+      cutPieces.forEach(p => {
+        const m = (p.material || '').trim();
+        if (!p.separator && m) materials.add(m);
+      });
+    }
+    materials.forEach(m => fetchAndCacheMaterialMaxDims(m));
+  }, [cutPieces, fetchAndCacheMaterialMaxDims]);
+
   // Validate a single piece's field instantly against material limits
   const validatePieceDimension = useCallback((pieceId: string, sectionMaterial?: string, nextLength?: number | null, nextWidth?: number | null) => {
     const matKey = (sectionMaterial || '').trim();
-    // Determine max dims: prefer DB cache; fallback to stock pieces single-side limit
+    // Only enforce when we have DB-backed dims cached
     let maxLen: number | undefined;
     let maxWid: number | undefined;
     const cached = matKey ? materialMaxDims[matKey] : undefined;
     if (cached) {
       maxLen = cached.maxLength;
       maxWid = cached.maxWidth;
-    } else {
-      const ms = getMaxBoardSideForMaterial(matKey);
-      if (ms) { maxLen = ms; maxWid = ms; }
     }
 
     setFieldErrors(prev => {
@@ -315,7 +332,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       }
       return { ...prev, [pieceId]: next };
     });
-  }, [materialMaxDims, getMaxBoardSideForMaterial]);
+  }, [materialMaxDims]);
   
   // State for managing material selections for each section
   interface SectionMaterial {
@@ -1587,9 +1604,9 @@ Thank you for your business!
                               value={piece.length ?? ''}
                               onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
                               onBlur={() => {
-                                const ms = getMaxBoardSideForMaterial(section.material);
+                                const d = getMaxDimsForMaterial(section.material);
                                 const val = Number(piece.length);
-                                if (ms && !isNaN(val) && val > ms) {
+                                if (d.maxLength && !isNaN(val) && val > d.maxLength) {
                                   setShowDimensionValidation(true);
                                   setIsValidating(true);
                                   setTimeout(() => setIsValidating(false), 4000);
@@ -1597,11 +1614,10 @@ Thank you for your business!
                               }}
                               variant="outlined"
                               size="small"
-                              placeholder={(() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? `≤ ${d.maxLength}mm` : undefined; })()}
                               InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
                               disabled={isConfirmed}
-                              error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
-                              helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
+                              error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return !!(d.maxLength && Number(piece.length) > d.maxLength); })())}
+                              helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength && Number(piece.length) > d.maxLength ? `Exceeds max length ${d.maxLength}mm` : ''; })())}
                             />
                             <TextField
                               id={`width-field-${piece.id}`}
@@ -1610,9 +1626,9 @@ Thank you for your business!
                               value={piece.width ?? ''}
                               onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
                               onBlur={() => {
-                                const ms = getMaxBoardSideForMaterial(section.material);
+                                const d = getMaxDimsForMaterial(section.material);
                                 const val = Number(piece.width);
-                                if (ms && !isNaN(val) && val > ms) {
+                                if (d.maxWidth && !isNaN(val) && val > d.maxWidth) {
                                   setShowDimensionValidation(true);
                                   setIsValidating(true);
                                   setTimeout(() => setIsValidating(false), 4000);
@@ -1620,277 +1636,11 @@ Thank you for your business!
                               }}
                               variant="outlined"
                               size="small"
-                              placeholder={(() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? `≤ ${d.maxWidth}mm` : undefined; })()}
                               InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
                               disabled={isConfirmed}
-                              error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
-                              helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
+                              error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return !!(d.maxWidth && Number(piece.width) > d.maxWidth); })())}
+                              helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth && Number(piece.width) > d.maxWidth ? `Exceeds max width ${d.maxWidth}mm` : ''; })())}
                             />
-                          </Box>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
-                            <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
-                            <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
-                            <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
-                            <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
-                            <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
-                            <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
-                          </Box>
-                        </Paper>
-                        
-                        {/* Add material button between pieces (except after the last piece) */}
-                        {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, my: 1 }}>
-                            <Button
-                              variant="text"
-                              size="small"
-                              aria-label="Insert material section"
-                              onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
-                              sx={{
-                                color: '#9e9e9e',
-                                fontSize: '0.75rem',
-                                fontWeight: 'normal',
-                                minWidth: 'auto',
-                                padding: '2px 6px',
-                                textTransform: 'none',
-                                textDecoration: 'underline',
-                                textDecorationColor: 'transparent',
-                                '&:hover': {
-                                  color: '#757575',
-                                  textDecorationColor: '#757575',
-                                  backgroundColor: 'transparent',
-                                },
-                                transition: 'all 0.2s ease-in-out',
-                              }}
-                            >
-                              add material
-                            </Button>
-                            <Button
-                              variant="text"
-                              size="small"
-                              aria-label="Add cut piece"
-                              onClick={() => handleAddCutPiece(undefined, actualPieceIndex)}
-                              sx={{
-                                color: '#9e9e9e',
-                                fontSize: '0.75rem',
-                                fontWeight: 'normal',
-                                minWidth: 'auto',
-                                padding: '2px 6px',
-                                textTransform: 'none',
-                                textDecoration: 'underline',
-                                textDecorationColor: 'transparent',
-                                '&:hover': {
-                                  color: '#757575',
-                                  textDecorationColor: '#757575',
-                                  backgroundColor: 'transparent',
-                                },
-                                transition: 'all 0.2s ease-in-out',
-                              }}
-                            >
-                              add piece
-                            </Button>
-                          </Box>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </Box>
-              ));
-            }
-            
-            // Fallback to original grouped rendering for manually created sections (mobile)
-            const sections = getSections();
-            
-            // If no sections exist (no separator pieces), create a default section with all pieces
-            if (sections.length === 0 && cutPieces.length > 0) {
-              const defaultSection = {
-                material: cutPieces[0]?.material || 'White Melamine',
-                pieces: cutPieces.filter(p => !p.separator),
-                headingIdx: 0
-              };
-              sections.push(defaultSection);
-              console.log('📱 MOBILE: Created default section with', defaultSection.pieces.length, 'pieces');
-            }
-            
-            return sections.map((section, sectionIdx) => (
-              <Box key={`section-mobile-${sectionIdx}`} sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                {console.log(`Rendering section ${sectionIdx}, material: ${section.material}, validation: ${(requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}`)}
-                
-                  <FormControl 
-                    fullWidth 
-                    size="medium" 
-                    required={showMaterialValidation || requireMaterialValidation || isValidating} 
-                    error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}
-                    id={`material-dropdown-${sectionIdx}`}
-                    sx={{
-                      animation: isValidating && (!section.material || section.material.trim() === '') ? 
-                        'pulse 1.5s infinite' : 'none',
-                      '@keyframes pulse': {
-                        '0%': {
-                          boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)',
-                        },
-                        '70%': {
-                          boxShadow: '0 0 0 10px rgba(211, 47, 47, 0)',
-                        },
-                        '100%': {
-                          boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
-                        },
-                      },
-                      mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') ? 0 : 2,
-                      '& .MuiOutlinedInput-root': {
-                        fontSize: '1.1rem',
-                        fontWeight: 'bold',
-                        border: '3px solid #1976d2',
-                        borderRadius: '8px',
-                        backgroundColor: '#f8f9ff',
-                        '&:hover': {
-                          border: '3px solid #1565c0',
-                        },
-                        '&.Mui-focused': {
-                          border: '3px solid #0d47a1',
-                          boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
-                        },
-                        '&.Mui-error': {
-                          border: '3px solid #d32f2f',
-                          backgroundColor: '#fff5f5',
-                        }
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '1.1rem',
-                        fontWeight: 'bold',
-                        color: '#1976d2',
-                        '&.Mui-focused': {
-                          color: '#0d47a1',
-                        },
-                        '&.Mui-error': {
-                          color: '#d32f2f',
-                        }
-                      }
-                    }}
-                  >
-                    <InputLabel>Material</InputLabel>
-                    <Select
-                        value={section.material}
-                        onChange={(e) => {
-                            const newMaterial = e.target.value;
-                            const updatedPieces = [...cutPieces];
-                            updatedPieces[section.headingIdx].name = newMaterial;
-                            updatedPieces[section.headingIdx].material = newMaterial;
-                            // Remove the requiresSelection flag since user has now selected
-                            delete updatedPieces[section.headingIdx].requiresSelection;
-                            // Update material for all pieces in this section
-                            for (let i = section.headingIdx + 1; i < updatedPieces.length; i++) {
-                                if (updatedPieces[i].separator) break;
-                                updatedPieces[i].material = newMaterial;
-                            }
-                            setCutPieces(updatedPieces);
-                            // Preload max dims for the selected material
-                            fetchAndCacheMaterialMaxDims(String(newMaterial));
-                        }}
-                        disabled={isConfirmed || loadingMaterials}
-                    >
-                        {loadingMaterials ? <MenuItem disabled>Loading...</MenuItem> : productDescriptions.map(description => (
-                            <MenuItem key={description} value={description}>{description}</MenuItem>
-                        ))}
-                    </Select>
-                    {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') && (
-                      <Box sx={{ 
-                        mt: 1, 
-                        mb: 2,
-                        p: 1.5, 
-                        backgroundColor: '#ffebee', 
-                        border: '2px solid #f44336', 
-                        borderRadius: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        animation: isValidating ? 'pulse 2s infinite' : 'none',
-                        '@keyframes pulse': {
-                          '0%': { opacity: 1, boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.4)' },
-                          '50%': { opacity: 0.8, boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)' },
-                          '100%': { opacity: 1, boxShadow: '0 0 0 0 rgba(244, 67, 54, 0)' },
-                        },
-                      }}>
-                        <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                          ⚠️ Materials dropdown needs a selection
-                        </Typography>
-                      </Box>
-                    )}
-                  </FormControl>
-                  <IconButton
-                    aria-label="Delete material section"
-                    onClick={() => {
-                      if (isConfirmed || loadingMaterials) return;
-                      // Delete the entire material section instead of just clearing the name
-                      handleDeleteMaterialSection(section.headingIdx);
-                    }}
-                    color="error"
-                    sx={{ ml: 1 }}
-                    disabled={isConfirmed || loadingMaterials || sections.length <= 1} // Prevent deleting the last section
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-
-              {section.pieces.map((piece, pieceIdx) => {
-                // Find the actual index of this piece in the cutPieces array
-                const actualPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
-                
-                return (
-                  <React.Fragment key={piece.id}>
-                    <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-                      <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
-                      <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
-                        <TextField
-                          id={`length-field-${piece.id}`}
-                          label={`Length (${unit})`}
-                          type="number"
-                          value={piece.length ?? ''}
-                          onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
-                          onBlur={() => {
-                            const ms = getMaxBoardSideForMaterial(section.material);
-                            const val = Number(piece.length);
-                            if (ms && !isNaN(val) && val > ms) {
-                              setShowDimensionValidation(true);
-                              setIsValidating(true);
-                              setTimeout(() => setIsValidating(false), 4000);
-                            }
-                          }}
-                          variant="outlined"
-                          size="small"
-                          placeholder={() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? `≤ ${d.maxLength}mm` : undefined; }}
-                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
-                          disabled={isConfirmed}
-                          error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
-                          helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
-                        />
-                        <TextField
-                          id={`width-field-${piece.id}`}
-                          label={`Width (${unit})`}
-                          type="number"
-                          value={piece.width ?? ''}
-                          onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
-                          onBlur={() => {
-                            const ms = getMaxBoardSideForMaterial(section.material);
-                            const val = Number(piece.width);
-                            if (ms && !isNaN(val) && val > ms) {
-                              setShowDimensionValidation(true);
-                              setIsValidating(true);
-                              setTimeout(() => setIsValidating(false), 4000);
-                            }
-                          }}
-                          variant="outlined"
-                          size="small"
-                          placeholder={() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? `≤ ${d.maxWidth}mm` : undefined; }}
-                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
-                          disabled={isConfirmed}
-                          error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
-                          helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
-                        />
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
                         <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
                         <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
                         <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
