@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PRODUCT_DESCRIPTIONS } from '../data/productDescriptions';
 import { getMaterialOptions, optimizeCutting, getPdfUrl, getProductPricing, getAllProductDescriptions, generateQuote } from '../services/api';
@@ -248,9 +248,9 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const getMaxDimsForMaterial = useCallback((material?: string): { maxLength?: number; maxWidth?: number } => {
     const key = (material || '').trim();
     if (key && materialMaxDims[key]) return materialMaxDims[key];
-    // No DB dims yet: do not fallback to arbitrary defaults to avoid wrong limits
-    return {};
-  }, [materialMaxDims]);
+    const ms = getMaxBoardSideForMaterial(key);
+    return ms ? { maxLength: ms, maxWidth: ms } : {};
+  }, [materialMaxDims, getMaxBoardSideForMaterial]);
 
   // Helper: parse a dimension string like "2730x1810x16mm" or "2730 x 1810"
   const parseDimsFromString = (raw?: string): { maxLength?: number; maxWidth?: number } => {
@@ -288,36 +288,19 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
     }
   }, [materialMaxDims]);
 
-  // Prefetch DB max dimensions for materials present in current sections (mobile-first UX)
-  useEffect(() => {
-    const materials = new Set<string>();
-    for (let i = 0; i < cutPieces.length; i++) {
-      const p = cutPieces[i];
-      if (p.separator) {
-        const m = (p.material || p.name || '').trim();
-        if (m) materials.add(m);
-      }
-    }
-    // If there are no explicit separators (e.g., manual list), gather from piece materials
-    if (materials.size === 0) {
-      cutPieces.forEach(p => {
-        const m = (p.material || '').trim();
-        if (!p.separator && m) materials.add(m);
-      });
-    }
-    materials.forEach(m => fetchAndCacheMaterialMaxDims(m));
-  }, [cutPieces, fetchAndCacheMaterialMaxDims]);
-
   // Validate a single piece's field instantly against material limits
   const validatePieceDimension = useCallback((pieceId: string, sectionMaterial?: string, nextLength?: number | null, nextWidth?: number | null) => {
     const matKey = (sectionMaterial || '').trim();
-    // Only enforce when we have DB-backed dims cached
+    // Determine max dims: prefer DB cache; fallback to stock pieces single-side limit
     let maxLen: number | undefined;
     let maxWid: number | undefined;
     const cached = matKey ? materialMaxDims[matKey] : undefined;
     if (cached) {
       maxLen = cached.maxLength;
       maxWid = cached.maxWidth;
+    } else {
+      const ms = getMaxBoardSideForMaterial(matKey);
+      if (ms) { maxLen = ms; maxWid = ms; }
     }
 
     setFieldErrors(prev => {
@@ -332,7 +315,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       }
       return { ...prev, [pieceId]: next };
     });
-  }, [materialMaxDims]);
+  }, [materialMaxDims, getMaxBoardSideForMaterial]);
   
   // State for managing material selections for each section
   interface SectionMaterial {
@@ -1395,31 +1378,6 @@ Thank you for your business!
   };
 
   const sections = getSections();
-  // Memoized helpers for mobile sequential rendering
-  const hasSequentialSeparators = useMemo(() => cutPieces.some(piece => piece.separator), [cutPieces]);
-  const mobileSequentialSections = useMemo(() => {
-    if (!hasSequentialSeparators) return [] as { material: string; pieces: any[]; headingIdx: number; separatorIndex: number }[];
-    let currentHeaderIndex = -1;
-    let currentMaterial = '';
-    let currentPieces: any[] = [];
-    const result: { material: string; pieces: any[]; headingIdx: number; separatorIndex: number }[] = [];
-    cutPieces.forEach((piece, index) => {
-      if (piece.separator) {
-        if (currentPieces.length > 0) {
-          result.push({ material: currentMaterial, pieces: currentPieces, headingIdx: currentHeaderIndex, separatorIndex: currentHeaderIndex });
-        }
-        currentHeaderIndex = index;
-        currentMaterial = piece.name || piece.material || '';
-        currentPieces = [];
-      } else {
-        currentPieces.push(piece);
-      }
-    });
-    if (currentPieces.length > 0) {
-      result.push({ material: currentMaterial, pieces: currentPieces, headingIdx: currentHeaderIndex, separatorIndex: currentHeaderIndex });
-    }
-    return result;
-  }, [cutPieces, hasSequentialSeparators]);
 
   return (
     <Paper elevation={3}>
@@ -1441,51 +1399,420 @@ Thank you for your business!
               Add Material
             </Button>
           </Box>
-          {cutPieces.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>No materials added yet</Typography>
-              <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleAddMaterialSection} disabled={isConfirmed}>Add Your First Material Section</Button>
-            </Box>
-          ) : (
-            (hasSequentialSeparators ? mobileSequentialSections : sections).map((section: any, sectionIdx: number) => (
-              <Box key={`section-mobile-${sectionIdx}-${section.headingIdx ?? section.separatorIndex}`} sx={{ mb: 3 }}>
+          
+
+          {(() => {
+            // Check if we have OCR-parsed data with separator pieces in sequence (mobile view)
+            const hasSequentialSeparators = cutPieces.some(piece => piece.separator);
+
+            
+            if (hasSequentialSeparators) {
+
+              // Process pieces in their original sequence for mobile
+              let currentSectionIndex = 0;
+              let currentSectionMaterial = '';
+              let currentSectionPieces: any[] = [];
+              const sectionsToRender: any[] = [];
+              
+              cutPieces.forEach((piece, index) => {
+                if (piece.separator) {
+                  // If we have accumulated pieces, save the current section
+                  if (currentSectionPieces.length > 0) {
+                    sectionsToRender.push({
+                      material: currentSectionMaterial,
+                      pieces: currentSectionPieces,
+                      headingIdx: currentSectionIndex,
+                      separatorIndex: currentSectionIndex
+                    });
+                  }
+                  
+                  // Start a new section
+                  currentSectionMaterial = piece.name || piece.material || 'Unknown Material';
+                  currentSectionPieces = [];
+                  currentSectionIndex = index;
+                } else {
+                  // Add regular piece to current section
+                  currentSectionPieces.push(piece);
+                }
+              });
+              
+              // Add the final section if it has pieces
+              if (currentSectionPieces.length > 0) {
+                sectionsToRender.push({
+                  material: currentSectionMaterial,
+                  pieces: currentSectionPieces,
+                  headingIdx: currentSectionIndex,
+                  separatorIndex: currentSectionIndex
+                });
+              }
+              
+              // Render mobile sections in their original sequence
+              return sectionsToRender.map((section, sectionIdx) => (
+                <Box key={`section-mobile-sequential-${section.separatorIndex}`} sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    
+                    <FormControl 
+                      fullWidth 
+                      size="medium" 
+                      required={showMaterialValidation || requireMaterialValidation || isValidating} 
+                      error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}
+                      id={`material-dropdown-${sectionIdx}`}
+                      sx={{
+                        animation: isValidating && (!section.material || section.material.trim() === '') ? 
+                          'pulse 1.5s infinite' : 'none',
+                        '@keyframes pulse': {
+                          '0%': {
+                            boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)',
+                          },
+                          '70%': {
+                            boxShadow: '0 0 0 10px rgba(211, 47, 47, 0)',
+                          },
+                          '100%': {
+                            boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
+                          },
+                        },
+                        mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') ? 0 : 2,
+                        '& .MuiOutlinedInput-root': {
+                          fontSize: '1.1rem',
+                          fontWeight: 'bold',
+                          border: '3px solid #1976d2',
+                          borderRadius: '8px',
+                          backgroundColor: '#f8f9ff',
+                          '&:hover': {
+                            border: '3px solid #1565c0',
+                          },
+                          '&.Mui-focused': {
+                            border: '3px solid #0d47a1',
+                            boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
+                          },
+                          '&.Mui-error': {
+                            border: '3px solid #d32f2f',
+                            backgroundColor: '#fff5f5',
+                          }
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '1.1rem',
+                          fontWeight: 'bold',
+                          color: '#1976d2',
+                          '&.Mui-focused': {
+                            color: '#0d47a1',
+                          },
+                          '&.Mui-error': {
+                            color: '#d32f2f',
+                          }
+                        }
+                      }}
+                    >
+                      <InputLabel>Material</InputLabel>
+                      <Select
+                        value={section.material || ''}
+                        onChange={(e) => {
+                          const newMaterial = e.target.value;
+                          const updatedPieces = [...cutPieces];
+                          // Update the separator piece name and remove requiresSelection flag
+                          if (updatedPieces[section.separatorIndex] && updatedPieces[section.separatorIndex].separator) {
+                            updatedPieces[section.separatorIndex].name = newMaterial;
+                            updatedPieces[section.separatorIndex].material = newMaterial;
+                            // Remove the requiresSelection flag since user has now selected
+                            delete updatedPieces[section.separatorIndex].requiresSelection;
+                          }
+                          // Update material for all pieces in this section
+                          section.pieces.forEach((piece: any) => {
+                            const pieceIndex = updatedPieces.findIndex(p => p.id === piece.id);
+                            if (pieceIndex !== -1) {
+                              updatedPieces[pieceIndex].material = newMaterial;
+                            }
+                          });
+                          setCutPieces(updatedPieces);
+                          // Preload max dims for the selected material
+                          fetchAndCacheMaterialMaxDims(String(newMaterial));
+                        }}
+                        disabled={isConfirmed || loadingMaterials}
+                      >
+                        {loadingMaterials ? <MenuItem disabled>Loading...</MenuItem> : productDescriptions.map(description => (
+                          <MenuItem key={description} value={description}>{description}</MenuItem>
+                        ))}
+                      </Select>
+                      {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') && (
+                        <Box sx={{ 
+                          mt: 1, 
+                          mb: 2,
+                          p: 1.5, 
+                          backgroundColor: '#ffebee', 
+                          border: '2px solid #f44336', 
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          animation: isValidating ? 'pulse 2s infinite' : 'none',
+                          '@keyframes pulse': {
+                            '0%': { opacity: 1, boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.4)' },
+                            '50%': { opacity: 0.8, boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)' },
+                            '100%': { opacity: 1, boxShadow: '0 0 0 0 rgba(244, 67, 54, 0)' },
+                          },
+                        }}>
+                          <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                            ⚠️ Please select a material from the dropdown
+                          </Typography>
+                        </Box>
+                      )}
+                    </FormControl>
+                    <IconButton
+                      aria-label="Delete material section"
+                      onClick={() => {
+                        if (isConfirmed || loadingMaterials) return;
+                        handleDeleteMaterialSection(section.separatorIndex);
+                      }}
+                      color="error"
+                      sx={{ ml: 1 }}
+                      disabled={isConfirmed || loadingMaterials || sectionsToRender.length <= 1}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+
+                  {section.pieces.map((piece: any, pieceIdx: number) => {
+                    // Find the actual index of this piece in the cutPieces array
+                    const actualPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
+                    
+                    return (
+                      <React.Fragment key={piece.id}>
+                        <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+                          <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
+                          <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
+                            <TextField
+                              id={`length-field-${piece.id}`}
+                              label={`Length (${unit})`}
+                              type="number"
+                              value={piece.length ?? ''}
+                              onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                              onBlur={() => {
+                                const ms = getMaxBoardSideForMaterial(section.material);
+                                const val = Number(piece.length);
+                                if (ms && !isNaN(val) && val > ms) {
+                                  setShowDimensionValidation(true);
+                                  setIsValidating(true);
+                                  setTimeout(() => setIsValidating(false), 4000);
+                                }
+                              }}
+                              variant="outlined"
+                              size="small"
+                              InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
+                              disabled={isConfirmed}
+                              error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
+                              helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
+                            />
+                            <TextField
+                              id={`width-field-${piece.id}`}
+                              label={`Width (${unit})`}
+                              type="number"
+                              value={piece.width ?? ''}
+                              onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                              onBlur={() => {
+                                const ms = getMaxBoardSideForMaterial(section.material);
+                                const val = Number(piece.width);
+                                if (ms && !isNaN(val) && val > ms) {
+                                  setShowDimensionValidation(true);
+                                  setIsValidating(true);
+                                  setTimeout(() => setIsValidating(false), 4000);
+                                }
+                              }}
+                              variant="outlined"
+                              size="small"
+                              InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
+                              disabled={isConfirmed}
+                              error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
+                              helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
+                            />
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
+                            <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
+                            <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
+                            <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
+                            <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
+                            <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
+                            <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
+                          </Box>
+                        </Paper>
+                        
+                        {/* Add material button between pieces (except after the last piece) */}
+                        {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, my: 1 }}>
+                            <Button
+                              variant="text"
+                              size="small"
+                              aria-label="Insert material section"
+                              onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
+                              sx={{
+                                color: '#9e9e9e',
+                                fontSize: '0.75rem',
+                                fontWeight: 'normal',
+                                minWidth: 'auto',
+                                padding: '2px 6px',
+                                textTransform: 'none',
+                                textDecoration: 'underline',
+                                textDecorationColor: 'transparent',
+                                '&:hover': {
+                                  color: '#757575',
+                                  textDecorationColor: '#757575',
+                                  backgroundColor: 'transparent',
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                              }}
+                            >
+                              add material
+                            </Button>
+                            <Button
+                              variant="text"
+                              size="small"
+                              aria-label="Add cut piece"
+                              onClick={() => handleAddCutPiece(undefined, actualPieceIndex)}
+                              sx={{
+                                color: '#9e9e9e',
+                                fontSize: '0.75rem',
+                                fontWeight: 'normal',
+                                minWidth: 'auto',
+                                padding: '2px 6px',
+                                textTransform: 'none',
+                                textDecoration: 'underline',
+                                textDecorationColor: 'transparent',
+                                '&:hover': {
+                                  color: '#757575',
+                                  textDecorationColor: '#757575',
+                                  backgroundColor: 'transparent',
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                              }}
+                            >
+                              add piece
+                            </Button>
+                          </Box>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </Box>
+              ));
+            }
+            
+            // Fallback to original grouped rendering for manually created sections (mobile)
+            const sections = getSections();
+            
+            // If no sections exist (no separator pieces), create a default section with all pieces
+            if (sections.length === 0 && cutPieces.length > 0) {
+              const defaultSection = {
+                material: cutPieces[0]?.material || 'White Melamine',
+                pieces: cutPieces.filter(p => !p.separator),
+                headingIdx: 0
+              };
+              sections.push(defaultSection);
+              console.log('📱 MOBILE: Created default section with', defaultSection.pieces.length, 'pieces');
+            }
+            
+            return sections.map((section, sectionIdx) => (
+              <Box key={`section-mobile-${sectionIdx}`} sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <FormControl
-                    fullWidth
-                    size="medium"
-                    required={showMaterialValidation || requireMaterialValidation || isValidating}
+                {console.log(`Rendering section ${sectionIdx}, material: ${section.material}, validation: ${(requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}`)}
+                
+                  <FormControl 
+                    fullWidth 
+                    size="medium" 
+                    required={showMaterialValidation || requireMaterialValidation || isValidating} 
                     error={(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '')}
                     id={`material-dropdown-${sectionIdx}`}
+                    sx={{
+                      animation: isValidating && (!section.material || section.material.trim() === '') ? 
+                        'pulse 1.5s infinite' : 'none',
+                      '@keyframes pulse': {
+                        '0%': {
+                          boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)',
+                        },
+                        '70%': {
+                          boxShadow: '0 0 0 10px rgba(211, 47, 47, 0)',
+                        },
+                        '100%': {
+                          boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
+                        },
+                      },
+                      mb: (showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') ? 0 : 2,
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '1.1rem',
+                        fontWeight: 'bold',
+                        border: '3px solid #1976d2',
+                        borderRadius: '8px',
+                        backgroundColor: '#f8f9ff',
+                        '&:hover': {
+                          border: '3px solid #1565c0',
+                        },
+                        '&.Mui-focused': {
+                          border: '3px solid #0d47a1',
+                          boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',
+                        },
+                        '&.Mui-error': {
+                          border: '3px solid #d32f2f',
+                          backgroundColor: '#fff5f5',
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '1.1rem',
+                        fontWeight: 'bold',
+                        color: '#1976d2',
+                        '&.Mui-focused': {
+                          color: '#0d47a1',
+                        },
+                        '&.Mui-error': {
+                          color: '#d32f2f',
+                        }
+                      }
+                    }}
                   >
                     <InputLabel>Material</InputLabel>
                     <Select
-                      value={section.material || ''}
-                      onChange={(e) => {
-                        const newMaterial = e.target.value;
-                        const updated = [...cutPieces];
-                        const headerIndex = (section as any).separatorIndex ?? section.headingIdx;
-                        if (headerIndex != null && updated[headerIndex] && updated[headerIndex].separator) {
-                          updated[headerIndex].name = newMaterial;
-                          updated[headerIndex].material = newMaterial;
-                          delete updated[headerIndex].requiresSelection;
-                        }
-                        section.pieces.forEach((piece: any) => {
-                          const idx = updated.findIndex(p => p.id === piece.id);
-                          if (idx !== -1) updated[idx].material = newMaterial;
-                        });
-                        setCutPieces(updated);
-                        fetchAndCacheMaterialMaxDims(String(newMaterial));
-                      }}
-                      disabled={isConfirmed || loadingMaterials}
+                        value={section.material}
+                        onChange={(e) => {
+                            const newMaterial = e.target.value;
+                            const updatedPieces = [...cutPieces];
+                            updatedPieces[section.headingIdx].name = newMaterial;
+                            updatedPieces[section.headingIdx].material = newMaterial;
+                            // Remove the requiresSelection flag since user has now selected
+                            delete updatedPieces[section.headingIdx].requiresSelection;
+                            // Update material for all pieces in this section
+                            for (let i = section.headingIdx + 1; i < updatedPieces.length; i++) {
+                                if (updatedPieces[i].separator) break;
+                                updatedPieces[i].material = newMaterial;
+                            }
+                            setCutPieces(updatedPieces);
+                            // Preload max dims for the selected material
+                            fetchAndCacheMaterialMaxDims(String(newMaterial));
+                        }}
+                        disabled={isConfirmed || loadingMaterials}
                     >
-                      {loadingMaterials ? <MenuItem disabled>Loading...</MenuItem> : productDescriptions.map(description => (
-                        <MenuItem key={description} value={description}>{description}</MenuItem>
-                      ))}
+                        {loadingMaterials ? <MenuItem disabled>Loading...</MenuItem> : productDescriptions.map(description => (
+                            <MenuItem key={description} value={description}>{description}</MenuItem>
+                        ))}
                     </Select>
                     {(showMaterialValidation || requireMaterialValidation || isValidating) && (!section.material || section.material.trim() === '') && (
-                      <Box sx={{ mt: 1, mb: 2, p: 1.5, backgroundColor: '#ffebee', border: '2px solid #f44336', borderRadius: '4px' }}>
-                        <Typography variant="body2" color="error" sx={{ fontWeight: 'bold' }}>
-                          ⚠️ Please select a material from the dropdown
+                      <Box sx={{ 
+                        mt: 1, 
+                        mb: 2,
+                        p: 1.5, 
+                        backgroundColor: '#ffebee', 
+                        border: '2px solid #f44336', 
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        animation: isValidating ? 'pulse 2s infinite' : 'none',
+                        '@keyframes pulse': {
+                          '0%': { opacity: 1, boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.4)' },
+                          '50%': { opacity: 0.8, boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)' },
+                          '100%': { opacity: 1, boxShadow: '0 0 0 0 rgba(244, 67, 54, 0)' },
+                        },
+                      }}>
+                        <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                          ⚠️ Materials dropdown needs a selection
                         </Typography>
                       </Box>
                     )}
@@ -1494,96 +1821,905 @@ Thank you for your business!
                     aria-label="Delete material section"
                     onClick={() => {
                       if (isConfirmed || loadingMaterials) return;
-                      const headerIndex = (section as any).separatorIndex ?? section.headingIdx;
-                      handleDeleteMaterialSection(headerIndex);
+                      // Delete the entire material section instead of just clearing the name
+                      handleDeleteMaterialSection(section.headingIdx);
                     }}
                     color="error"
                     sx={{ ml: 1 }}
-                    disabled={isConfirmed || loadingMaterials || (hasSequentialSeparators ? mobileSequentialSections.length <= 1 : sections.length <= 1)}
+                    disabled={isConfirmed || loadingMaterials || sections.length <= 1} // Prevent deleting the last section
                   >
                     <DeleteIcon />
                   </IconButton>
                 </Box>
-                {section.pieces.map((piece: any, pieceIdx: number) => {
-                  const actualPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
-                  return (
-                    <React.Fragment key={piece.id}>
-                      <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-                        <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
-                        <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
-                          <TextField
-                            id={`length-field-${piece.id}`}
-                            label={`Length (${unit})`}
-                            type="number"
-                            value={piece.length ?? ''}
-                            onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
-                            onBlur={() => {
-                              const d = getMaxDimsForMaterial(section.material);
-                              const val = Number(piece.length);
-                              if (d.maxLength && !isNaN(val) && val > d.maxLength) {
-                                setShowDimensionValidation(true);
-                                setIsValidating(true);
-                                setTimeout(() => setIsValidating(false), 4000);
+
+              {section.pieces.map((piece, pieceIdx) => {
+                // Find the actual index of this piece in the cutPieces array
+                const actualPieceIndex = cutPieces.findIndex(p => p.id === piece.id);
+                
+                return (
+                  <React.Fragment key={piece.id}>
+                    <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+                      <TextField fullWidth label="Name" value={piece.name || ''} onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)} variant="outlined" size="small" sx={{ mb: 1.5 }} disabled={isConfirmed} />
+                      <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
+                        <TextField
+                          id={`length-field-${piece.id}`}
+                          label={`Length (${unit})`}
+                          type="number"
+                          value={piece.length ?? ''}
+                          onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                          onBlur={() => {
+                            const ms = getMaxBoardSideForMaterial(section.material);
+                            const val = Number(piece.length);
+                            if (ms && !isNaN(val) && val > ms) {
+                              setShowDimensionValidation(true);
+                              setIsValidating(true);
+                              setTimeout(() => setIsValidating(false), 4000);
+                            }
+                          }}
+                          variant="outlined"
+                          size="small"
+                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
+                          disabled={isConfirmed}
+                          error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })())}
+                          helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
+                        />
+                        <TextField
+                          id={`width-field-${piece.id}`}
+                          label={`Width (${unit})`}
+                          type="number"
+                          value={piece.width ?? ''}
+                          onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                          onBlur={() => {
+                            const ms = getMaxBoardSideForMaterial(section.material);
+                            const val = Number(piece.width);
+                            if (ms && !isNaN(val) && val > ms) {
+                              setShowDimensionValidation(true);
+                              setIsValidating(true);
+                              setTimeout(() => setIsValidating(false), 4000);
+                            }
+                          }}
+                          variant="outlined"
+                          size="small"
+                          InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
+                          disabled={isConfirmed}
+                          error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })())}
+                          helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })())}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', mb: 1 }}>
+                        <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
+                        <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
+                        <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
+                        <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
+                        <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
+                        <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
+                      </Box>
+                    </Paper>
+                    
+                    {/* Add material button between pieces (except after the last piece) */}
+                    {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, my: 1 }}>
+                        <Button
+                          variant="text"
+                          size="small"
+                          aria-label="Insert material section"
+                          onClick={() => handleInsertMaterialSeparator(actualPieceIndex)}
+                          sx={{
+                            color: '#9e9e9e',
+                            fontSize: '0.75rem',
+                            fontWeight: 'normal',
+                            minWidth: 'auto',
+                            padding: '2px 6px',
+                            textTransform: 'none',
+                            textDecoration: 'underline',
+                            textDecorationColor: 'transparent',
+                            '&:hover': {
+                              color: '#757575',
+                              textDecorationColor: '#757575',
+                              backgroundColor: 'transparent',
+                            },
+                            transition: 'all 0.2s ease-in-out',
+                          }}
+                        >
+                          add material
+                        </Button>
+                        <Button
+                          variant="text"
+                          size="small"
+                          aria-label="Add cut piece"
+                          onClick={() => handleAddCutPiece(undefined, actualPieceIndex)}
+                          sx={{
+                            color: '#9e9e9e',
+                            fontSize: '0.75rem',
+                            fontWeight: 'normal',
+                            minWidth: 'auto',
+                            padding: '2px 6px',
+                            textTransform: 'none',
+                            textDecoration: 'underline',
+                            textDecorationColor: 'transparent',
+                            '&:hover': {
+                              color: '#757575',
+                              textDecorationColor: '#757575',
+                              backgroundColor: 'transparent',
+                            },
+                            transition: 'all 0.2s ease-in-out',
+                          }}
+                        >
+                          add piece
+                        </Button>
+                      </Box>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </Box>
+          ));
+          })()}
+        </Box>
+      ) : (
+        // Desktop Table View
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Cutlist</Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button variant="outlined" startIcon={<AddIcon />} onClick={() => handleAddCutPiece()} disabled={isConfirmed}>Add Piece</Button>
+              <Button 
+                variant="contained" 
+                color="secondary" 
+                startIcon={<AddIcon />} 
+                onClick={handleAddMaterialSection} 
+                disabled={isConfirmed}
+                sx={{ fontWeight: 'bold' }}
+              >
+                Add New Material Section
+              </Button>
+            </Box>
+          </Box>
+          {(() => {
+            // Check if we have OCR-parsed data with separator pieces in sequence
+            const hasSequentialSeparators = cutPieces.some(piece => piece.separator);
+            
+            if (cutPieces.length === 0) {
+              // No pieces yet, show a welcome message
+              return (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>No materials added yet</Typography>
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddMaterialSection}
+                  >
+                    Add Your First Material Section
+                  </Button>
+                </Box>
+              );
+            }
+            
+            // If we have sequential separators from OCR parsing, render in original order
+            if (hasSequentialSeparators) {
+              console.log('🎯 DESKTOP SEQUENTIAL RENDERING DEBUG:');
+              console.log('📊 Total cut pieces:', cutPieces.length);
+              const separatorPieces = cutPieces.filter(piece => piece.separator);
+              console.log('🔗 Separator pieces found:', separatorPieces.length);
+              separatorPieces.forEach((sep, idx) => {
+                console.log(`  Separator ${idx + 1}: ${sep.name || sep.material} (ID: ${sep.id})`);
+              });
+              
+              let currentSectionIndex = 0;
+              let currentSectionMaterial = '';
+              let currentSectionPieces: any[] = [];
+              const sectionsToRender: any[] = [];
+              
+              // Process pieces in their original sequence
+              cutPieces.forEach((piece, index) => {
+                console.log(`📋 Processing piece ${index}: ${piece.separator ? 'SEPARATOR' : 'REGULAR'} - ${piece.name || piece.material || 'Unknown'}`);
+                
+                if (piece.separator) {
+                  // If we have accumulated pieces, save the current section
+                  if (currentSectionPieces.length > 0) {
+                    console.log(`💾 Saving section with ${currentSectionPieces.length} pieces for material: ${currentSectionMaterial}`);
+                    sectionsToRender.push({
+                      material: currentSectionMaterial,
+                      pieces: currentSectionPieces,
+                      headingIdx: currentSectionIndex,
+                      separatorIndex: currentSectionIndex
+                    });
+                  }
+                  
+                  // Start a new section
+                  currentSectionMaterial = piece.name || piece.material || 'Unknown Material';
+                  currentSectionPieces = [];
+                  currentSectionIndex = index;
+                  console.log(`🆕 Starting new section: ${currentSectionMaterial} at index ${index}`);
+                } else {
+                  // Add regular piece to current section
+                  currentSectionPieces.push(piece);
+                  console.log(`➕ Added piece to current section: ${piece.name || 'Unnamed'} (${piece.length}x${piece.width})`);
+                }
+              });
+              
+              // Add the final section if it has pieces
+              if (currentSectionPieces.length > 0) {
+                console.log(`💾 Saving final section with ${currentSectionPieces.length} pieces for material: ${currentSectionMaterial}`);
+                sectionsToRender.push({
+                  material: currentSectionMaterial,
+                  pieces: currentSectionPieces,
+                  headingIdx: currentSectionIndex,
+                  separatorIndex: currentSectionIndex
+                });
+              }
+              
+              console.log(`🎨 FINAL SECTIONS TO RENDER: ${sectionsToRender.length}`);
+              sectionsToRender.forEach((section, idx) => {
+                console.log(`  Section ${idx + 1}: ${section.material} with ${section.pieces.length} pieces`);
+              });
+              
+              // Render sections in their original sequence
+              return sectionsToRender.map((section, sectionIndex) => (
+                <Box key={section.separatorIndex} sx={{ mb: 4 }}>
+                  <Paper elevation={2} sx={{ p: 0, borderRadius: '4px', overflow: 'hidden' }}>
+                    {/* Section header */}
+                    <Box 
+                      sx={{ 
+                        bgcolor: 'primary.main', 
+                        color: 'white', 
+                        px: 2, 
+                        py: 1,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {/* Material dropdown for sequential sections */}
+                        <FormControl 
+                          required={showMaterialValidation || requireMaterialValidation} 
+                          error={(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '')}
+                          id={`material-dropdown-${sectionIndex}`}
+                          sx={{
+                            minWidth: 200,
+                            mr: 2,
+                            '& .MuiOutlinedInput-root': {
+                              color: 'white',
+                              '& fieldset': {
+                                borderColor: 'rgba(255, 255, 255, 0.5)',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'white',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: 'white',
+                              },
+                              '&.Mui-error fieldset': {
+                                borderColor: '#ff6b6b',
                               }
-                            }}
-                            variant="outlined"
-                            size="small"
-                            InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength ? (<InputAdornment position="end">Max {d.maxLength}</InputAdornment>) : null; })() as any }}
-                            disabled={isConfirmed}
-                            error={Boolean(fieldErrors[piece.id]?.length) || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return !!(d.maxLength && Number(piece.length) > d.maxLength); })())}
-                            helperText={fieldErrors[piece.id]?.length || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return d.maxLength && Number(piece.length) > d.maxLength ? `Exceeds max length ${d.maxLength}mm` : ''; })())}
-                          />
-                          <TextField
-                            id={`width-field-${piece.id}`}
-                            label={`Width (${unit})`}
-                            type="number"
-                            value={piece.width ?? ''}
-                            onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
-                            onBlur={() => {
-                              const d = getMaxDimsForMaterial(section.material);
-                              const val = Number(piece.width);
-                              if (d.maxWidth && !isNaN(val) && val > d.maxWidth) {
-                                setShowDimensionValidation(true);
-                                setIsValidating(true);
-                                setTimeout(() => setIsValidating(false), 4000);
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: 'rgba(255, 255, 255, 0.7)',
+                              '&.Mui-focused': {
+                                color: 'white',
+                              },
+                              '&.Mui-error': {
+                                color: '#ff6b6b',
                               }
+                            },
+                            '& .MuiSelect-icon': {
+                              color: 'white',
+                            }
+                          }}
+                        >
+                          <InputLabel>Material</InputLabel>
+                          <Select
+                            value={section.material || ''}
+                            onChange={(e) => {
+                              const newMaterial = e.target.value;
+                              const updatedPieces = [...cutPieces];
+                              // Update the separator piece name
+                              if (updatedPieces[section.separatorIndex] && updatedPieces[section.separatorIndex].separator) {
+                                updatedPieces[section.separatorIndex].name = newMaterial;
+                              }
+                              // Update material for all pieces in this section
+                              section.pieces.forEach((piece: any) => {
+                                const pieceIndex = updatedPieces.findIndex(p => p.id === piece.id);
+                                if (pieceIndex !== -1) {
+                                  updatedPieces[pieceIndex].material = newMaterial;
+                                }
+                              });
+                              setCutPieces(updatedPieces);
                             }}
-                            variant="outlined"
-                            size="small"
-                            InputProps={{ endAdornment: (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth ? (<InputAdornment position="end">Max {d.maxWidth}</InputAdornment>) : null; })() as any }}
-                            disabled={isConfirmed}
-                            error={Boolean(fieldErrors[piece.id]?.width) || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return !!(d.maxWidth && Number(piece.width) > d.maxWidth); })())}
-                            helperText={fieldErrors[piece.id]?.width || (showDimensionValidation && (() => { const d = getMaxDimsForMaterial(section.material); return d.maxWidth && Number(piece.width) > d.maxWidth ? `Exceeds max width ${d.maxWidth}mm` : ''; })())}
-                          />
-                          <FormControlLabel control={<Checkbox checked={!!piece.lengthTick1} onChange={e => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)} disabled={isConfirmed} />} label="L1" />
-                          <FormControlLabel control={<Checkbox checked={!!piece.lengthTick2} onChange={e => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)} disabled={isConfirmed} />} label="L2" />
-                          <FormControlLabel control={<Checkbox checked={!!piece.widthTick1} onChange={e => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)} disabled={isConfirmed} />} label="W1" />
-                          <FormControlLabel control={<Checkbox checked={!!piece.widthTick2} onChange={e => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)} disabled={isConfirmed} />} label="W2" />
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
-                          <TextField label="Quantity" type="number" value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1} onChange={(e) => handleCutPieceChange(piece.id, 'quantity', e.target.value)} variant="outlined" size="small" inputProps={{ min: 1 }} disabled={isConfirmed} />
-                          <IconButton onClick={() => handleDeleteCutPiece(piece.id)} color="error" disabled={isConfirmed}><DeleteIcon /></IconButton>
-                        </Box>
-                      </Paper>
-                      {pieceIdx < section.pieces.length - 1 && !isConfirmed && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, my: 1 }}>
-                          <Button variant="text" size="small" aria-label="Insert material section" onClick={() => handleInsertMaterialSeparator(actualPieceIndex)} sx={{ color: '#9e9e9e', fontSize: '0.75rem', minWidth: 'auto', padding: '2px 6px', textTransform: 'none' }}>add material</Button>
-                          <Button variant="text" size="small" aria-label="Add cut piece" onClick={() => handleAddCutPiece(undefined, actualPieceIndex)} sx={{ color: '#9e9e9e', fontSize: '0.75rem', minWidth: 'auto', padding: '2px 6px', textTransform: 'none' }}>add piece</Button>
-                        </Box>
+                            disabled={isConfirmed || loadingMaterials}
+                            label="Material"
+                          >
+                            {loadingMaterials ? <MenuItem disabled>Loading...</MenuItem> : productDescriptions.map(description => (
+                              <MenuItem key={description} value={description}>{description}</MenuItem>
+                            ))}
+                          </Select>
+                          {(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '') && (
+                            <Box sx={{ 
+                              position: 'absolute',
+                              top: '100%',
+                              left: 0,
+                              right: 0,
+                              mt: 1, 
+                              p: 1, 
+                              backgroundColor: '#ffebee', 
+                              border: '2px solid #f44336', 
+                              borderRadius: '4px',
+                              zIndex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1
+                            }}>
+                              <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                ⚠️ Materials dropdown needs a selection
+                              </Typography>
+                            </Box>
+                          )}
+                        </FormControl>
+                        
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                          {section.material} ({section.pieces.length} pieces)
+                        </Typography>
+                      </Box>
+                      
+                      <IconButton 
+                        onClick={() => handleDeleteMaterialSection(section.separatorIndex)} 
+                        sx={{ color: 'white' }}
+                        disabled={isConfirmed}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                                        {/* Table content for this section */}
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Width (mm)</TableCell>
+                            <TableCell>Length (mm)</TableCell>
+                            <TableCell>Quantity</TableCell>
+                            <TableCell>Description</TableCell>
+                            <TableCell>Edging</TableCell>
+                            <TableCell align="center">Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {section.pieces.map((piece: any) => (
+                            <TableRow key={piece.id}>
+                              <TableCell>
+                                <TextField
+                                  id={`width-field-${piece.id}`}
+                                  label={`Width (${unit})`}
+                                  type="number"
+                                  value={piece.width ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.width);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="outlined"
+                                  size="small"
+                                  inputProps={{ min: 1 }}
+                                  disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  id={`length-field-${piece.id}`}
+                                  label={`Length (${unit})`}
+                                  type="number"
+                                  value={piece.length ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.length);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="outlined"
+                                  size="small"
+                                  inputProps={{ min: 1 }}
+                                  disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  type="number"
+                                  value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'quantity', parseInt(e.target.value))}
+                                  variant="outlined"
+                                  size="small"
+                                  inputProps={{ min: 1 }}
+                                  disabled={isConfirmed}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  value={piece.description || piece.name || ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'description', e.target.value)}
+                                  variant="outlined"
+                                  size="small"
+                                  disabled={isConfirmed}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={piece.lengthTick1 || false}
+                                        onChange={(e) => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)}
+                                        size="small"
+                                        disabled={isConfirmed}
+                                      />
+                                    }
+                                    label="L1"
+                                    sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: '0.75rem' } }}
+                                  />
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={piece.lengthTick2 || false}
+                                        onChange={(e) => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)}
+                                        size="small"
+                                        disabled={isConfirmed}
+                                      />
+                                    }
+                                    label="L2"
+                                    sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: '0.75rem' } }}
+                                  />
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={piece.widthTick1 || false}
+                                        onChange={(e) => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)}
+                                        size="small"
+                                        disabled={isConfirmed}
+                                      />
+                                    }
+                                    label="W1"
+                                    sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: '0.75rem' } }}
+                                  />
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={piece.widthTick2 || false}
+                                        onChange={(e) => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)}
+                                        size="small"
+                                        disabled={isConfirmed}
+                                      />
+                                    }
+                                    label="W2"
+                                    sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: '0.75rem' } }}
+                                  />
+                                </Box>
+                              </TableCell>
+                              <TableCell align="center">
+                                <IconButton
+                                  onClick={() => handleDeleteCutPiece(piece.id)}
+                                  color="error"
+                                  size="small"
+                                  disabled={isConfirmed}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    
+                    {/* Add material and add piece buttons for this section */}
+                    <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50', display: 'flex', justifyContent: 'center', gap: 2 }}>
+                      <Button
+                        variant="text"
+                        size="small"
+                        aria-label="Insert material section"
+                        onClick={() => handleInsertMaterialSeparator(section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : 0)}
+                        disabled={isConfirmed}
+                        sx={{
+                          color: '#9e9e9e',
+                          fontSize: '0.75rem',
+                          fontWeight: 'normal',
+                          minWidth: 'auto',
+                          padding: '2px 6px',
+                          textTransform: 'none',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'transparent',
+                          '&:hover': {
+                            color: '#757575',
+                            textDecorationColor: '#757575',
+                            backgroundColor: 'transparent',
+                          },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      >
+                        add material
+                      </Button>
+                      <Button
+                        variant="text"
+                        size="small"
+                        aria-label="Add cut piece"
+                        onClick={() => handleAddCutPiece(section.material, section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : 0)}
+                        disabled={isConfirmed}
+                        sx={{
+                          color: '#9e9e9e',
+                          fontSize: '0.75rem',
+                          fontWeight: 'normal',
+                          minWidth: 'auto',
+                          padding: '2px 6px',
+                          textTransform: 'none',
+                          textDecoration: 'underline',
+                          textDecorationColor: 'transparent',
+                          '&:hover': {
+                            color: '#757575',
+                            textDecorationColor: '#757575',
+                            backgroundColor: 'transparent',
+                          },
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      >
+                        add piece
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Box>
+              ));
+            }
+            
+            // Fallback to original grouped rendering for manually created sections
+            const sections = getSections();
+            return sections.map((section, sectionIndex) => (
+              <Box key={section.headingIdx} sx={{ mb: 4 }}>
+                <Paper elevation={2} sx={{ p: 0, borderRadius: '4px', overflow: 'hidden' }}>
+                  {/* Section header */}
+                  <Box 
+                    sx={{ 
+                      bgcolor: 'primary.main', 
+                      color: 'white', 
+                      px: 2, 
+                      py: 1,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {/* Material dropdown for desktop view */}
+                      <FormControl 
+                        required={showMaterialValidation || requireMaterialValidation} 
+                        error={(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '' || !productDescriptions.includes(section.material))}
+                        id={`material-dropdown-${sectionIndex}`}
+                        sx={{
+                          minWidth: 200,
+                          mr: 2,
+                          '& .MuiOutlinedInput-root': {
+                            color: 'white',
+                            '& fieldset': {
+                              borderColor: 'rgba(255, 255, 255, 0.5)',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: 'white',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'white',
+                            },
+                            '&.Mui-error fieldset': {
+                              borderColor: '#ff6b6b',
+                            }
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&.Mui-focused': {
+                              color: 'white',
+                            },
+                            '&.Mui-error': {
+                              color: '#ff6b6b',
+                            }
+                          },
+                          '& .MuiSelect-icon': {
+                            color: 'white',
+                          }
+                        }}
+                      >
+                        <InputLabel>Material</InputLabel>
+                        <Select
+                          value={section.material || ''}
+                          onChange={(e) => {
+                            const newMaterial = e.target.value;
+                            const updatedPieces = [...cutPieces];
+                            updatedPieces[section.headingIdx].name = newMaterial;
+                            // Update material for all pieces in this section
+                            for (let i = section.headingIdx + 1; i < updatedPieces.length; i++) {
+                              if (updatedPieces[i].separator) break;
+                              updatedPieces[i].material = newMaterial;
+                            }
+                            setCutPieces(updatedPieces);
+                          }}
+                          disabled={isConfirmed || loadingMaterials}
+                          label="Material"
+                        >
+                          {loadingMaterials ? <MenuItem disabled>Loading...</MenuItem> : productDescriptions.map(description => (
+                            <MenuItem key={description} value={description}>{description}</MenuItem>
+                          ))}
+                        </Select>
+                        {(showMaterialValidation || requireMaterialValidation) && (!section.material || section.material.trim() === '') && (
+                          <Box sx={{ 
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            mt: 1, 
+                            p: 1, 
+                            backgroundColor: '#ffebee', 
+                            border: '2px solid #f44336', 
+                            borderRadius: '4px',
+                            zIndex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}>
+                            <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                              ⚠️ Materials dropdown needs a selection
+                            </Typography>
+                          </Box>
+                        )}
+                      </FormControl>
+                      
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                        Section {sectionIndex + 1}
+                      </Typography>
+                      {!isConfirmed && sections.length > 1 && (
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDeleteMaterialSection(section.headingIdx)}
+                          sx={{ ml: 1, color: 'white' }}
+                          disabled={isConfirmed}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
                       )}
-                    </React.Fragment>
-                  );
-                })}
+                    </Box>
+                    {!isConfirmed && (
+                      <Button 
+                        variant="contained" 
+                        color="secondary" 
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => handleAddCutPiece(section.material)}
+                      >
+                        Add Piece
+                      </Button>
+                    )}
+                  </Box>
+                  
+                  {/* Section table */}
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          {!isConfirmed && <TableCell width="5%"></TableCell>}
+                          <TableCell width="30%">Name</TableCell>
+                          <TableCell width="15%" align="right">Width (mm)</TableCell>
+                          <TableCell width="15%" align="right">Length (mm)</TableCell>
+                          <TableCell width="10%" align="right">Qty</TableCell>
+                          {!isConfirmed && (
+                            <>
+                              <TableCell width="5%" align="center">L1</TableCell>
+                              <TableCell width="5%" align="center">L2</TableCell>
+                              <TableCell width="5%" align="center">W1</TableCell>
+                              <TableCell width="5%" align="center">W2</TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {section.pieces.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={isConfirmed ? 5 : 9} align="center">
+                              <Typography sx={{ py: 2, color: 'text.secondary' }}>No pieces added to this material section</Typography>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          section.pieces.map((piece) => (
+                            <TableRow key={piece.id}>
+                              {!isConfirmed && (
+                                <TableCell>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={() => handleDeleteCutPiece(piece.id)}
+                                    disabled={isConfirmed}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                <TextField
+                                  variant="standard"
+                                  value={piece.name || ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'name', e.target.value)}
+                                  fullWidth
+                                  disabled={isConfirmed}
+                                />
+                              </TableCell>
+                              <TableCell align="right">
+                                <TextField
+                                  id={`width-field-${piece.id}`}
+                                  label={`Width (mm)`}
+                                  type="number"
+                                  value={piece.width ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.width);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="standard"
+                                  disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                                />
+                              </TableCell>
+                              <TableCell align="right">
+                                <TextField
+                                  id={`length-field-${piece.id}`}
+                                  label={`Length (mm)`}
+                                  type="number"
+                                  value={piece.length ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'length', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.length);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="standard"
+                                  disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                                />
+                              </TableCell>
+                              <TableCell align="right">
+                                <TextField
+                                  id={`quantity-field-${piece.id}`}
+                                  variant="standard"
+                                  value={piece.quantity !== undefined && piece.quantity !== null ? piece.quantity : 1}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'quantity', Number(e.target.value))}
+                                  type="number"
+                                  InputProps={{ inputProps: { min: 1, step: 1 } }}
+                                  disabled={isConfirmed}
+                                  error={showQuantityValidation && piece.quantity > 100 && !highQuantityPieces.includes(piece.id)}
+                                  helperText={showQuantityValidation && piece.quantity > 100 && !highQuantityPieces.includes(piece.id) ? 'High quantity - please confirm' : ''}
+                                />
+                              </TableCell>
+                              {!isConfirmed && (
+                                <>
+                                  <TableCell align="center">
+                                    <Checkbox 
+                                      checked={!!piece.lengthTick1} 
+                                      onChange={(e) => handleCutPieceChange(piece.id, 'lengthTick1', e.target.checked)}
+                                      disabled={isConfirmed}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Checkbox 
+                                      checked={!!piece.lengthTick2} 
+                                      onChange={(e) => handleCutPieceChange(piece.id, 'lengthTick2', e.target.checked)}
+                                      disabled={isConfirmed}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Checkbox 
+                                      checked={!!piece.widthTick1} 
+                                      onChange={(e) => handleCutPieceChange(piece.id, 'widthTick1', e.target.checked)}
+                                      disabled={isConfirmed}
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Checkbox 
+                                      checked={!!piece.widthTick2} 
+                                      onChange={(e) => handleCutPieceChange(piece.id, 'widthTick2', e.target.checked)}
+                                      disabled={isConfirmed}
+                                    />
+                                  </TableCell>
+                                </>
+                              )}
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  
+                  {/* Add material and add piece buttons for this section */}
+                  <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'grey.50', display: 'flex', justifyContent: 'center', gap: 2 }}>
+                    <Button
+                      variant="text"
+                      size="small"
+                      aria-label="Insert material section"
+                      onClick={() => handleInsertMaterialSeparator(section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : section.headingIdx)}
+                      disabled={isConfirmed}
+                      sx={{
+                        color: '#9e9e9e',
+                        fontSize: '0.75rem',
+                        fontWeight: 'normal',
+                        minWidth: 'auto',
+                        padding: '2px 6px',
+                        textTransform: 'none',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'transparent',
+                        '&:hover': {
+                          color: '#757575',
+                          textDecorationColor: '#757575',
+                          backgroundColor: 'transparent',
+                        },
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                    >
+                      add material
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="small"
+                      aria-label="Add cut piece"
+                      onClick={() => handleAddCutPiece(section.material, section.pieces[section.pieces.length - 1] ? cutPieces.findIndex(p => p.id === section.pieces[section.pieces.length - 1].id) : section.headingIdx)}
+                      disabled={isConfirmed}
+                      sx={{
+                        color: '#9e9e9e',
+                        fontSize: '0.75rem',
+                        fontWeight: 'normal',
+                        minWidth: 'auto',
+                        padding: '2px 6px',
+                        textTransform: 'none',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'transparent',
+                        '&:hover': {
+                          color: '#757575',
+                          textDecorationColor: '#757575',
+                          backgroundColor: 'transparent',
+                        },
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                    >
+                      add piece
+                    </Button>
+                  </Box>
+                </Paper>
               </Box>
-            ))
-          )}
+            ));
+          })()}
           {!isConfirmed && (
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, mb: 2 }}>
-              <Box />
+              <Box>
+              </Box>
             </Box>
           )}
         </Box>
-      ) : null}
+      )}
 
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
         
