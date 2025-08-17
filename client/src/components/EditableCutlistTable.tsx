@@ -1710,7 +1710,7 @@ Thank you for your business!
               })}
             </Box>
           ));
-          })()}
+          }()}
         </Box>
       ) : (
         // Desktop Table View
