@@ -98,6 +98,7 @@ const CutlistEdit: React.FC = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isDataConfirmed, setIsDataConfirmed] = useState(false); // Local confirmation state
+  const [ocrEmptyDialogOpen, setOcrEmptyDialogOpen] = useState(false);
   
   // Branch selection state
   const [selectedBranch, setSelectedBranch] = useState<string>('');
@@ -251,6 +252,16 @@ const CutlistEdit: React.FC = () => {
     fetchCutlistData();
   }, [fetchCutlistData]);
   
+  // Show dialog if there are no cut pieces (only for existing cutlists, not "/cutlist-edit/new")
+  useEffect(() => {
+    if (!isNewCutlist && !loading && !error && cutlistData) {
+      const noCuts = !Array.isArray(cutlistData.cutPieces) || cutlistData.cutPieces.length === 0;
+      if (noCuts) {
+        setOcrEmptyDialogOpen(true);
+      }
+    }
+  }, [isNewCutlist, loading, error, cutlistData]);
+  
   const handleSaveCutlist = async (dataToSave: CutlistData) => {
     if (!id) {
       showSnackbar('Cannot save: No cutlist ID provided', 'error');
@@ -371,6 +382,14 @@ const CutlistEdit: React.FC = () => {
     }
     showSnackbar('Cutlist data confirmed successfully!', 'success');
   };
+
+  const handleOpenWhatsApp = () => {
+    const phone = '27769789389'; // international format without '+' for wa.me
+    const text = encodeURIComponent('image');
+    const url = `https://wa.me/${phone}?text=${text}`;
+    // Prefer opening in same tab on mobile to ensure app handoff; new tab fallback on desktop
+    window.location.href = url;
+  };
   
   return (
     <Container maxWidth="md" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', py: 3 }}>
@@ -457,6 +476,22 @@ const CutlistEdit: React.FC = () => {
           />
         </Paper>
       )}
+
+      {/* OCR Empty Dialog */}
+      <Dialog open={ocrEmptyDialogOpen} onClose={() => setOcrEmptyDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>We need to process your image again</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            We couldn’t find any measurements in your image. Please send the image to us on WhatsApp and we’ll re-process it right away.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOcrEmptyDialogOpen(false)}>Close</Button>
+          <Button variant="contained" color="success" startIcon={<WhatsAppIcon />} onClick={handleOpenWhatsApp}>
+            Send image on WhatsApp
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
