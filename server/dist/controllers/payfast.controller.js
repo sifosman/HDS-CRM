@@ -334,6 +334,7 @@ exports.generatePaymentForm = generatePaymentForm;
 // NOTE: This is a minimal implementation to enable async flow without timeouts.
 // Heavy processing (invoice creation, PDF generation, email sending) should run here.
 const processItnJob = async (req, res) => {
+    var _a, _b, _c, _d;
     try {
         const token = req.headers['x-internal-token'];
         const expected = process.env.ITN_PROCESS_TOKEN || 'local-dev-token';
@@ -410,14 +411,95 @@ const processItnJob = async (req, res) => {
         // Prepare email data
         const customerName = [pfData.name_first, pfData.name_last].filter(Boolean).join(' ').trim() || 'Customer';
         const emailService = new email_service_1.EmailService();
+        // Enrich email with PDF URLs and optimization details when possible
+        let quotePdfUrl;
+        let invoicePdfUrl;
+        let cutlistPdfUrl;
+        let optimizationDetails = {};
+        if (quoteId) {
+            try {
+                const quoteRes = await supabase_service_1.default.fetchQuoteByNumber(quoteId);
+                if (quoteRes.success && quoteRes.data) {
+                    const q = quoteRes.data;
+                    console.log('🔎 Quote record URL fields:', {
+                        pdf_url: q.pdf_url,
+                        quote_pdf_url: q.quote_pdf_url,
+                        cutlist_pdf_url: q.cutlist_pdf_url,
+                        cutlist_url: q.cutlist_url,
+                        quote_number: q.quote_number
+                    });
+                    quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
+                    // Use only the real cutlist PDF URL from the cutlists bucket (do not fall back to cutlist_url which may be a quote link)
+                    cutlistPdfUrl = q.cutlist_pdf_url || undefined;
+                    optimizationDetails = {
+                        totalBoards: (_a = q.total_boards) !== null && _a !== void 0 ? _a : undefined,
+                        totalLength: (_b = q.total_length) !== null && _b !== void 0 ? _b : undefined,
+                        wastage: (_c = q.wastage_percentage) !== null && _c !== void 0 ? _c : undefined,
+                        cutlistUrl: (_d = q.cutlist_url) !== null && _d !== void 0 ? _d : undefined
+                    };
+                    // Fallback: if cutlistPdfUrl not present, construct public URL based on standard naming: cutlist-<quote_number lowercased>.pdf
+                    if (!cutlistPdfUrl) {
+                        const supabaseUrl = process.env.SUPABASE_URL || '';
+                        const qn = (q.quote_number || quoteId || '').toString();
+                        if (supabaseUrl && qn) {
+                            cutlistPdfUrl = `${supabaseUrl}/storage/v1/object/public/cutlists/cutlist-${qn.toLowerCase()}.pdf`;
+                            console.log('ℹ️ Using constructed cutlist PDF URL fallback:', cutlistPdfUrl);
+                        }
+                    }
+                }
+                const invRes = await supabase_service_1.default.fetchInvoiceByQuoteId(quoteId);
+                if (invRes.success && invRes.data) {
+                    console.log('🔎 Invoice record URL fields:', {
+                        pdf_url: invRes.data.pdf_url,
+                        invoice_pdf_url: invRes.data.invoice_pdf_url,
+                        invoice_number: invRes.data.invoice_number
+                    });
+                    // Support possible schema variations for invoice PDF URL
+                    invoicePdfUrl = invRes.data.pdf_url || invRes.data.invoice_pdf_url || undefined;
+                    // Fallback: derive latest invoice PDF public URL from storage if DB fields are missing
+                    if (!invoicePdfUrl && invRes.data.invoice_number) {
+                        try {
+                            const listRes = await supabase_service_1.default.listInvoicePdfs(invRes.data.invoice_number);
+                            if (listRes.success && Array.isArray(listRes.data) && listRes.data.length > 0) {
+                                const files = listRes.data.slice();
+                                files.sort((a, b) => b.name.localeCompare(a.name));
+                                const latest = files[0];
+                                const supabaseUrl = process.env.SUPABASE_URL || '';
+                                if (supabaseUrl) {
+                                    invoicePdfUrl = `${supabaseUrl}/storage/v1/object/public/invoices/${latest.name}`;
+                                    console.log('ℹ️ Using constructed invoice PDF URL fallback:', invoicePdfUrl);
+                                }
+                            }
+                            else {
+                                console.log('ℹ️ No invoice PDFs found in storage for invoice_number:', invRes.data.invoice_number);
+                            }
+                        }
+                        catch (e) {
+                            console.warn('⚠️ Invoice PDF fallback construction failed:', e);
+                        }
+                    }
+                }
+            }
+            catch (enrichErr) {
+                console.warn('⚠️ Email enrichment (PDF URLs) failed:', enrichErr);
+            }
+        }
         try {
             console.log('📧 Sending payment confirmation email...');
+            console.log('📎 Final PDF URLs for email:', {
+                quotePdfUrl,
+                invoicePdfUrl,
+                cutlistPdfUrl
+            });
             await emailService.sendPaymentConfirmationEmail({
                 customerName,
                 customerEmail: recipient,
                 quoteNumber: quoteId || (pfData.m_payment_id || 'UNKNOWN'),
                 amount,
-                optimizationDetails: {}
+                quotePdfUrl,
+                invoicePdfUrl,
+                cutlistPdfUrl,
+                optimizationDetails
             });
             console.log('✅ Email sent successfully to', recipient);
         }

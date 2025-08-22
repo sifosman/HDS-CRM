@@ -213,6 +213,7 @@ const SupabaseService = {
      * - quote_number (text, nullable) - IMPORTANT: Must be populated for invoice downloads
      */
     async createQuote(quoteData) {
+        var _a, _b, _c;
         try {
             console.log('Creating quote with data:', JSON.stringify({
                 cutlistId: (quoteData === null || quoteData === void 0 ? void 0 : quoteData.cutlistId) || (quoteData === null || quoteData === void 0 ? void 0 : quoteData.cutlist_id),
@@ -276,19 +277,56 @@ const SupabaseService = {
             if (quoteData.total !== undefined) {
                 quote.total = quoteData.total;
             }
-            if (quoteData.status) {
-                quote.status = quoteData.status;
+            // Extract and set branch fields explicitly on the quote for reliable email resolution
+            try {
+                const payloadBranchData = (quoteData === null || quoteData === void 0 ? void 0 : quoteData.branchData)
+                    || ((_a = quoteData === null || quoteData === void 0 ? void 0 : quoteData.quoteData) === null || _a === void 0 ? void 0 : _a.branchData)
+                    || ((_c = (_b = quoteData === null || quoteData === void 0 ? void 0 : quoteData.quoteData) === null || _b === void 0 ? void 0 : _b.data) === null || _c === void 0 ? void 0 : _c.branchData);
+                if (payloadBranchData && typeof payloadBranchData === 'object') {
+                    const tradingAs = payloadBranchData.trading_as || payloadBranchData.tradingAs;
+                    const branch = payloadBranchData.branch;
+                    const branchTradingAs = payloadBranchData.branch_trading_as || payloadBranchData.branchTradingAs;
+                    if (tradingAs)
+                        quote.trading_as = tradingAs;
+                    if (branch)
+                        quote.branch = branch;
+                    if (branchTradingAs)
+                        quote.branch_trading_as = branchTradingAs;
+                    console.log('createQuote: set branch fields on quote', {
+                        trading_as: quote.trading_as,
+                        branch: quote.branch,
+                        branch_trading_as: quote.branch_trading_as
+                    });
+                }
+                else {
+                    console.log('createQuote: no branchData found on payload');
+                }
             }
-            if (quoteData.cutlistUrl) {
-                quote.cutlist_url = quoteData.cutlistUrl;
+            catch (e) {
+                console.warn('createQuote: non-fatal error extracting branchData', e);
             }
-            console.log('Inserting quote with quote_number field populated:', JSON.stringify(quote));
-            // Insert quote into database
-            const { data, error } = await supabase
-                .from('quotes')
-                .insert([quote])
-                .select()
-                .single();
+            // Insert into database
+            const doInsert = async (payload) => {
+                return await supabase
+                    .from('quotes')
+                    .insert([payload])
+                    .select()
+                    .single();
+            };
+            let insertResult = await doInsert(quote);
+            let { data, error } = insertResult;
+            // Fallback: if branch columns don't exist in quotes table, retry without them
+            if (error && ((typeof error.code === 'string' && error.code === 'PGRST204') ||
+                (typeof error.message === 'string' && /trading_as|branch_trading_as|\bbranch\b/.test(error.message)))) {
+                const fallbackQuote = Object.assign({}, quote);
+                delete fallbackQuote.trading_as;
+                delete fallbackQuote.branch_trading_as;
+                delete fallbackQuote.branch;
+                console.warn("quotes table missing one or more branch columns (trading_as/branch/branch_trading_as). Retrying insert without these fields.");
+                const retry = await doInsert(fallbackQuote);
+                data = retry.data;
+                error = retry.error;
+            }
             if (error) {
                 console.error('Error creating quote:', error);
                 return { success: false, error: error.message };
@@ -740,17 +778,23 @@ const SupabaseService = {
         }
     },
     /**
-     * Get customer email from quote
+     * Get customer email from quote using quote number/filename resolution
      */
     async getCustomerEmailFromQuote(quoteId) {
         try {
+            // Prefer resilient lookup via filename/quote_number
+            const resolved = await this.fetchQuoteByNumber(quoteId);
+            if ((resolved === null || resolved === void 0 ? void 0 : resolved.success) && resolved.data) {
+                return resolved.data.customer_email || null;
+            }
+            // Fallback: direct by quote_number
             const { data, error } = await supabase
                 .from('quotes')
                 .select('customer_email')
-                .eq('id', quoteId)
+                .eq('quote_number', quoteId)
                 .single();
             if (error) {
-                console.error('Error fetching customer email from quote:', error);
+                console.error('Error fetching customer email from quote (by quote_number):', error);
                 return null;
             }
             return (data === null || data === void 0 ? void 0 : data.customer_email) || null;
@@ -761,32 +805,115 @@ const SupabaseService = {
         }
     },
     /**
-     * Get branch email from branch_details table
+     * Get branch email for a quote. Attempts to resolve branch from quote fields or filename suffix.
      */
     async getBranchEmailByQuote(quoteId) {
+        var _a;
         try {
-            // First, get the quote to find the branch/trading name
-            const { data: quoteData, error: quoteError } = await supabase
-                .from('quotes')
-                .select('customer_name, branch_name')
-                .eq('id', quoteId)
-                .single();
-            if (quoteError) {
-                console.error('Error fetching quote for branch email:', quoteError);
+            // Resolve the quote using resilient lookup first
+            const quoteRes = await this.fetchQuoteByNumber(quoteId);
+            const quoteData = (quoteRes === null || quoteRes === void 0 ? void 0 : quoteRes.success) ? quoteRes.data : null;
+            if (!quoteData) {
+                console.warn('Could not resolve quote for branch email using quoteId:', quoteId);
                 return null;
             }
-            // Try to get branch details using customer_name or branch_name
-            const branchName = quoteData.branch_name || quoteData.customer_name;
-            const { data: branchData, error: branchError } = await supabase
-                .from('branch_details')
-                .select('email')
+            // 1) Try explicit branch fields on quotes
+            let branchName = quoteData.trading_as ||
+                quoteData.branch ||
+                quoteData.branch_trading_as;
+            console.log('📧 Branch email resolution: quote fields', {
+                quoteId,
+                filename: quoteData.filename,
+                quote_number: quoteData.quote_number,
+                trading_as: quoteData.trading_as,
+                branch: quoteData.branch,
+                branch_trading_as: quoteData.branch_trading_as,
+            });
+            // 1a) Fallback: parse branch from quote_data JSON if not present in explicit columns
+            if (!branchName) {
+                try {
+                    const parsed = typeof quoteData.quote_data === 'string'
+                        ? JSON.parse(quoteData.quote_data || '{}')
+                        : (quoteData.quote_data || {});
+                    const jsonBranch = (_a = parsed === null || parsed === void 0 ? void 0 : parsed.branchData) === null || _a === void 0 ? void 0 : _a.trading_as;
+                    if (jsonBranch && typeof jsonBranch === 'string') {
+                        branchName = jsonBranch;
+                        console.log('📧 Branch email resolution: found branch in quote_data JSON', { branchName });
+                    }
+                }
+                catch (e) {
+                    console.log('📧 Branch email resolution: failed to parse quote_data JSON for branch');
+                }
+            }
+            // 2) Attempt to extract branch code from identifier (Q-YYYYMMDD-NNNN-BRANCH) and match by abbreviation
+            const identifier = (quoteData.filename || quoteData.quote_number || quoteId || '');
+            const parts = identifier.split('-');
+            if (parts.length >= 4) {
+                const branchCodeRaw = parts[3];
+                const branchCode = (branchCodeRaw || '').toUpperCase();
+                console.log('📧 Branch email resolution: derived code from identifier', {
+                    identifier,
+                    branchCodeRaw,
+                    branchCode,
+                });
+                // Strategy A: match by derived abbreviation from trading_as (3 letters per word, concatenated)
+                const { data: allBranches, error: listErr } = await supabase
+                    .from('branches')
+                    .select('email_address, trading_as');
+                if (!listErr && allBranches && allBranches.length > 0) {
+                    const deriveAbbr = (name) => name
+                        .split(/\s+/)
+                        .map(w => w.substring(0, 3))
+                        .join('')
+                        .replace(/[^a-z]/gi, '')
+                        .toUpperCase();
+                    // Try exact abbr match (with and without leading 'HDS ' prefix considered)
+                    let matched = allBranches.find(b => deriveAbbr(b.trading_as) === branchCode);
+                    if (!matched) {
+                        matched = allBranches.find(b => deriveAbbr(b.trading_as.replace(/^HDS\s+/i, '')) === branchCode);
+                    }
+                    if (matched) {
+                        console.log('📧 Branch email resolution: matched by abbreviation', {
+                            matchedTradingAs: matched.trading_as,
+                            email: matched.email_address,
+                        });
+                        return matched.email_address || null;
+                    }
+                }
+                // Strategy B: partial name include fallback using branch code fragment
+                const { data: approx, error: approxErr } = await supabase
+                    .from('branches')
+                    .select('email_address, trading_as')
+                    .ilike('trading_as', `%${branchCodeRaw}%`)
+                    .limit(1)
+                    .maybeSingle();
+                if (!approxErr && approx) {
+                    console.log('📧 Branch email resolution: matched by partial name', {
+                        matchedTradingAs: approx.trading_as,
+                        email: approx.email_address,
+                    });
+                    return approx.email_address || null;
+                }
+            }
+            if (!branchName) {
+                console.warn('📧 Branch email resolution: no branch name derived for quote', { quoteId });
+                return null;
+            }
+            // Final: exact match on branches by trading_as if available
+            const { data: branchRow, error: branchErr } = await supabase
+                .from('branches')
+                .select('email_address')
                 .eq('trading_as', branchName)
                 .single();
-            if (branchError) {
-                console.error('Error fetching branch email:', branchError);
+            if (branchErr) {
+                console.error('Error fetching branch email from branches table:', branchErr);
                 return null;
             }
-            return (branchData === null || branchData === void 0 ? void 0 : branchData.email) || null;
+            console.log('📧 Branch email resolution: exact match by trading_as', {
+                branchName,
+                email: branchRow === null || branchRow === void 0 ? void 0 : branchRow.email_address,
+            });
+            return (branchRow === null || branchRow === void 0 ? void 0 : branchRow.email_address) || null;
         }
         catch (error) {
             console.error('Error in getBranchEmailByQuote:', error);
@@ -798,13 +925,16 @@ const SupabaseService = {
      */
     async getBestEmailForQuote(quoteId) {
         try {
-            // Try branch email first
             const branchEmail = await this.getBranchEmailByQuote(quoteId);
-            if (branchEmail) {
+            if (branchEmail)
                 return branchEmail;
-            }
-            // Fallback to customer email
             const customerEmail = await this.getCustomerEmailFromQuote(quoteId);
+            if (!customerEmail) {
+                console.warn('📧 Best email resolution failed for quote. Neither branch nor customer email found.', { quoteId });
+            }
+            else {
+                console.log('📧 Best email resolution fell back to customer email', { quoteId, customerEmail });
+            }
             return customerEmail;
         }
         catch (error) {

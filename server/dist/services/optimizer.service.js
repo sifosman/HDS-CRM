@@ -96,13 +96,39 @@ const prepareOptimizationData = (pieces, unit) => {
         else { // Cut piece
             for (let i = 0; i < piece.amount; i++) {
                 seq++;
+                // Extract and normalize edging info, if present on incoming piece
+                const anyPiece = piece;
+                const rawEdging = anyPiece === null || anyPiece === void 0 ? void 0 : anyPiece.edging;
+                let edgeL1 = false, edgeL2 = false, edgeW1 = false, edgeW2 = false;
+                if (rawEdging !== undefined && rawEdging !== null) {
+                    if (rawEdging === 1 || rawEdging === true || (typeof rawEdging === 'string' && rawEdging.trim() === '1')) {
+                        edgeL1 = edgeL2 = edgeW1 = edgeW2 = true;
+                    }
+                    else if (typeof rawEdging === 'string') {
+                        rawEdging.split(',').map((s) => s.trim()).filter((s) => s).forEach((s) => {
+                            if (s === 'L1')
+                                edgeL1 = true;
+                            if (s === 'L2')
+                                edgeL2 = true;
+                            if (s === 'W1')
+                                edgeW1 = true;
+                            if (s === 'W2')
+                                edgeW2 = true;
+                        });
+                    }
+                }
                 cutPieces.push({
                     width,
                     length,
                     quantity: 1,
                     patternDirection,
                     externalId: seq,
-                    canRotate: patternDirection === 0 // Can only rotate if no pattern
+                    canRotate: patternDirection === 0, // Can only rotate if no pattern
+                    edging: rawEdging,
+                    edgeL1,
+                    edgeL2,
+                    edgeW1,
+                    edgeW2
                 });
             }
         }
@@ -166,7 +192,12 @@ const optimizeCuttingLayout = (stockPieces, cutPieces, cutWidth, layout) => {
                             y: rect.y,
                             width: useRotated ? cutPiece.length : cutPiece.width,
                             length: useRotated ? cutPiece.width : cutPiece.length,
-                            externalId: cutPiece.externalId
+                            externalId: cutPiece.externalId,
+                            edging: cutPiece.edging,
+                            edgeL1: cutPiece.edgeL1,
+                            edgeL2: cutPiece.edgeL2,
+                            edgeW1: cutPiece.edgeW1,
+                            edgeW2: cutPiece.edgeW2
                         };
                         solutionStockPiece.cutPieces.push(placedPiece);
                         // Split the free rectangle into two new free rectangles
@@ -296,7 +327,12 @@ const optimizeCuttingLayout = (stockPieces, cutPieces, cutWidth, layout) => {
                                 y: y * gridSize,
                                 width: cutPiece.width,
                                 length: cutPiece.length,
-                                externalId: cutPiece.externalId
+                                externalId: cutPiece.externalId,
+                                edging: cutPiece.edging,
+                                edgeL1: cutPiece.edgeL1,
+                                edgeL2: cutPiece.edgeL2,
+                                edgeW1: cutPiece.edgeW1,
+                                edgeW2: cutPiece.edgeW2
                             });
                             // Remove the placed piece from the list
                             sortedCutPieces.splice(i, 1);
@@ -2028,7 +2064,7 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
     // Create detailed cut pieces table
     const cutPiecesTableStartX = 50;
     const cutPiecesTableStartY = doc.y;
-    const cutPiecesColWidths = [40, 50, 60, 60, 50, 50, 80, 80]; // ID, Stock, Width, Length, X, Y, Area, Label
+    const cutPiecesColWidths = [35, 45, 55, 55, 45, 45, 70, 60, 70]; // ID, Stock, Width, Length, X, Y, Area, Edging, Label
     const cutPiecesRowHeight = 16;
     // Draw cut pieces table header
     doc.rect(cutPiecesTableStartX, cutPiecesTableStartY, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
@@ -2041,7 +2077,8 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
     doc.text('X Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[4] });
     doc.text('Y Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[5] });
     doc.text('Area', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[6] });
-    doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[7] });
+    doc.text('Edging', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[7] });
+    doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + cutPiecesColWidths[7] + 5, cutPiecesTableStartY + 4, { width: cutPiecesColWidths[8] });
     // Draw data rows for ALL cut pieces
     let cutPiecesCurrentRowY = cutPiecesTableStartY + cutPiecesRowHeight;
     const cutPiecesMaxRowsPerPage = 40; // More rows per page for cut pieces
@@ -2063,7 +2100,8 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
                 doc.text('X Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[4] });
                 doc.text('Y Pos', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[5] });
                 doc.text('Area', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[6] });
-                doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[7] });
+                doc.text('Edging', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[7] });
+                doc.text('Label', cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + cutPiecesColWidths[7] + 5, cutPiecesCurrentRowY - cutPiecesRowHeight + 4, { width: cutPiecesColWidths[8] });
             }
             // Calculate values for this cut piece
             const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
@@ -2072,6 +2110,28 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
             const cutY = convertUnit(cutPiece.y, 0, unit).toFixed(1);
             const cutAreaFormatted = (parseFloat(cutWidth) * parseFloat(cutLength)).toFixed(1);
             const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `P${stockIndex + 1}-${cutIndex + 1}`;
+            // Determine edging string for this cut piece
+            const cpAny = cutPiece;
+            const edgingSides = [];
+            if (cpAny && (cpAny.edgeL1 || cpAny.edgeL2 || cpAny.edgeW1 || cpAny.edgeW2)) {
+                if (cpAny.edgeL1)
+                    edgingSides.push('L1');
+                if (cpAny.edgeL2)
+                    edgingSides.push('L2');
+                if (cpAny.edgeW1)
+                    edgingSides.push('W1');
+                if (cpAny.edgeW2)
+                    edgingSides.push('W2');
+            }
+            else if (cpAny && (cpAny.edging !== undefined && cpAny.edging !== null)) {
+                if (cpAny.edging === 1 || cpAny.edging === true) {
+                    edgingSides.push('L1', 'L2', 'W1', 'W2');
+                }
+                else if (typeof cpAny.edging === 'string') {
+                    cpAny.edging.split(',').map((s) => s.trim()).filter((s) => s).forEach((s) => edgingSides.push(s));
+                }
+            }
+            const edgingStr = edgingSides.join(', ');
             // Draw row
             doc.rect(cutPiecesTableStartX, cutPiecesCurrentRowY, cutPiecesColWidths.reduce((a, b) => a + b, 0), cutPiecesRowHeight)
                 .stroke();
@@ -2083,7 +2143,8 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
             doc.text(`${cutX}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[4] });
             doc.text(`${cutY}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[5] });
             doc.text(`${cutAreaFormatted}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[6] });
-            doc.text(`${cutLabel}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[7] });
+            doc.text(`${edgingStr}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[7] });
+            doc.text(`${cutLabel}`, cutPiecesTableStartX + cutPiecesColWidths[0] + cutPiecesColWidths[1] + cutPiecesColWidths[2] + cutPiecesColWidths[3] + cutPiecesColWidths[4] + cutPiecesColWidths[5] + cutPiecesColWidths[6] + cutPiecesColWidths[7] + 5, cutPiecesCurrentRowY + 4, { width: cutPiecesColWidths[8] });
             cutPiecesCurrentRowY += cutPiecesRowHeight;
             cutPieceRowCount++;
         });
