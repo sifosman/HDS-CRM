@@ -360,16 +360,19 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   }, []);
 
   useEffect(() => {
-    if (initialData) {
+    if (!initialData) return;
+    // If we've already directly parsed OCR text into state, do not override cutPieces
+    // This preserves auto-ticked edging flags from OCR parsing
+    if (!hasDirectlyParsed) {
       const normalized = normalizeCutPieces(initialData.cutPieces || [], DEFAULT_MATERIAL_CATEGORIES);
       setCutPieces(normalized);
-      setStockPieces(initialData.stockPieces || []);
-      setMaterials(initialData.materials || []);
-      setUnit(initialData.unit || 'mm');
-      setCustomerName(initialData.customerName || '');
-      setProjectName(initialData.projectName || '');
     }
-  }, [initialData]);
+    setStockPieces(initialData.stockPieces || []);
+    setMaterials(initialData.materials || []);
+    setUnit(initialData.unit || 'mm');
+    setCustomerName(initialData.customerName || '');
+    setProjectName(initialData.projectName || '');
+  }, [initialData, hasDirectlyParsed]);
 
   useEffect(() => {
     // If we have detected materials from OCR text, use those instead of default

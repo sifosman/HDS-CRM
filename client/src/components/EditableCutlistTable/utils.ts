@@ -214,8 +214,10 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
     { key: "messonite", value: "White Messonite" }, // Just messonite
   ];
   
+  // Normalize literal "\n" sequences to spaces so they are ignored
+  const normalizedText = ocrText.replace(/\\n/g, ' ');
   // Split OCR text into lines
-  const lines = ocrText.split('\n').filter(line => line.trim() !== '');
+  const lines = normalizedText.split('\n').filter(line => line.trim() !== '');
   console.log(`🔍 OCR PARSING DEBUG: Parsing ${lines.length} lines of OCR text`);
   console.log(`📋 Available material triggers:`, materialTriggers.map(t => t.key));
   
@@ -305,9 +307,20 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
     if (dimensionMatch) {
       const width = parseInt(dimensionMatch[1], 10);
       const length = parseInt(dimensionMatch[2], 10);
-      const quantity = dimensionMatch[3] ? parseInt(dimensionMatch[3], 10) : 1;
+      let quantity = dimensionMatch[3] ? parseInt(dimensionMatch[3], 10) : 1;
+      // Also support formats like '1700 x 450 = 10'
+      const equalsQty = line.match(/=\s*(\d+)/);
+      if (equalsQty) {
+        const q = parseInt(equalsQty[1], 10);
+        if (!isNaN(q) && q > 0) quantity = q;
+      }
       
       if (!isNaN(width) && !isNaN(length) && width > 0 && length > 0) {
+        // Extract edging flags from the same line (supports spaces, commas, slashes)
+        const hasL1 = /(^|[\s,\/])L1($|[\s,\/])/i.test(` ${line} `);
+        const hasL2 = /(^|[\s,\/])L2($|[\s,\/])/i.test(` ${line} `);
+        const hasW1 = /(^|[\s,\/])W1($|[\s,\/])/i.test(` ${line} `);
+        const hasW2 = /(^|[\s,\/])W2($|[\s,\/])/i.test(` ${line} `);
         dimensions.push({
           id: `dim-${Date.now()}-${dimensions.length}`,
           width,
@@ -316,7 +329,6 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           material: currentMaterial,
           description: line, // Store the original line for reference
           lineIndex: i, // Track original position in OCR text
-          // Edging flags parsed from line
           lengthTick1: hasL1 || undefined,
           lengthTick2: hasL2 || undefined,
           widthTick1: hasW1 || undefined,
@@ -328,6 +340,51 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
     }
   }
   
+  // Global fallback: if input likely contains multiple entries but line parsing under-detected,
+  // scan the entire normalized text for repeated 'L x W = Q [edging]' patterns.
+  try {
+    const globalPattern = /(\d+)\s*[xX×*]\s*(\d+)\s*(?:=\s*(\d+))?(?:\s+((?:L1|L2|W1|W2)(?:[\s,\/]+(?:L1|L2|W1|W2))*))?/g;
+    const textForScan = (typeof ocrText === 'string' ? ocrText.replace(/\n/g, ' ') : '') as string;
+    let matchCount = 0;
+    // First, count how many entries exist in the whole text
+    for (const _ of textForScan.matchAll(globalPattern)) { matchCount++; }
+    if (matchCount > dimensions.length) {
+      console.log(`⚠️ Line parsing found ${dimensions.length}, but global scan found ${matchCount}. Rebuilding from global scan.`);
+      const rebuilt: any[] = [];
+      for (const m of textForScan.matchAll(globalPattern)) {
+        const width = parseInt(m[1], 10);
+        const length = parseInt(m[2], 10);
+        const qty = m[3] ? parseInt(m[3], 10) : 1;
+        const flags = (m[4] || '').trim();
+        if (!isNaN(width) && !isNaN(length) && width > 0 && length > 0) {
+          const hasL1 = /(^|[\s,\/])L1($|[\s,\/])/i.test(` ${flags} `);
+          const hasL2 = /(^|[\s,\/])L2($|[\s,\/])/i.test(` ${flags} `);
+          const hasW1 = /(^|[\s,\/])W1($|[\s,\/])/i.test(` ${flags} `);
+          const hasW2 = /(^|[\s,\/])W2($|[\s,\/])/i.test(` ${flags} `);
+          rebuilt.push({
+            id: `dim-${Date.now()}-${rebuilt.length}`,
+            width,
+            length,
+            quantity: qty,
+            material: currentMaterial,
+            description: `${width}x${length} = ${qty}${flags ? ' ' + flags : ''}`,
+            lineIndex: -1,
+            lengthTick1: hasL1 || undefined,
+            lengthTick2: hasL2 || undefined,
+            widthTick1: hasW1 || undefined,
+            widthTick2: hasW2 || undefined,
+          });
+        }
+      }
+      if (rebuilt.length > 0) {
+        dimensions.length = 0;
+        dimensions.push(...rebuilt);
+      }
+    }
+  } catch (e) {
+    console.warn('Global OCR scan fallback failed:', e);
+  }
+
   // If we didn't find many dimensions with standard parsing, try HDS table format
   // Check for HDS-specific conditions
   const hasHDSIdentifier = ocrText.toUpperCase().includes('HDS');

@@ -300,6 +300,20 @@ const generateQuote = async (req, res) => {
                 stockPieces: JSON.stringify(stockPieces),
                 cutPieces: JSON.stringify(optimizerCutPieces)
             });
+            // Enforce selective rotation: only allow rotation for a specific material
+            try {
+                const allowedMaterial = 'mel mdf platinum white 9x6x3 sf 202';
+                const materialKey = String(material || '').toLowerCase().trim();
+                const allowRotationForMaterial = materialKey === allowedMaterial;
+                optimizerCutPieces.forEach((cp) => {
+                    // Keep legacy rule (no pattern) and further restrict by material
+                    cp.canRotate = Boolean(cp.canRotate && allowRotationForMaterial);
+                });
+                console.log(`Rotation policy for material "${material}": ${allowRotationForMaterial ? 'ALLOW' : 'BLOCK'}`);
+            }
+            catch (e) {
+                console.warn('Selective rotation enforcement failed; using legacy behavior', e);
+            }
             // 7. Run optimization
             const cutWidth = 3; // 3mm saw blade width
             const layout = 0; // Guillotine layout

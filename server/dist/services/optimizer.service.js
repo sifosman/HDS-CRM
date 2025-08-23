@@ -79,10 +79,12 @@ const prepareOptimizationData = (pieces, unit) => {
     const cutPieces = [];
     let seq = 0;
     pieces.forEach(piece => {
+        var _a;
         // Convert to mm for internal calculations
         const width = Math.round(convertUnit(piece.width, unit, 0));
         const length = Math.round(convertUnit(piece.length, unit, 0));
-        const patternDirection = piece.pattern;
+        // Default to no-grain when pattern is not provided from client
+        const patternDirection = (_a = piece === null || piece === void 0 ? void 0 : piece.pattern) !== null && _a !== void 0 ? _a : 0;
         if (piece.kind === 1) { // Stock piece
             for (let i = 0; i < piece.amount; i++) {
                 stockPieces.push({
@@ -174,17 +176,26 @@ const optimizeCuttingLayout = (stockPieces, cutPieces, cutWidth, layout) => {
                     // Check if piece fits in this rectangle (considering cut width)
                     const fitsWidth = cutPiece.width <= rect.width;
                     const fitsHeight = cutPiece.length <= rect.height;
-                    // Try rotated if allowed and it fits better
+                    // Try rotated if allowed and it fits
                     const canRotate = cutPiece.canRotate && cutPiece.patternDirection === 0;
                     const fitsWidthRotated = canRotate && cutPiece.length <= rect.width;
                     const fitsHeightRotated = canRotate && cutPiece.width <= rect.height;
+                    // Decide orientation to place
+                    let canPlaceNormal = fitsWidth && fitsHeight;
+                    let canPlaceRotated = fitsWidthRotated && fitsHeightRotated;
                     let useRotated = false;
-                    if (fitsWidth && fitsHeight) {
-                        // Check if rotation would be more efficient
-                        if (canRotate && fitsWidthRotated && fitsHeightRotated) {
+                    if (canPlaceNormal || canPlaceRotated) {
+                        if (canPlaceNormal && canPlaceRotated) {
+                            // Both orientations fit: choose the one with less waste
                             const normalWaste = (rect.width - cutPiece.width) * (rect.height - cutPiece.length);
                             const rotatedWaste = (rect.width - cutPiece.length) * (rect.height - cutPiece.width);
                             useRotated = rotatedWaste < normalWaste;
+                        }
+                        else if (!canPlaceNormal && canPlaceRotated) {
+                            useRotated = true;
+                        }
+                        else {
+                            useRotated = false;
                         }
                         // Place the piece
                         const placedPiece = {
@@ -199,6 +210,11 @@ const optimizeCuttingLayout = (stockPieces, cutPieces, cutWidth, layout) => {
                             edgeW1: cutPiece.edgeW1,
                             edgeW2: cutPiece.edgeW2
                         };
+                        try {
+                            console.log(`Placed piece #${placedPiece.externalId} on stock index ${stockPieceIndex} at (${placedPiece.x},${placedPiece.y}) ` +
+                                `size ${placedPiece.width}x${placedPiece.length} (rotated=${useRotated})`);
+                        }
+                        catch (_a) { }
                         solutionStockPiece.cutPieces.push(placedPiece);
                         // Split the free rectangle into two new free rectangles
                         // Remove the current free rectangle
