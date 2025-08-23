@@ -164,6 +164,11 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
           material: dim.material,
           description: dim.description || `${dim.length}x${dim.width}`,
           name: dim.description || `${dim.length}x${dim.width}`,
+          // Edging flags parsed from OCR text
+          lengthTick1: !!dim.lengthTick1,
+          lengthTick2: !!dim.lengthTick2,
+          widthTick1:  !!dim.widthTick1,
+          widthTick2:  !!dim.widthTick2,
         };
       });
       

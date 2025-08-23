@@ -263,6 +263,12 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
       continue;
     }
     
+    // Helper: detect edging flags on this line
+    const hasL1 = /\bL1\b/i.test(line);
+    const hasL2 = /\bL2\b/i.test(line);
+    const hasW1 = /\bW1\b/i.test(line);
+    const hasW2 = /\bW2\b/i.test(line);
+
     // Try to extract dimensions: First check for quantity-first format like '10/ 1700 x 450'
     const quantityFirstMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*[xX×*]\s*(\d+)/);
     if (quantityFirstMatch) {
@@ -281,7 +287,12 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           quantity,
           material: currentMaterial,
           description: line, // Store the original line for reference
-          lineIndex: i // Track original position in OCR text
+          lineIndex: i, // Track original position in OCR text
+          // Edging flags parsed from line
+          lengthTick1: hasL1 || undefined,
+          lengthTick2: hasL2 || undefined,
+          widthTick1: hasW1 || undefined,
+          widthTick2: hasW2 || undefined,
         });
         
         console.log(`✅ QUANTITY-FIRST FORMAT: Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
@@ -304,7 +315,12 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           quantity,
           material: currentMaterial,
           description: line, // Store the original line for reference
-          lineIndex: i // Track original position in OCR text
+          lineIndex: i, // Track original position in OCR text
+          // Edging flags parsed from line
+          lengthTick1: hasL1 || undefined,
+          lengthTick2: hasL2 || undefined,
+          widthTick1: hasW1 || undefined,
+          widthTick2: hasW2 || undefined,
         });
         
         console.log(`✅ STANDARD FORMAT: Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
@@ -456,7 +472,12 @@ export function normalizeCutPieces(rawPieces: any[], DEFAULT_MATERIAL_CATEGORIES
           name: description,
           description: description, // Keep the original description
           edging: piece.edging,
-          material: piece.material // Keep the material assigned by backend
+          material: piece.material, // Keep the material assigned by backend
+          // Preserve edging tick flags if present
+          lengthTick1: !!piece.lengthTick1,
+          lengthTick2: !!piece.lengthTick2,
+          widthTick1: !!piece.widthTick1,
+          widthTick2: !!piece.widthTick2,
         };
         
         normalizedPieces.push(normalizedPiece);
@@ -544,7 +565,12 @@ export function normalizeCutPieces(rawPieces: any[], DEFAULT_MATERIAL_CATEGORIES
         name: description,
         description: description, // Keep the original description
         edging: piece.edging,
-        material: piece.material || currentMaterial // Preserve existing material from backend
+        material: piece.material || currentMaterial, // Preserve existing material from backend
+        // Preserve edging tick flags if present
+        lengthTick1: !!piece.lengthTick1,
+        lengthTick2: !!piece.lengthTick2,
+        widthTick1: !!piece.widthTick1,
+        widthTick2: !!piece.widthTick2,
       };
       
       normalizedPieces.push(normalizedPiece);
