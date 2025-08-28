@@ -354,31 +354,31 @@ export const generateQuote = async (req: Request, res: Response) => {
       
       // Enforce selective rotation: only allow rotation for specific materials (case-insensitive exact match)
       try {
-        // Allowed materials for rotation - generated from CSV (updated list ygb.csv) where grade === 'no'
+        // Allowed materials for rotation - exact user-provided list (lowercased)
         const allowedMaterials = [
           // ACRYLIC / ACRYLIC-UV
           'acrylic black matt 9x4x17',
-          'acrylic mirror silver 9x4x17 im',
           'acrylic white matt 9x4x17',
           'acrylic/uv - assorted clearance gloss 8x4x17mm',
 
           // MEL CHIP
           'mel chip black peen 9x6x16 df pg',
           'mel chip black txt 9x6x16 df',
+          'mel chip caligra text 9x6x16 df',
           'mel chip charcoal grey txt 9x6x16 df',
           'mel chip charcoal grey txt 9x6x16 df b-grd',
-          'mel chip congo linear 9x6x16 df pg',
           'mel chip cream txt 9x6x16df best buy',
           'mel chip dessert sky txt 9x6x16 df',
           'mel chip dunblane grey peen 9x6x16df pg',
           'mel chip folkstone grey peen 9x6x16mm pg',
-          'mel chip iceberg white linear 9x6x16 df pg',
           'mel chip iceberg white peen 9x6x16 df pg',
           'mel chip kalapana peen 9x6x16 df pg',
           'mel chip kara blue peen 9x6x16 df pg',
+          'mel chip metallic cappuccino txt 9x6x16 df',
           'mel chip moonstone grey txt 9x6x16 df',
           'mel chip moonstone txt 9x6x16 df grey b-grade',
           'mel chip olivia text 9x6x16 df',
+          'mel chip pearl grey text 9x6x16 df',
           'mel chip premium white txt 9x6x16 df',
           'mel chip storm grey peen 9x6x16 df pg',
           'mel chip value white 9x6x16 df',
@@ -387,10 +387,15 @@ export const generateQuote = async (req: Request, res: Response) => {
           'mel mdf platinum white 9x6x16 df',
           'mel mdf platinum white 9x6x3 sf 202',
 
+          // PLAIN CHIP
+          'plain chip 2750x1830x16mm "best buy"',
+          'plain chip 2750x1830x16mm fx',
+
           // UV
           'uv - black 9x6x17',
           'uv - black 9x6x17 cutting grd',
           'uv - black 9x6x17 pg',
+          'uv - caligra 9x6x17mm',
           'uv - cappucinno 9x6x17 pg'
         ];
         const materialKey = String(material || '').toLowerCase().trim();
