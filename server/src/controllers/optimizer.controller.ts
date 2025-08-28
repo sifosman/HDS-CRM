@@ -354,46 +354,44 @@ export const generateQuote = async (req: Request, res: Response) => {
       
       // Enforce selective rotation: only allow rotation for specific materials (case-insensitive exact match)
       try {
+        // Allowed materials for rotation - generated from CSV (updated list ygb.csv) where grade === 'no'
         const allowedMaterials = [
-          'uv - summer white 9x6x17 pg',
-          'uv - moonstone 9x6x17 grey',
-          'uv - iceberg white 9x6x17 pg',
-          'uv - iceland white 9x6x17',
-          'uv - olivia 9x6x17mm',
-          'uv - pearl grey 9x6x17mm',
-          // Newly added UV rotatable materials
-          'uv - dunblane grey 9x6x17 pg',
-          'uv - petrol blue 9x6x17 pg',
-          'uv - storm grey 9x6x17 pg',
-          'uv - kalapana 9x6x17 pg',
-          'uv - congo 9x6x17 pg',
-          'mel chip moonstone grey txt 9x6x16 df',
-          'mel chip moonstone linear 9x6x16 df grey',
-          'mel chip moonstone txt 9x6x16 df grey b-grade',
-          'mel chip iceberg white peen 9x6x16 df pg',
-          'mel chip iceberg white linear 9x6x16 df pg',
-          // Newly added MEL CHIP rotatable materials
-          'mel chip folkstone grey peen 9x6x16mm pg',
-          'mel chip dunblane grey peen 9x6x16 df pg',
-          'mel chip storm grey peen 9x6x16 df pg',
-          'mel chip kara blue peen 9x6x16 df pg',
-          'mel chip kalapana peen 9x6x16 df pg',
-          'mel chip metallic cappuccino txt 9x6x16 df',
-          'mel chip congo linear 9x6x16 df pg',
-          'mel chip olivia text 9x6x16 df',
-          'mel chip pearl grey text 9x6x16 df',
-          'mel chip pure white alp 9x6x16 df',
-          'mel chip white cedar linear 9x6x16 df',
-          'mel chip white marble alp 9x6x16 df',
-          'mel chip super white ashwood 9x6x16 df',
-          'mel chip white linnen txt 9x6x16 df',
-          'mel chip premium white txt 9x6x16 df',
-          'mel chip value white 9x6x16 df',
-          'mel chip american white oak lnr 9x6x16 df',
+          // ACRYLIC / ACRYLIC-UV
+          'acrylic black matt 9x4x17',
+          'acrylic mirror silver 9x4x17 im',
           'acrylic white matt 9x4x17',
-          'uv mdf white 9x4x16mm',
+          'acrylic/uv - assorted clearance gloss 8x4x17mm',
+
+          // MEL CHIP
+          'mel chip black peen 9x6x16 df pg',
+          'mel chip black txt 9x6x16 df',
+          'mel chip charcoal grey txt 9x6x16 df',
+          'mel chip charcoal grey txt 9x6x16 df b-grd',
+          'mel chip congo linear 9x6x16 df pg',
+          'mel chip cream txt 9x6x16df best buy',
+          'mel chip dessert sky txt 9x6x16 df',
+          'mel chip dunblane grey peen 9x6x16df pg',
+          'mel chip folkstone grey peen 9x6x16mm pg',
+          'mel chip iceberg white linear 9x6x16 df pg',
+          'mel chip iceberg white peen 9x6x16 df pg',
+          'mel chip kalapana peen 9x6x16 df pg',
+          'mel chip kara blue peen 9x6x16 df pg',
+          'mel chip moonstone grey txt 9x6x16 df',
+          'mel chip moonstone txt 9x6x16 df grey b-grade',
+          'mel chip olivia text 9x6x16 df',
+          'mel chip premium white txt 9x6x16 df',
+          'mel chip storm grey peen 9x6x16 df pg',
+          'mel chip value white 9x6x16 df',
+
+          // MEL MDF
           'mel mdf platinum white 9x6x16 df',
-          'mel mdf platinum white 9x6x3 sf 202'
+          'mel mdf platinum white 9x6x3 sf 202',
+
+          // UV
+          'uv - black 9x6x17',
+          'uv - black 9x6x17 cutting grd',
+          'uv - black 9x6x17 pg',
+          'uv - cappucinno 9x6x17 pg'
         ];
         const materialKey = String(material || '').toLowerCase().trim();
         const allowRotationForMaterial = allowedMaterials.includes(materialKey);
