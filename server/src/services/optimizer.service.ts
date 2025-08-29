@@ -2681,20 +2681,38 @@ export const generatePdfWithBuffer = async (
     doc.text(`${stockWidth.toFixed(1)}${unitLabel}`, diagramStartX, diagramStartY + scaledLength + 10);
     doc.text(`${stockLength.toFixed(1)}${unitLabel}`, diagramStartX + scaledWidth + 10, diagramStartY);
 
-    // Add cut pieces list below diagram
-    doc.moveDown(8);
-    doc.fontSize(10).fillColor('#000000');
-    doc.text('Cut Pieces in this Stock:', 50, doc.y);
-    doc.moveDown(0.5);
+    // Add cut pieces list to the RIGHT of the diagram (to avoid covering it)
+    // Compute right-side panel starting position next to the diagram
+    const rightPanelPadding = 12;
+    let listX = diagramStartX + scaledWidth + rightPanelPadding; // start to the right of the diagram
+    let listY = diagramStartY; // align to top of diagram
+    // Ensure a minimum left margin if diagram nearly fills width
+    const pageRightMargin = 50;
+    const maxListWidth = Math.max(150, doc.page.width - listX - pageRightMargin);
+    if (listX > doc.page.width - pageRightMargin) {
+      // If somehow beyond printable area, clamp inside and place below as fallback
+      listX = doc.page.width - pageRightMargin - 150;
+      listY = diagramStartY + scaledLength + 16;
+    }
 
+    // Title for the list
+    doc.fontSize(10).fillColor('#000000');
+    doc.text('Cut Pieces in this Stock:', listX, listY, { width: maxListWidth, continued: false });
+    listY = doc.y + 2;
+
+    // Render each bullet item within the right-side panel with constrained width
     stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
       const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
       const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
       const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `Piece ${cutIndex + 1}`;
-      
-      doc.fontSize(8);
-      doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`, 70, doc.y);
-      doc.moveDown(0.3);
+
+      doc.fontSize(8).fillColor('#000000');
+      doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`,
+        listX + 10,
+        listY,
+        { width: maxListWidth - 10 }
+      );
+      listY = doc.y + 2;
     });
   });
 
