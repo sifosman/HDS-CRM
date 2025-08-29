@@ -2681,36 +2681,46 @@ export const generatePdfWithBuffer = async (
     doc.text(`${stockWidth.toFixed(1)}${unitLabel}`, diagramStartX, diagramStartY + scaledLength + 10);
     doc.text(`${stockLength.toFixed(1)}${unitLabel}`, diagramStartX + scaledWidth + 10, diagramStartY);
 
-    // Add cut pieces list to the RIGHT of the diagram (to avoid covering it)
-    // Compute right-side panel starting position next to the diagram
-    const rightPanelPadding = 12;
-    let listX = diagramStartX + scaledWidth + rightPanelPadding; // start to the right of the diagram
-    let listY = diagramStartY; // align to top of diagram
-    // Ensure a minimum left margin if diagram nearly fills width
+    // Add cut pieces list to the RIGHT of the diagram (avoid covering labels) and right-align it
+    // Compute a safe left boundary just beyond the diagram's right-side labels
     const pageRightMargin = 50;
-    const maxListWidth = Math.max(150, doc.page.width - listX - pageRightMargin);
-    if (listX > doc.page.width - pageRightMargin) {
-      // If somehow beyond printable area, clamp inside and place below as fallback
-      listX = doc.page.width - pageRightMargin - 150;
-      listY = diagramStartY + scaledLength + 16;
+    const gapFromDiagram = 40; // leave room for dimension text near the diagram's right edge
+    const safeLeft = diagramStartX + scaledWidth + gapFromDiagram;
+    const panelMaxWidth = 220; // cap width so it doesn't crowd the page
+    let panelWidth = Math.min(panelMaxWidth, Math.max(150, doc.page.width - pageRightMargin - safeLeft));
+
+    let listX = doc.page.width - pageRightMargin - panelWidth; // anchor to right margin
+    let listY = diagramStartY; // align to top of diagram
+
+    // If there isn't enough horizontal space, place the list below the diagram as a fallback
+    if (listX < safeLeft) {
+      listX = safeLeft; // clamp to safe area
+      panelWidth = Math.max(150, doc.page.width - pageRightMargin - listX);
+      if (panelWidth < 150) {
+        // Not enough width next to diagram; move below
+        listX = 50;
+        panelWidth = doc.page.width - 100;
+        listY = diagramStartY + scaledLength + 16;
+      }
     }
 
-    // Title for the list
+    // Title for the list (right-aligned)
     doc.fontSize(10).fillColor('#000000');
-    doc.text('Cut Pieces in this Stock:', listX, listY, { width: maxListWidth, continued: false });
+    doc.text('Cut Pieces in this Stock:', listX, listY, { width: panelWidth, align: 'right', continued: false });
     listY = doc.y + 2;
 
-    // Render each bullet item within the right-side panel with constrained width
+    // Render each bullet item, right-aligned within the panel
     stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
       const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
       const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
       const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `Piece ${cutIndex + 1}`;
 
       doc.fontSize(8).fillColor('#000000');
-      doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`,
-        listX + 10,
+      doc.text(
+        `• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`,
+        listX,
         listY,
-        { width: maxListWidth - 10 }
+        { width: panelWidth, align: 'right' }
       );
       listY = doc.y + 2;
     });
