@@ -391,16 +391,17 @@ const parseHDSTableFormat = (text: string, result: any): any => {
           continue;
         }
         
+        // Preserve source order: first value is Height/Length, second is Width
         result.cutPieces.push({
           id: uuidv4(),
-          length: Math.max(height, width), // Larger dimension as length
-          width: Math.min(height, width),  // Smaller dimension as width
+          length: height,
+          width: width,
           quantity: qty,
           name: `Piece ${result.cutPieces.length + 1}`,
           description: line.trim()
         });
         
-        console.log(`Added HDS cut piece: ${Math.max(height, width)}x${Math.min(height, width)}, Qty: ${qty}`);
+        console.log(`Added HDS cut piece: ${height}x${width}, Qty: ${qty}`);
       } else {
         console.log(`Invalid dimensions found in line: "${line}"`);
       }

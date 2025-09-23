@@ -2182,8 +2182,8 @@ Thank you for your business!
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Width (mm)</TableCell>
                             <TableCell>Length (mm)</TableCell>
+                            <TableCell>Width (mm)</TableCell>
                             <TableCell>Quantity</TableCell>
                             <TableCell>Description</TableCell>
                             <TableCell>Edging</TableCell>
@@ -2193,30 +2193,6 @@ Thank you for your business!
                         <TableBody>
                           {section.pieces.map((piece: any) => (
                             <TableRow key={piece.id}>
-                              <TableCell>
-                                <TextField
-                                  id={`width-field-${piece.id}`}
-                                  label={`Width (${unit})`}
-                                  type="number"
-                                  value={piece.width ?? ''}
-                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
-                                  onBlur={() => {
-                                    const ms = getMaxBoardSideForMaterial(section.material);
-                                    const val = Number(piece.width);
-                                    if (ms && !isNaN(val) && val > ms) {
-                                      setShowDimensionValidation(true);
-                                      setIsValidating(true);
-                                      setTimeout(() => setIsValidating(false), 4000);
-                                    }
-                                  }}
-                                  variant="outlined"
-                                  size="small"
-                                  inputProps={{ min: 1 }}
-                                  disabled={isConfirmed}
-                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
-                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
-                                />
-                              </TableCell>
                               <TableCell>
                                 <TextField
                                   id={`length-field-${piece.id}`}
@@ -2239,6 +2215,30 @@ Thank you for your business!
                                   disabled={isConfirmed}
                                   error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.length) > ms); })()}
                                   helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.length) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  id={`width-field-${piece.id}`}
+                                  label={`Width (${unit})`}
+                                  type="number"
+                                  value={piece.width ?? ''}
+                                  onChange={(e) => handleCutPieceChange(piece.id, 'width', Number(e.target.value))}
+                                  onBlur={() => {
+                                    const ms = getMaxBoardSideForMaterial(section.material);
+                                    const val = Number(piece.width);
+                                    if (ms && !isNaN(val) && val > ms) {
+                                      setShowDimensionValidation(true);
+                                      setIsValidating(true);
+                                      setTimeout(() => setIsValidating(false), 4000);
+                                    }
+                                  }}
+                                  variant="outlined"
+                                  size="small"
+                                  inputProps={{ min: 1 }}
+                                  disabled={isConfirmed}
+                                  error={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return !!(ms && Number(piece.width) > ms); })()}
+                                  helperText={showDimensionValidation && (() => { const ms = getMaxBoardSideForMaterial(section.material); return ms && Number(piece.width) > ms ? `Exceeds max board side ${ms}mm` : ''; })()}
                                 />
                               </TableCell>
                               <TableCell>

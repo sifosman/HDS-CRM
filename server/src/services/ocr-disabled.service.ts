@@ -189,8 +189,9 @@ const extractFromHDSTable = (ocrText: string): { dimensions: Dimension[], unit: 
             // Add new dimension
             const newDimension: Dimension = {
               id: `hds-${Date.now()}-${dimensions.length}`,
-              length: width, // Fix: Use width as length (Length x Width format)
-              width: height, // Fix: Use height as width (Length x Width format)
+              // Preserve source order: height = Length, width = Width
+              length: height,
+              width: width,
               quantity: quantity
             };
             dimensionMap.set(dimensionKey, newDimension);

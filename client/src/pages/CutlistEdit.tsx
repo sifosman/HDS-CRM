@@ -222,6 +222,13 @@ const CutlistEdit: React.FC = () => {
         cutPieces: ensureIds(rawCutlist.cutPieces || [], 'cp'),
         stockPieces: ensureIds(rawCutlist.stockPieces || [], 'sp'),
       };
+
+      // If we have rawText from OCR, prefer re-parsing on the client
+      // This ensures the latest Length x Width parsing rules are applied
+      if (safeData.rawText && safeData.rawText.trim().length > 0) {
+        console.log('Raw OCR text present — clearing server cutPieces to force client re-parse (LxW).');
+        safeData.cutPieces = [];
+      }
       
       console.log('Safe data object created:', JSON.stringify(safeData, null, 2));
       setCutlistData(safeData);
