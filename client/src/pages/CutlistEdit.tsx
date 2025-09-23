@@ -262,9 +262,13 @@ const CutlistEdit: React.FC = () => {
   // Show dialog if there are no cut pieces (only for existing cutlists, not "/cutlist-edit/new")
   useEffect(() => {
     if (!isNewCutlist && !loading && !error && cutlistData) {
+      const hasRawText = !!(cutlistData.rawText && cutlistData.rawText.trim().length > 0);
       const noCuts = !Array.isArray(cutlistData.cutPieces) || cutlistData.cutPieces.length === 0;
-      if (noCuts) {
+      // Only show the OCR empty dialog if we have neither cut pieces nor rawText to parse
+      if (noCuts && !hasRawText) {
         setOcrEmptyDialogOpen(true);
+      } else {
+        setOcrEmptyDialogOpen(false);
       }
     }
   }, [isNewCutlist, loading, error, cutlistData]);

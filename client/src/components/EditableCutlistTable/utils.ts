@@ -275,8 +275,8 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
     const quantityFirstMatch = line.match(/(\d+)\s*\/\s*(\d+)\s*[xX×*]\s*(\d+)/);
     if (quantityFirstMatch) {
       const quantity = parseInt(quantityFirstMatch[1], 10);
-      const width = parseInt(quantityFirstMatch[2], 10);
-      const length = parseInt(quantityFirstMatch[3], 10);
+      const length = parseInt(quantityFirstMatch[2], 10); // first dimension = length
+      const width = parseInt(quantityFirstMatch[3], 10);  // second dimension = width
       
       // Validate that this looks like reasonable dimensions and quantity (consistent with backend)
       if (!isNaN(width) && !isNaN(length) && !isNaN(quantity) && 
@@ -284,8 +284,8 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           width >= 50 && width <= 3000 && length >= 50 && length <= 3000) {
         dimensions.push({
           id: `dim-${Date.now()}-${dimensions.length}`,
-          width,
           length,
+          width,
           quantity,
           material: currentMaterial,
           description: line, // Store the original line for reference
@@ -297,7 +297,7 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           widthTick2: hasW2 || undefined,
         });
         
-        console.log(`✅ QUANTITY-FIRST FORMAT: Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
+        console.log(`✅ QUANTITY-FIRST FORMAT: Added dimension (LxW): ${length}x${width}, qty=${quantity}, material=${currentMaterial}`);
         continue; // Skip to next line since we found a match
       }
     }
@@ -305,8 +305,8 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
     // Try to extract dimensions: standard format like '460x2000' or '460x2000x2'
     const dimensionMatch = line.match(/(\d+)\s*[xX×*]\s*(\d+)(?:\s*[xX×*]\s*(\d+))?/);
     if (dimensionMatch) {
-      const width = parseInt(dimensionMatch[1], 10);
-      const length = parseInt(dimensionMatch[2], 10);
+      const length = parseInt(dimensionMatch[1], 10); // first dimension = length
+      const width = parseInt(dimensionMatch[2], 10);  // second dimension = width
       let quantity = dimensionMatch[3] ? parseInt(dimensionMatch[3], 10) : 1;
       // Also support formats like '1700 x 450 = 10'
       const equalsQty = line.match(/=\s*(\d+)/);
@@ -315,7 +315,7 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
         if (!isNaN(q) && q > 0) quantity = q;
       }
       
-      if (!isNaN(width) && !isNaN(length) && width > 0 && length > 0) {
+      if (!isNaN(length) && !isNaN(width) && length > 0 && width > 0) {
         // Extract edging flags from the same line (supports spaces, commas, slashes)
         const hasL1 = /(^|[\s,\/])L1($|[\s,\/])/i.test(` ${line} `);
         const hasL2 = /(^|[\s,\/])L2($|[\s,\/])/i.test(` ${line} `);
@@ -323,8 +323,8 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
         const hasW2 = /(^|[\s,\/])W2($|[\s,\/])/i.test(` ${line} `);
         dimensions.push({
           id: `dim-${Date.now()}-${dimensions.length}`,
-          width,
           length,
+          width,
           quantity,
           material: currentMaterial,
           description: line, // Store the original line for reference
@@ -335,7 +335,7 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
           widthTick2: hasW2 || undefined,
         });
         
-        console.log(`✅ STANDARD FORMAT: Added dimension: ${width}x${length}, qty=${quantity}, material=${currentMaterial}`);
+        console.log(`✅ STANDARD FORMAT: Added dimension (LxW): ${length}x${width}, qty=${quantity}, material=${currentMaterial}`);
       }
     }
   }
@@ -352,22 +352,22 @@ export function parseOcrText(ocrText: string, materialCategories: string[]): { d
       console.log(`⚠️ Line parsing found ${dimensions.length}, but global scan found ${matchCount}. Rebuilding from global scan.`);
       const rebuilt: any[] = [];
       for (const m of textForScan.matchAll(globalPattern)) {
-        const width = parseInt(m[1], 10);
-        const length = parseInt(m[2], 10);
+        const length = parseInt(m[1], 10); // first dimension = length
+        const width = parseInt(m[2], 10);  // second dimension = width
         const qty = m[3] ? parseInt(m[3], 10) : 1;
         const flags = (m[4] || '').trim();
-        if (!isNaN(width) && !isNaN(length) && width > 0 && length > 0) {
+        if (!isNaN(length) && !isNaN(width) && length > 0 && width > 0) {
           const hasL1 = /(^|[\s,\/])L1($|[\s,\/])/i.test(` ${flags} `);
           const hasL2 = /(^|[\s,\/])L2($|[\s,\/])/i.test(` ${flags} `);
           const hasW1 = /(^|[\s,\/])W1($|[\s,\/])/i.test(` ${flags} `);
           const hasW2 = /(^|[\s,\/])W2($|[\s,\/])/i.test(` ${flags} `);
           rebuilt.push({
             id: `dim-${Date.now()}-${rebuilt.length}`,
-            width,
             length,
+            width,
             quantity: qty,
             material: currentMaterial,
-            description: `${width}x${length} = ${qty}${flags ? ' ' + flags : ''}`,
+            description: `${length}x${width} = ${qty}${flags ? ' ' + flags : ''}`,
             lineIndex: -1,
             lengthTick1: hasL1 || undefined,
             lengthTick2: hasL2 || undefined,
