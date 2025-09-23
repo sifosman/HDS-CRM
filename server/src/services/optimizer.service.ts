@@ -467,9 +467,11 @@ export const generatePdf = (solution: Solution, unit: number, cutWidth: number =
     });
   });
   
-  // Convert edging to meters and calculate cost
+  // Convert edging to meters and calculate cost (includes 10% allowance)
   const EDGING_PRICE_PER_METER = 14; // R14 per meter
-  const totalEdgingMeters = totalEdging / 1000;
+  const EDGING_ALLOWANCE_FACTOR = 1.10; // +10%
+  const totalEdgingWithAllowanceMm = Math.round(totalEdging * EDGING_ALLOWANCE_FACTOR);
+  const totalEdgingMeters = totalEdgingWithAllowanceMm / 1000;
   const edgingCost = totalEdgingMeters * EDGING_PRICE_PER_METER;
 
   // Calculate total area and waste
