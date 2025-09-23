@@ -1629,23 +1629,18 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   let boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
   boardTotal = parseFloat(boardTotal.toFixed(2));
 
-  // Calculate edging costs for each section
+  // Calculate edging costs for each section (apply 10% allowance to meterage)
   sections.forEach((section: any) => {
     if (section.edging && section.edging.totalEdging > 0) {
-      // Convert from mm to meters
-      const edgingMeters = section.edging.totalEdging / 1000;
+      // Apply 10% allowance in mm, then convert to meters
+      const totalEdgingWithAllowanceMm = Math.round(section.edging.totalEdging * 1.10);
+      const edgingMeters = totalEdgingWithAllowanceMm / 1000;
       totalEdgingMeters += edgingMeters;
       
-      // Use the already calculated cost from the controller if available
-      if (section.edging.cost !== undefined) {
-        section.edgingCost = parseFloat(section.edging.cost);
-        totalEdgingCost += section.edgingCost;
-      } else {
-        // Fallback calculation if cost not provided
-        const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
-        section.edgingCost = parseFloat(edgingCost);
-        totalEdgingCost += section.edgingCost;
-      }
+      // Always compute edging cost from adjusted meters to ensure consistency
+      const computedEdgingCost = parseFloat((edgingMeters * EDGING_PRICE_PER_METER).toFixed(2));
+      section.edgingCost = computedEdgingCost;
+      totalEdgingCost += computedEdgingCost;
     } else {
       section.edgingCost = 0;
     }
@@ -1739,7 +1734,8 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
       doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
          .stroke();
       
-      const edgingMeters = (edging.totalEdging / 1000).toFixed(2);
+      // Recompute display using adjusted meters for this section
+      const edgingMeters = (Math.round(edging.totalEdging * 1.10) / 1000).toFixed(2);
       const edgingCost = section.edgingCost !== undefined 
         ? section.edgingCost.toFixed(2) 
         : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
