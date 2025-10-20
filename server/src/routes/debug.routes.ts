@@ -62,7 +62,7 @@ router.post('/test-botsailor', ((req: Request, res: Response) => {
     try {
       console.log('===== BOTSAILOR FORMAT TEST =====');
       
-      const WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
+      const WEBHOOK_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
       const recipient = req.body?.recipient || req.body?.phoneNumber;
       
       if (!recipient) {

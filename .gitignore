@@ -32,6 +32,7 @@ node_modules/
 /dist
 /build
 /out
+server/dist/
 
 # Cache
 .npm
