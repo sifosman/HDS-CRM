@@ -1,5 +1,7 @@
 import express, { Request, Response, RequestHandler } from 'express';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 import SupabaseService from '../services/supabase.service';
 
 const router = express.Router();
@@ -222,3 +224,64 @@ router.get('/test-supabase', ((req: Request, res: Response) => {
 }) as unknown as RequestHandler);
 
 export default router;
+
+// Runtime verification endpoint to check which Botsailor webhook ID is present in compiled files
+// Usage (browser): GET /api/debug/check-botsailor-url
+router.get('/check-botsailor-url', ((req: Request, res: Response) => {
+  try {
+    const oldId = '145613.157394.183999.1748553417';
+    const newId = '145613.241603.253062.1760952893';
+
+    // When compiled, __dirname will be server/dist/routes. We want server/dist/controllers/*
+    const distRoot = path.resolve(__dirname, '..');
+    const candidates = [
+      path.join(distRoot, 'controllers', 'webhook-direct.controller.js'),
+      path.join(distRoot, 'controllers', 'botsailor.controller.js'),
+      path.join(distRoot, 'controllers', 'n8n.controller.js'),
+      path.join(distRoot, 'controllers', 'cutlist.controller.js'),
+      path.join(distRoot, 'routes', 'debug.routes.js')
+    ];
+
+    const results: Array<{ file: string; exists: boolean; hasOld: boolean; hasNew: boolean }> = [];
+
+    for (const file of candidates) {
+      const exists = fs.existsSync(file);
+      if (!exists) {
+        results.push({ file, exists, hasOld: false, hasNew: false });
+        continue;
+      }
+      let content = '';
+      try {
+        content = fs.readFileSync(file, 'utf8');
+      } catch (_) {
+        // ignore read errors
+      }
+      const hasOld = content.includes(oldId);
+      const hasNew = content.includes(newId);
+      results.push({ file, exists: true, hasOld, hasNew });
+    }
+
+    const anyOld = results.some(r => r.exists && r.hasOld);
+    const anyNew = results.some(r => r.exists && r.hasNew);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Botsailor webhook ID scan completed',
+      summary: {
+        anyOld,
+        anyNew
+      },
+      details: results,
+      env: {
+        dir: __dirname,
+        nodeEnv: process.env.NODE_ENV || null
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to scan for webhook IDs',
+      error: error?.message || 'Unknown error'
+    });
+  }
+}) as unknown as RequestHandler);
