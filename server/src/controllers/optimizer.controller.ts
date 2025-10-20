@@ -17,7 +17,7 @@ export const optimizeCutting = async (req: Request, res: Response) => {
   try {
     const { pieces, unit, width, layout } = req.body;
 
-    // Validate input
+    // Validate inputs
     if (!pieces || !Array.isArray(pieces) || pieces.length === 0) {
       return res.status(400).json({ message: 'Invalid pieces data' });
     }
