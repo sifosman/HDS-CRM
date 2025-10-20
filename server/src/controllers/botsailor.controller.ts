@@ -18,7 +18,7 @@ dotenv.config();
  * Handles interactions with the Botsailor WhatsApp API
  */
 // Botsailor webhook URL for sending cutting list links
-const BOTSAILOR_WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
+const BOTSAILOR_WEBHOOK_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
 
 export const botsailorController = {
   /**
@@ -339,7 +339,11 @@ export const botsailorController = {
         customer_name: customerName || cutlist.customerName || 'Customer',
         cutlist_url: cutlistUrl,
         dimensions_count: cutlist.dimensions?.length || 0,
-        project_name: cutlist.projectName || 'Cutting List Project'
+        project_name: cutlist.projectName || 'Cutting List Project',
+        template_parameters: [
+          (customerName || cutlist.customerName || '').trim(),
+          cutlistUrl
+        ]
       };
       
       console.log('Sending data to Botsailor webhook:', webhookData);

@@ -12,7 +12,7 @@ import SupabaseService from '../services/supabase.service';
 dotenv.config();
 
 // Botsailor webhook URL for sending cutting list links
-const BOTSAILOR_WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
+const BOTSAILOR_WEBHOOK_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
 
 // Import the Cutlist model with CommonJS require to avoid TypeScript module resolution issues
 const Cutlist = require('../models/cutlist.model').default;
@@ -248,7 +248,11 @@ const sendCutlistLinkViaWhatsApp = async (cutlistId: string, phoneNumber: string
       customer_name: customerName || cutlist.customerName || 'Customer',
       cutlist_url: cutlistUrl,
       dimensions_count: cutlist.dimensions?.length || 0,
-      project_name: cutlist.projectName || 'Cutting List Project'
+      project_name: cutlist.projectName || 'Cutting List Project',
+      template_parameters: [
+        (customerName || cutlist.customerName || '').trim(),
+        cutlistUrl
+      ]
     };
     
     console.log('Sending cutlist link to WhatsApp via Botsailor webhook:', webhookData);
