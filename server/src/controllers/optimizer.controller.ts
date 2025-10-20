@@ -22,7 +22,7 @@ export const optimizeCutting = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid pieces data' });
     }
 
-    // Check if there are both stock pieces and cut pieces
+    // Check if there are both stock pieces and cut piecess
     const hasStockPieces = pieces.some(piece => piece.kind === 1);
     const hasCutPieces = pieces.some(piece => piece.kind === 0);
 
