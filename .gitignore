@@ -32,7 +32,7 @@ node_modules/
 /dist
 /build
 /out
-server/dist/
+# Note: server/dist/ is committed for Vercel deployment
 
 # Cache
 .npm
