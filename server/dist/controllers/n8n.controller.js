@@ -9,10 +9,10 @@ const dotenv_1 = __importDefault(require("dotenv"));
 // Load environment variables
 dotenv_1.default.config();
 // Botsailor webhook URL for sending cutting list links
-const BOTSAILOR_WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
+const BOTSAILOR_WEBHOOK_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
 // Alternative URLs to try
-const DIRECT_GET_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
-const FLOW_URL = 'https://www.botsailor.com/flow-webhook/145613.157394.183999.1748553417';
+const DIRECT_GET_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
+const FLOW_URL = 'https://botsailor.com/flow-webhook/145613.241603.253062.1760952893';
 // Function to try multiple webhook methods
 const tryWebhookMethods = async (phoneNumber, cutlistUrl, senderName, dimensionsCount, ocrText, originalRequestBody = {}) => {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j;
@@ -29,7 +29,11 @@ const tryWebhookMethods = async (phoneNumber, cutlistUrl, senderName, dimensions
                 customer_name: senderName || originalRequestBody.customer_name || originalRequestBody.name || 'Customer',
                 cutlist_url: cutlistUrl,
                 dimensions_count: dimensionsCount,
-                project_name: originalRequestBody.project_name || 'Cutting List from WhatsApp'
+                project_name: originalRequestBody.project_name || 'Cutting List from WhatsApp',
+                template_parameters: [
+                    (senderName || originalRequestBody.customer_name || originalRequestBody.name || '').trim(),
+                    cutlistUrl
+                ]
             }, {
                 headers: { 'Content-Type': 'application/json' },
                 timeout: 10000

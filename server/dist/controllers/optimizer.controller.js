@@ -12,11 +12,11 @@ const supabase_service_1 = __importDefault(require("../services/supabase.service
 const optimizeCutting = async (req, res) => {
     try {
         const { pieces, unit, width, layout } = req.body;
-        // Validate input
+        // Validate inputs
         if (!pieces || !Array.isArray(pieces) || pieces.length === 0) {
             return res.status(400).json({ message: 'Invalid pieces data' });
         }
-        // Check if there are both stock pieces and cut pieces
+        // Check if there are both stock pieces and cut piecess
         const hasStockPieces = pieces.some(piece => piece.kind === 1);
         const hasCutPieces = pieces.some(piece => piece.kind === 0);
         if (!hasStockPieces || !hasCutPieces) {
@@ -302,32 +302,45 @@ const generateQuote = async (req, res) => {
             });
             // Enforce selective rotation: only allow rotation for specific materials (case-insensitive exact match)
             try {
+                // Allowed materials for rotation - exact user-provided list (lowercased)
                 const allowedMaterials = [
-                    'uv - summer white 9x6x17 pg',
-                    'uv - moonstone 9x6x17 grey',
-                    'uv - iceberg white 9x6x17 pg',
-                    'uv - iceland white 9x6x17',
-                    'uv - olivia 9x6x17mm',
-                    'uv - pearl grey 9x6x17mm',
-                    'mel chip moonstone grey txt 9x6x16 df',
-                    'mel chip moonstone linear 9x6x16 df grey',
-                    'mel chip moonstone txt 9x6x16 df grey b-grade',
+                    // ACRYLIC / ACRYLIC-UV
+                    'acrylic black matt 9x4x17',
+                    'acrylic white matt 9x4x17',
+                    'acrylic/uv - assorted clearance gloss 8x4x17mm',
+                    // MEL CHIP
+                    'mel chip black peen 9x6x16 df pg',
+                    'mel chip black txt 9x6x16 df',
+                    'mel chip caligra text 9x6x16 df',
+                    'mel chip charcoal grey txt 9x6x16 df',
+                    'mel chip charcoal grey txt 9x6x16 df b-grd',
+                    'mel chip cream txt 9x6x16df best buy',
+                    'mel chip dessert sky txt 9x6x16 df',
+                    'mel chip dunblane grey peen 9x6x16df pg',
+                    'mel chip folkstone grey peen 9x6x16mm pg',
                     'mel chip iceberg white peen 9x6x16 df pg',
-                    'mel chip iceberg white linear 9x6x16 df pg',
+                    'mel chip kalapana peen 9x6x16 df pg',
+                    'mel chip kara blue peen 9x6x16 df pg',
+                    'mel chip metallic cappuccino txt 9x6x16 df',
+                    'mel chip moonstone grey txt 9x6x16 df',
+                    'mel chip moonstone txt 9x6x16 df grey b-grade',
                     'mel chip olivia text 9x6x16 df',
                     'mel chip pearl grey text 9x6x16 df',
-                    'mel chip pure white alp 9x6x16 df',
-                    'mel chip white cedar linear 9x6x16 df',
-                    'mel chip white marble alp 9x6x16 df',
-                    'mel chip super white ashwood 9x6x16 df',
-                    'mel chip white linnen txt 9x6x16 df',
                     'mel chip premium white txt 9x6x16 df',
+                    'mel chip storm grey peen 9x6x16 df pg',
                     'mel chip value white 9x6x16 df',
-                    'mel chip american white oak lnr 9x6x16 df',
-                    'acrylic white matt 9x4x17',
-                    'uv mdf white 9x4x16mm',
+                    // MEL MDF
                     'mel mdf platinum white 9x6x16 df',
-                    'mel mdf platinum white 9x6x3 sf 202'
+                    'mel mdf platinum white 9x6x3 sf 202',
+                    // PLAIN CHIP
+                    'plain chip 2750x1830x16mm "best buy"',
+                    'plain chip 2750x1830x16mm fx',
+                    // UV
+                    'uv - black 9x6x17',
+                    'uv - black 9x6x17 cutting grd',
+                    'uv - black 9x6x17 pg',
+                    'uv - caligra 9x6x17mm',
+                    'uv - cappucinno 9x6x17 pg'
                 ];
                 const materialKey = String(material || '').toLowerCase().trim();
                 const allowRotationForMaterial = allowedMaterials.includes(materialKey);

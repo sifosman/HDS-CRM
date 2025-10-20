@@ -428,9 +428,11 @@ const generatePdf = (solution, unit, cutWidth = 3, layout = 0) => {
             totalEdging += edgingNeeded;
         });
     });
-    // Convert edging to meters and calculate cost
+    // Convert edging to meters and calculate cost (includes 10% allowance)
     const EDGING_PRICE_PER_METER = 14; // R14 per meter
-    const totalEdgingMeters = totalEdging / 1000;
+    const EDGING_ALLOWANCE_FACTOR = 1.10; // +10%
+    const totalEdgingWithAllowanceMm = Math.round(totalEdging * EDGING_ALLOWANCE_FACTOR);
+    const totalEdgingMeters = totalEdgingWithAllowanceMm / 1000;
     const edgingCost = totalEdgingMeters * EDGING_PRICE_PER_METER;
     // Calculate total area and waste
     let totalStockArea = 0;
@@ -1349,23 +1351,17 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
     // Calculate initial grand total from board costs
     let boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
     boardTotal = parseFloat(boardTotal.toFixed(2));
-    // Calculate edging costs for each section
+    // Calculate edging costs for each section (apply 10% allowance to meterage)
     sections.forEach((section) => {
         if (section.edging && section.edging.totalEdging > 0) {
-            // Convert from mm to meters
-            const edgingMeters = section.edging.totalEdging / 1000;
+            // Apply 10% allowance in mm, then convert to meters
+            const totalEdgingWithAllowanceMm = Math.round(section.edging.totalEdging * 1.10);
+            const edgingMeters = totalEdgingWithAllowanceMm / 1000;
             totalEdgingMeters += edgingMeters;
-            // Use the already calculated cost from the controller if available
-            if (section.edging.cost !== undefined) {
-                section.edgingCost = parseFloat(section.edging.cost);
-                totalEdgingCost += section.edgingCost;
-            }
-            else {
-                // Fallback calculation if cost not provided
-                const edgingCost = (edgingMeters * EDGING_PRICE_PER_METER).toFixed(2);
-                section.edgingCost = parseFloat(edgingCost);
-                totalEdgingCost += section.edgingCost;
-            }
+            // Always compute edging cost from adjusted meters to ensure consistency
+            const computedEdgingCost = parseFloat((edgingMeters * EDGING_PRICE_PER_METER).toFixed(2));
+            section.edgingCost = computedEdgingCost;
+            totalEdgingCost += computedEdgingCost;
         }
         else {
             section.edgingCost = 0;
@@ -1437,7 +1433,8 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
             // Edging row
             doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
                 .stroke();
-            const edgingMeters = (edging.totalEdging / 1000).toFixed(2);
+            // Recompute display using adjusted meters for this section
+            const edgingMeters = (Math.round(edging.totalEdging * 1.10) / 1000).toFixed(2);
             const edgingCost = section.edgingCost !== undefined
                 ? section.edgingCost.toFixed(2)
                 : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
@@ -2219,18 +2216,38 @@ const generatePdfWithBuffer = async (solution, unit, cutWidth = 3, layout = 0) =
         doc.fontSize(10).fillColor('#666666');
         doc.text(`${stockWidth.toFixed(1)}${unitLabel}`, diagramStartX, diagramStartY + scaledLength + 10);
         doc.text(`${stockLength.toFixed(1)}${unitLabel}`, diagramStartX + scaledWidth + 10, diagramStartY);
-        // Add cut pieces list below diagram
-        doc.moveDown(8);
+        // Add cut pieces list to the RIGHT of the diagram (avoid covering labels) and right-align it
+        // Compute a safe left boundary just beyond the diagram's right-side labels
+        const pageRightMargin = 50;
+        const gapFromDiagram = 40; // leave room for dimension text near the diagram's right edge
+        const safeLeft = diagramStartX + scaledWidth + gapFromDiagram;
+        const panelMaxWidth = 220; // cap width so it doesn't crowd the page
+        let panelWidth = Math.min(panelMaxWidth, Math.max(150, doc.page.width - pageRightMargin - safeLeft));
+        let listX = doc.page.width - pageRightMargin - panelWidth; // anchor to right margin
+        let listY = diagramStartY; // align to top of diagram
+        // If there isn't enough horizontal space, place the list below the diagram as a fallback
+        if (listX < safeLeft) {
+            listX = safeLeft; // clamp to safe area
+            panelWidth = Math.max(150, doc.page.width - pageRightMargin - listX);
+            if (panelWidth < 150) {
+                // Not enough width next to diagram; move below
+                listX = 50;
+                panelWidth = doc.page.width - 100;
+                listY = diagramStartY + scaledLength + 16;
+            }
+        }
+        // Title for the list (right-aligned)
         doc.fontSize(10).fillColor('#000000');
-        doc.text('Cut Pieces in this Stock:', 50, doc.y);
-        doc.moveDown(0.5);
+        doc.text('Cut Pieces in this Stock:', listX, listY, { width: panelWidth, align: 'right', continued: false });
+        listY = doc.y + 2;
+        // Render each bullet item, right-aligned within the panel
         stockPiece.cutPieces.forEach((cutPiece, cutIndex) => {
             const cutWidth = convertUnit(cutPiece.width, 0, unit).toFixed(1);
             const cutLength = convertUnit(cutPiece.length, 0, unit).toFixed(1);
             const cutLabel = cutPiece.externalId ? `Piece ${cutPiece.externalId}` : `Piece ${cutIndex + 1}`;
-            doc.fontSize(8);
-            doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`, 70, doc.y);
-            doc.moveDown(0.3);
+            doc.fontSize(8).fillColor('#000000');
+            doc.text(`• ${cutLabel}: ${cutWidth} × ${cutLength} ${unitLabel}`, listX, listY, { width: panelWidth, align: 'right' });
+            listY = doc.y + 2;
         });
     });
     console.log(`📄 Detailed Diagrams Complete: Added ${stockPiecesToShow} detailed cutting layouts`);
