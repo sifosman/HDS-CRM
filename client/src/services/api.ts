@@ -158,4 +158,11 @@ export const getBranchByTradingAs = async (tradingAs: string): Promise<any> => {
   return response.data;
 };
 
+// List quote PDFs from storage bucket
+export const listQuotePdfs = async (prefix: string = ''): Promise<any> => {
+  const qs = prefix ? `?prefix=${encodeURIComponent(prefix)}` : '';
+  const response = await api.get(`/supabase/quotes/storage${qs}`);
+  return response.data;
+};
+
 export default api;

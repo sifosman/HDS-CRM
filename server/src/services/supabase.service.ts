@@ -802,6 +802,45 @@ const SupabaseService = {
   },
 
   /**
+   * List quote PDFs from the hdsquotes bucket
+   * @param prefix Optional folder/prefix to filter
+   */
+  async listQuotePdfs(prefix: string = ''): Promise<{ success: boolean; error?: string; data?: Array<{ name: string; url: string; updated_at?: string; created_at?: string; size?: number }>; }> {
+    try {
+      const { data: files, error } = await supabase
+        .storage
+        .from('hdsquotes')
+        .list(prefix, {
+          limit: 1000,
+          sortBy: { column: 'name', order: 'desc' }
+        } as any);
+
+      if (error) {
+        console.error('Error listing quote PDFs:', error);
+        return { success: false, error: error.message };
+      }
+
+      const results = (files || [])
+        .filter((f: any) => !!f && typeof f.name === 'string')
+        .map((f: any) => {
+          const { data: urlData } = supabase.storage.from('hdsquotes').getPublicUrl(prefix ? `${prefix}/${f.name}` : f.name);
+          return {
+            name: f.name,
+            url: urlData.publicUrl,
+            updated_at: (f as any).updated_at,
+            created_at: (f as any).created_at,
+            size: (f as any).metadata?.size
+          };
+        });
+
+      return { success: true, data: results };
+    } catch (error: any) {
+      console.error('Error in listQuotePdfs:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Get the first available branch from branches table (fallback method)
    */
   getFirstAvailableBranch: async (): Promise<any> => {

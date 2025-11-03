@@ -15,6 +15,7 @@ import WhatsAppUpload from './pages/WhatsAppUpload';
 import CutlistEdit from './pages/CutlistEdit';
 import CutlistDemo from './pages/CutlistDemo';
 import NotFound from './pages/NotFound';
+import QuotesDashboard from './pages/QuotesDashboard';
 
 const theme = createTheme({
   palette: {
@@ -114,6 +115,7 @@ function App() {
           >
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/dashboard/quotes" element={<QuotesDashboard />} />
               <Route path="/projects" element={<ProjectList />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/optimizer" element={<Optimizer />} />
