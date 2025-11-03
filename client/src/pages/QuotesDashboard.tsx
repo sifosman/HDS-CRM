@@ -126,37 +126,78 @@ export default function QuotesDashboard() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, width: '100%' }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="h5">Quotes Dashboard</Typography>
-          <Chip label={`${monthAnchor.toLocaleString(undefined, { month: 'long' })} ${monthAnchor.getFullYear()}`} color="primary" variant="outlined" />
-          <IconButton onClick={goPrevMonth} size="small"><NavigateBeforeIcon /></IconButton>
-          <IconButton onClick={goNextMonth} size="small" disabled={isCurrentMonth()}><NavigateNextIcon /></IconButton>
-          <Chip label={recordCountLabel} variant="outlined" />
-        </Stack>
-        <Stack direction="row" spacing={1} alignItems="center">
+      {isSmall ? (
+        <Stack spacing={1} sx={{ mb: 2 }}>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+              <Typography variant="h6" noWrap>Quotes Dashboard</Typography>
+              <Chip label={`${monthAnchor.toLocaleString(undefined, { month: 'long' })} ${monthAnchor.getFullYear()}`} color="primary" variant="outlined" />
+            </Stack>
+            <Stack direction="row" spacing={0} alignItems="center">
+              <IconButton onClick={goPrevMonth} size="small"><NavigateBeforeIcon /></IconButton>
+              <IconButton onClick={goNextMonth} size="small" disabled={isCurrentMonth()}><NavigateNextIcon /></IconButton>
+            </Stack>
+          </Stack>
           <TextField
             size="small"
+            fullWidth
             placeholder="Search by filename..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             InputProps={{ startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1 }} /> }}
           />
-          <Chip
-            label={autoRefresh ? 'Auto: On' : 'Auto: Off'}
-            color={autoRefresh ? 'success' : 'default'}
-            variant="outlined"
-            onClick={() => setAutoRefresh(v => !v)}
-          />
-          <Tooltip title="Refresh now">
-            <span>
-              <IconButton color="primary" onClick={fetchData} disabled={loading}>
-                <RefreshIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Chip label={recordCountLabel} variant="outlined" />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip
+                label={autoRefresh ? 'Auto: On' : 'Auto: Off'}
+                color={autoRefresh ? 'success' : 'default'}
+                variant="outlined"
+                onClick={() => setAutoRefresh(v => !v)}
+              />
+              <Tooltip title="Refresh now">
+                <span>
+                  <IconButton color="primary" onClick={fetchData} disabled={loading}>
+                    <RefreshIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
+          </Stack>
         </Stack>
-      </Stack>
+      ) : (
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="h5">Quotes Dashboard</Typography>
+            <Chip label={`${monthAnchor.toLocaleString(undefined, { month: 'long' })} ${monthAnchor.getFullYear()}`} color="primary" variant="outlined" />
+            <IconButton onClick={goPrevMonth} size="small"><NavigateBeforeIcon /></IconButton>
+            <IconButton onClick={goNextMonth} size="small" disabled={isCurrentMonth()}><NavigateNextIcon /></IconButton>
+            <Chip label={recordCountLabel} variant="outlined" />
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Search by filename..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              InputProps={{ startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1 }} /> }}
+            />
+            <Chip
+              label={autoRefresh ? 'Auto: On' : 'Auto: Off'}
+              color={autoRefresh ? 'success' : 'default'}
+              variant="outlined"
+              onClick={() => setAutoRefresh(v => !v)}
+            />
+            <Tooltip title="Refresh now">
+              <span>
+                <IconButton color="primary" onClick={fetchData} disabled={loading}>
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        </Stack>
+      )}
 
       {isSmall ? (
         <Stack spacing={1}>
