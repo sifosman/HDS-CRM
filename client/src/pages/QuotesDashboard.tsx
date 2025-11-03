@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, TextField, Stack, Chip, Tooltip } from '@mui/material';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, TextField, Stack, Chip, Tooltip, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -25,6 +26,8 @@ export default function QuotesDashboard() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const timerRef = useRef<number | null>(null);
+  const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
 
   const fetchData = async () => {
     setLoading(true);
@@ -98,6 +101,15 @@ export default function QuotesDashboard() {
     return list;
   }, [files, query, monthRange.start, monthRange.end]);
 
+  const recordCountLabel = useMemo(() => {
+    const count = filtered.length;
+    const suffix = isCurrentMonth() ? ' (till date)' : '';
+    return `${count} record${count === 1 ? '' : 's'}${suffix}`;
+  }, [filtered.length, monthAnchor]);
+
+  const formatSize = (size?: number) => (typeof size === 'number' ? `${(size / 1024).toFixed(1)} KB` : '-');
+  const formatDate = (d?: string) => (d ? new Date(d).toLocaleString() : '-');
+
   const goPrevMonth = () => {
     setMonthAnchor(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -119,6 +131,7 @@ export default function QuotesDashboard() {
           <Chip label={`${monthAnchor.toLocaleString(undefined, { month: 'long' })} ${monthAnchor.getFullYear()}`} color="primary" variant="outlined" />
           <IconButton onClick={goPrevMonth} size="small"><NavigateBeforeIcon /></IconButton>
           <IconButton onClick={goNextMonth} size="small" disabled={isCurrentMonth()}><NavigateNextIcon /></IconButton>
+          <Chip label={recordCountLabel} variant="outlined" />
         </Stack>
         <Stack direction="row" spacing={1} alignItems="center">
           <TextField
@@ -144,43 +157,68 @@ export default function QuotesDashboard() {
         </Stack>
       </Stack>
 
-      <Paper>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Filename</TableCell>
-                <TableCell sx={{ width: 180 }}>Created</TableCell>
-                <TableCell sx={{ width: 180 }}>Updated</TableCell>
-                <TableCell sx={{ width: 100 }} align="right">Size</TableCell>
-                <TableCell sx={{ width: 80 }} align="center">Open</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.map((f) => (
-                <TableRow key={f.name} hover>
-                  <TableCell>{f.name}</TableCell>
-                  <TableCell>{f.created_at ? new Date(f.created_at).toLocaleString() : '-'}</TableCell>
-                  <TableCell>{f.updated_at ? new Date(f.updated_at).toLocaleString() : '-'}</TableCell>
-                  <TableCell align="right">{typeof f.size === 'number' ? `${(f.size / 1024).toFixed(1)} KB` : '-'}</TableCell>
-                  <TableCell align="center">
-                    <IconButton component="a" href={f.url} target="_blank" rel="noopener noreferrer" size="small">
-                      <OpenInNewIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+      {isSmall ? (
+        <Stack spacing={1}>
+          {filtered.map((f) => (
+            <Paper key={f.name} sx={{ p: 1 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" noWrap title={f.name}>{f.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDate(f.updated_at || f.created_at)} · {formatSize(f.size)}
+                  </Typography>
+                </Box>
+                <IconButton component="a" href={f.url} target="_blank" rel="noopener noreferrer" size="small" color="primary">
+                  <OpenInNewIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Paper>
+          ))}
+          {filtered.length === 0 && (
+            <Paper sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+              {loading ? 'Loading…' : 'No files found'}
+            </Paper>
+          )}
+        </Stack>
+      ) : (
+        <Paper>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    {loading ? 'Loading…' : 'No files found'}
-                  </TableCell>
+                  <TableCell>Filename</TableCell>
+                  <TableCell sx={{ width: 180 }}>Created</TableCell>
+                  <TableCell sx={{ width: 180 }}>Updated</TableCell>
+                  <TableCell sx={{ width: 100 }} align="right">Size</TableCell>
+                  <TableCell sx={{ width: 80 }} align="center">Open</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {filtered.map((f) => (
+                  <TableRow key={f.name} hover>
+                    <TableCell>{f.name}</TableCell>
+                    <TableCell>{formatDate(f.created_at)}</TableCell>
+                    <TableCell>{formatDate(f.updated_at)}</TableCell>
+                    <TableCell align="right">{formatSize(f.size)}</TableCell>
+                    <TableCell align="center">
+                      <IconButton component="a" href={f.url} target="_blank" rel="noopener noreferrer" size="small">
+                        <OpenInNewIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                      {loading ? 'Loading…' : 'No files found'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
     </Box>
   );
 }
