@@ -103,7 +103,8 @@ export default function QuotesDashboard() {
 
   const recordCountLabel = useMemo(() => {
     const count = filtered.length;
-    const suffix = isCurrentMonth() ? ' (till date)' : '';
+    const now = new Date();
+    const suffix = (monthAnchor.getFullYear() === now.getFullYear() && monthAnchor.getMonth() === now.getMonth()) ? ' (till date)' : '';
     return `${count} record${count === 1 ? '' : 's'}${suffix}`;
   }, [filtered.length, monthAnchor]);
 
