@@ -28,7 +28,7 @@ export interface PaymentConfirmationData {
     cutlistUrl?: string;
   };
 }
-//test
+
 export interface QuoteCreatedEmailData {
   branchEmail: string;
   quoteNumber: string;
@@ -163,6 +163,69 @@ export class EmailService {
     }
   }
 
+  async sendQuoteCreatedEmail(data: QuoteCreatedEmailData): Promise<void> {
+    try {
+      // Verify connection before sending to catch networking/cert issues early
+      try {
+        await this.transporter.verify();
+        console.log('[EmailService] SMTP verify succeeded (quote created)');
+      } catch (verr) {
+        console.warn('[EmailService] SMTP verify failed (quote created), attempting to send anyway:', verr);
+      }
+
+      const mailOptions: any = {
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to: data.branchEmail,
+        subject: `New Quote Created - ${data.quoteNumber}`,
+        html: this.generateQuoteCreatedTemplate(data),
+        // Plain-text alternative improves deliverability for business mail servers
+        text: this.generatePlainTextQuoteCreated(data),
+        // Align SMTP envelope MAIL FROM with visible From to satisfy DMARC alignment
+        envelope: {
+          from: this.config.fromEmail,
+          to: data.branchEmail
+        },
+        // Allow configuring a Reply-To distinct from the SMTP sender
+        replyTo: process.env.REPLY_TO_EMAIL || this.config.fromEmail,
+        // Attach cutlist PDF directly using public URL
+        attachments: [
+          {
+            filename: `cutlist-${data.quoteNumber}.pdf`,
+            path: data.cutlistPdfUrl,
+            contentType: 'application/pdf'
+          }
+        ]
+      };
+
+      // Retry transient errors once
+      const isTransient = (err: any) => {
+        const msg = (err && (err.code || err.message || '')) + '';
+        return /ETIMEDOUT|ECONNRESET|ECONNREFUSED|EPIPE|Unexpected socket close/i.test(msg);
+      };
+      let attempt = 0;
+      const maxAttempts = 2;
+      while (true) {
+        try {
+          attempt++;
+          const result = await this.transporter.sendMail(mailOptions);
+          console.log('Quote created email sent:', result.messageId);
+          console.log('Quote created email includes cutlist attachment and links');
+          break;
+        } catch (sendErr) {
+          console.warn(`[EmailService] quote-created send attempt ${attempt} failed:`, sendErr);
+          if (attempt >= maxAttempts || !isTransient(sendErr)) {
+            throw sendErr;
+          }
+          // backoff
+          await new Promise(res => setTimeout(res, 1500));
+        }
+      }
+    } catch (error) {
+      console.error('Error sending quote-created email:', error);
+      throw error;
+    }
+  }
+
   private generatePaymentConfirmationTemplate(data: PaymentConfirmationData): string {
     const optimization = data.optimizationDetails;
     
@@ -283,115 +346,61 @@ export class EmailService {
     return lines.join('\n');
   }
 
-  async sendQuoteCreatedEmail(data: QuoteCreatedEmailData): Promise<void> {
-    try {
-      // Verify connection before sending to catch networking/cert issues early
-      try {
-        await this.transporter.verify();
-        console.log('[EmailService] SMTP verify succeeded (quote created)');
-      } catch (verr) {
-        console.warn('[EmailService] SMTP verify failed (quote created), attempting to send anyway:', verr);
-      }
-
-      const mailOptions: any = {
-        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
-        to: data.branchEmail,
-        subject: `New Quote Created - ${data.quoteNumber}`,
-        html: this.generateQuoteCreatedTemplate(data),
-        // Plain-text alternative improves deliverability for business mail servers
-        text: this.generatePlainTextQuoteCreated(data),
-        // Align SMTP envelope MAIL FROM with visible From to satisfy DMARC alignment
-        envelope: {
-          from: this.config.fromEmail,
-          to: data.branchEmail
-        },
-        // Allow configuring a Reply-To distinct from the SMTP sender
-        replyTo: process.env.REPLY_TO_EMAIL || this.config.fromEmail,
-        // Attach cutlist PDF directly using public URL
-        attachments: [
-          {
-            filename: `cutlist-${data.quoteNumber}.pdf`,
-            path: data.cutlistPdfUrl,
-            contentType: 'application/pdf'
-          }
-        ]
-      };
-
-      // Retry transient errors once
-      const isTransient = (err: any) => {
-        const msg = (err && (err.code || err.message || '')) + '';
-        return /ETIMEDOUT|ECONNRESET|ECONNREFUSED|EPIPE|Unexpected socket close/i.test(msg);
-      };
-      let attempt = 0;
-      const maxAttempts = 2;
-      while (true) {
-        try {
-          attempt++;
-          const result = await this.transporter.sendMail(mailOptions);
-          console.log('Quote created email sent:', result.messageId);
-          console.log('Quote created email includes cutlist attachment and links');
-          break;
-        } catch (sendErr) {
-          console.warn(`[EmailService] quote-created send attempt ${attempt} failed:`, sendErr);
-          if (attempt >= maxAttempts || !isTransient(sendErr)) {
-            throw sendErr;
-          }
-          // backoff
-          await new Promise(res => setTimeout(res, 1500));
-        }
-      }
-    } catch (error) {
-      console.error('Error sending quote-created email:', error);
-      throw error;
-    }
-  }
-
   private generateQuoteCreatedTemplate(data: QuoteCreatedEmailData): string {
-    const customerPhoneLine = data.customerPhone
-      ? `<p><strong>Customer Phone:</strong> ${data.customerPhone}</p>`
-      : '';
-    const projectNameLine = data.projectName
-      ? `<p><strong>Project Name:</strong> ${data.projectName}</p>`
-      : '';
-    const quoteLinkButton = data.quotePdfUrl
-      ? `
-        <div style="margin: 10px 0;">
-          <a href="${data.quotePdfUrl}" style="display: inline-block; background: #fd7e14; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-            📝 View Quote PDF
-          </a>
-        </div>
-      `
-      : '';
-
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #003366; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h2 style="margin: 0;">New Quote Created</h2>
-          <p style="margin: 5px 0 0 0; opacity: 0.9;">A new quote has been generated for a customer</p>
+        <div style="background: #28a745; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="margin: 0;">📝 New Quote Created</h2>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Quote Number: ${data.quoteNumber}</p>
         </div>
-
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Customer Information</h3>
+          <p><strong>Name:</strong> ${data.customerName}</p>
+          ${data.customerPhone ? `<p><strong>Contact Number:</strong> ${data.customerPhone}</p>` : ''}
+        </div>
+        
         <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Quote Details</h3>
           <p><strong>Quote Number:</strong> ${data.quoteNumber}</p>
-          <p><strong>Customer Name:</strong> ${data.customerName}</p>
-          ${customerPhoneLine}
-          ${projectNameLine}
+          ${data.projectName ? `<p><strong>Project Name:</strong> ${data.projectName}</p>` : ''}
         </div>
-
+        
         <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #0c5460;">Cutting List</h3>
-          <p style="margin-bottom: 10px;">The cutting list for this quote is attached to this email as a PDF.</p>
-          <div style="margin: 10px 0;">
-            <a href="${data.cutlistPdfUrl}" style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-              📋 Download Cutlist PDF
-            </a>
-          </div>
+          ${data.cutlistPdfUrl ? `<p><strong>Cutlist PDF:</strong> <a href="${data.cutlistPdfUrl}" style="color: #007bff;">View Online</a></p>` : ''}
         </div>
 
-        ${quoteLinkButton}
-
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #155724;">📎 Download Documents</h3>
+          <p style="color: #155724; margin-bottom: 10px;">Click the links below to download the required documents:</p>
+          <div style="margin: 15px 0;">
+            ${data.quotePdfUrl ? `
+              <div style="margin: 10px 0;">
+                <a href="${data.quotePdfUrl}" style="display: inline-block; background: #fd7e14; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  📝 Download Quote PDF
+                </a>
+              </div>
+            ` : ''}
+            ${data.cutlistPdfUrl ? `
+              <div style="margin: 10px 0;">
+                <a href="${data.cutlistPdfUrl}" style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                  📋 Download Cutlist PDF
+                </a>
+              </div>
+            ` : ''}
+            ${!data.quotePdfUrl && !data.cutlistPdfUrl ? '<p style="color: #856404;">Documents will be available shortly.</p>' : ''}
+          </div>
+        </div>
+        
         <div style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 30px; color: #6c757d; font-size: 14px;">
-          <p>A customer has requested a quote. Please review the attached cutting list and contact the customer if any additional information is required.</p>
+          <p><strong>Next Steps:</strong></p>
+          <ol style="margin: 10px 0;">
+            <li>Review the attached cutlist and quote</li>
+            <li>Contact the customer to confirm order details</li>
+            <li>Schedule production and delivery</li>
+            <li>Update the customer on progress</li>
+          </ol>
           <p><strong>HDS Group - Quotation System</strong></p>
         </div>
       </div>
@@ -407,12 +416,11 @@ export class EmailService {
     if (data.customerPhone) lines.push(`Customer Phone: ${data.customerPhone}`);
     if (data.projectName) lines.push(`Project Name: ${data.projectName}`);
     lines.push('');
-    lines.push('The cutting list for this quote is attached to this email as a PDF.');
+    lines.push('The cutting list for this quote is attached to this email as a PDF file.');
     lines.push('');
-    lines.push(`Cutlist PDF URL: ${data.cutlistPdfUrl}`);
-    if (data.quotePdfUrl) {
-      lines.push(`Quote PDF URL: ${data.quotePdfUrl}`);
-    }
+    lines.push('Links:');
+    lines.push(`Cutlist PDF: ${data.cutlistPdfUrl}`);
+    if (data.quotePdfUrl) lines.push(`Quote PDF: ${data.quotePdfUrl}`);
     lines.push('');
     lines.push('HDS Group - Quotation System');
     return lines.join('\n');

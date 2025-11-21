@@ -326,7 +326,7 @@ const SupabaseService = {
       if (quoteData.cutlistPdfUrl) {
         quote.cutlist_pdf_url = quoteData.cutlistPdfUrl;
       }
-      
+
       // Extract and set branch fields explicitly on the quote for reliable email resolution
       try {
         const payloadBranchData = (quoteData as any)?.branchData
