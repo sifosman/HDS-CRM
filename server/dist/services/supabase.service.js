@@ -277,6 +277,9 @@ const SupabaseService = {
             if (quoteData.total !== undefined) {
                 quote.total = quoteData.total;
             }
+            if (quoteData.cutlistPdfUrl) {
+                quote.cutlist_pdf_url = quoteData.cutlistPdfUrl;
+            }
             // Extract and set branch fields explicitly on the quote for reliable email resolution
             try {
                 const payloadBranchData = (quoteData === null || quoteData === void 0 ? void 0 : quoteData.branchData)
@@ -702,6 +705,43 @@ const SupabaseService = {
         }
         catch (error) {
             console.error('Error in uploadQuotePdf:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    /**
+     * List quote PDFs from the hdsquotes bucket
+     * @param prefix Optional folder/prefix to filter
+     */
+    async listQuotePdfs(prefix = '') {
+        try {
+            const { data: files, error } = await supabase
+                .storage
+                .from('hdsquotes')
+                .list(prefix, {
+                limit: 1000,
+                sortBy: { column: 'name', order: 'desc' }
+            });
+            if (error) {
+                console.error('Error listing quote PDFs:', error);
+                return { success: false, error: error.message };
+            }
+            const results = (files || [])
+                .filter((f) => !!f && typeof f.name === 'string')
+                .map((f) => {
+                var _a;
+                const { data: urlData } = supabase.storage.from('hdsquotes').getPublicUrl(prefix ? `${prefix}/${f.name}` : f.name);
+                return {
+                    name: f.name,
+                    url: urlData.publicUrl,
+                    updated_at: f.updated_at,
+                    created_at: f.created_at,
+                    size: (_a = f.metadata) === null || _a === void 0 ? void 0 : _a.size
+                };
+            });
+            return { success: true, data: results };
+        }
+        catch (error) {
+            console.error('Error in listQuotePdfs:', error);
             return { success: false, error: error.message };
         }
     },

@@ -8,6 +8,7 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const optimizer_service_1 = require("../services/optimizer.service");
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
+const email_service_1 = require("../services/email.service");
 // Optimize cutting layout
 const optimizeCutting = async (req, res) => {
     try {
@@ -164,6 +165,7 @@ const generateQuote = async (req, res) => {
         let invoiceNumber = null;
         let quotePdfUrl = '';
         let invoicePdfUrl = '';
+        let cutlistPdfUrl = '';
         let edgingCostTotal = 0;
         let totalBoardsUsed = 0; // Track total boards used for cutting fee
         // Generate a unique quote ID with branch name BEFORE processing sections
@@ -373,6 +375,7 @@ const generateQuote = async (req, res) => {
                 const cutlistPdfResult = await (0, optimizer_service_1.generateAndUploadOptimizationPdf)(solution, unit, cutWidth, layout, dynamicCutlistId);
                 if (cutlistPdfResult.success && cutlistPdfResult.publicUrl) {
                     console.log('Cutlist PDF generated and uploaded successfully:', cutlistPdfResult.publicUrl);
+                    cutlistPdfUrl = cutlistPdfResult.publicUrl;
                 }
                 else {
                     console.error('Failed to generate or upload cutlist PDF:', cutlistPdfResult.error);
@@ -629,7 +632,8 @@ const generateQuote = async (req, res) => {
                 total: grandTotal * 1.15,
                 status: 'pending',
                 cutlistUrl: quotePdfUrl,
-                branchData: branchData
+                branchData: branchData,
+                cutlistPdfUrl: cutlistPdfUrl
             };
         }
         catch (dataError) {
@@ -661,7 +665,8 @@ const generateQuote = async (req, res) => {
                 subtotal: grandTotal,
                 tax: grandTotal * 0.15,
                 total: grandTotal * 1.15,
-                status: 'pending'
+                status: 'pending',
+                cutlistPdfUrl: cutlistPdfUrl
             };
         }
         console.log('Saving quote with data:', {
@@ -710,6 +715,42 @@ const generateQuote = async (req, res) => {
             catch (invoiceError) {
                 console.error('❌ Error creating invoice at quote creation:', invoiceError);
                 // Continue without invoice if creation fails - quote is still valid
+            }
+            // Send notification email to branch with attached cutlist PDF
+            try {
+                let branchEmail = null;
+                if (branchData && branchData.email_address) {
+                    branchEmail = branchData.email_address;
+                }
+                else if (branchData && branchData.trading_as) {
+                    const branchRes = await supabase_service_1.default.getBranchByTradingAs(branchData.trading_as);
+                    if (branchRes.success && branchRes.data && branchRes.data.email_address) {
+                        branchEmail = branchRes.data.email_address;
+                    }
+                }
+                const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
+                const recipient = branchEmail || fallbackEmail;
+                if (!recipient) {
+                    console.warn('No branch or fallback email configured; skipping quote-created email');
+                }
+                else if (!cutlistPdfUrl) {
+                    console.warn('No cutlistPdfUrl available; skipping quote-created email');
+                }
+                else {
+                    const emailService = new email_service_1.EmailService();
+                    await emailService.sendQuoteCreatedEmail({
+                        branchEmail: recipient,
+                        quoteNumber: quoteId,
+                        customerName,
+                        customerPhone: phoneNumber,
+                        projectName,
+                        cutlistPdfUrl,
+                        quotePdfUrl,
+                    });
+                }
+            }
+            catch (emailError) {
+                console.error('Error sending quote-created email:', emailError);
             }
         }
         // Return the processed data without returning the response object

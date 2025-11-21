@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 const router = express_1.default.Router();
 // Debug endpoint to test the n8n workflow and recipient value
@@ -64,7 +66,7 @@ router.post('/test-botsailor', ((req, res) => {
         var _a, _b, _c;
         try {
             console.log('===== BOTSAILOR FORMAT TEST =====');
-            const WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
+            const WEBHOOK_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
             const recipient = ((_a = req.body) === null || _a === void 0 ? void 0 : _a.recipient) || ((_b = req.body) === null || _b === void 0 ? void 0 : _b.phoneNumber);
             if (!recipient) {
                 return res.status(400).json({
@@ -208,3 +210,60 @@ router.get('/test-supabase', ((req, res) => {
     })();
 }));
 exports.default = router;
+// Runtime verification endpoint to check which Botsailor webhook ID is present in compiled files
+// Usage (browser): GET /api/debug/check-botsailor-url
+router.get('/check-botsailor-url', ((req, res) => {
+    try {
+        const oldId = '145613.157394.183999.1748553417';
+        const newId = '145613.241603.253062.1760952893';
+        // When compiled, __dirname will be server/dist/routes. We want server/dist/controllers/*
+        const distRoot = path_1.default.resolve(__dirname, '..');
+        const candidates = [
+            path_1.default.join(distRoot, 'controllers', 'webhook-direct.controller.js'),
+            path_1.default.join(distRoot, 'controllers', 'botsailor.controller.js'),
+            path_1.default.join(distRoot, 'controllers', 'n8n.controller.js'),
+            path_1.default.join(distRoot, 'controllers', 'cutlist.controller.js'),
+            path_1.default.join(distRoot, 'routes', 'debug.routes.js')
+        ];
+        const results = [];
+        for (const file of candidates) {
+            const exists = fs_1.default.existsSync(file);
+            if (!exists) {
+                results.push({ file, exists, hasOld: false, hasNew: false });
+                continue;
+            }
+            let content = '';
+            try {
+                content = fs_1.default.readFileSync(file, 'utf8');
+            }
+            catch (_) {
+                // ignore read errors
+            }
+            const hasOld = content.includes(oldId);
+            const hasNew = content.includes(newId);
+            results.push({ file, exists: true, hasOld, hasNew });
+        }
+        const anyOld = results.some(r => r.exists && r.hasOld);
+        const anyNew = results.some(r => r.exists && r.hasNew);
+        return res.status(200).json({
+            success: true,
+            message: 'Botsailor webhook ID scan completed',
+            summary: {
+                anyOld,
+                anyNew
+            },
+            details: results,
+            env: {
+                dir: __dirname,
+                nodeEnv: process.env.NODE_ENV || null
+            }
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to scan for webhook IDs',
+            error: (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error'
+        });
+    }
+}));

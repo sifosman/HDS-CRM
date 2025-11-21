@@ -11,6 +11,7 @@ import {
   generateAndUploadOptimizationPdf
 } from '../services/optimizer.service';
 import SupabaseService from '../services/supabase.service';
+import { EmailService } from '../services/email.service';
 
 // Optimize cutting layout
 export const optimizeCutting = async (req: Request, res: Response) => {
@@ -191,6 +192,7 @@ export const generateQuote = async (req: Request, res: Response) => {
     let invoiceNumber: string | null = null;
     let quotePdfUrl = '';
     let invoicePdfUrl = '';
+    let cutlistPdfUrl = '';
     let edgingCostTotal = 0;
     let totalBoardsUsed = 0; // Track total boards used for cutting fee
 
@@ -430,6 +432,7 @@ export const generateQuote = async (req: Request, res: Response) => {
         const cutlistPdfResult = await generateAndUploadOptimizationPdf(solution, unit, cutWidth, layout, dynamicCutlistId);
         if (cutlistPdfResult.success && cutlistPdfResult.publicUrl) {
           console.log('Cutlist PDF generated and uploaded successfully:', cutlistPdfResult.publicUrl);
+          cutlistPdfUrl = cutlistPdfResult.publicUrl;
         } else {
           console.error('Failed to generate or upload cutlist PDF:', cutlistPdfResult.error);
         }
@@ -714,7 +717,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         total: grandTotal * 1.15,
         status: 'pending',
         cutlistUrl: quotePdfUrl,
-        branchData: branchData
+        branchData: branchData,
+        cutlistPdfUrl: cutlistPdfUrl
       };
     } catch (dataError) {
       console.error('Error creating quote save data:', dataError);
@@ -745,7 +749,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         subtotal: grandTotal,
         tax: grandTotal * 0.15,
         total: grandTotal * 1.15,
-        status: 'pending'
+        status: 'pending',
+        cutlistPdfUrl: cutlistPdfUrl
       };
     }
     
@@ -793,6 +798,42 @@ export const generateQuote = async (req: Request, res: Response) => {
       } catch (invoiceError) {
         console.error('❌ Error creating invoice at quote creation:', invoiceError);
         // Continue without invoice if creation fails - quote is still valid
+      }
+
+      // Send notification email to branch with attached cutlist PDF
+      try {
+        let branchEmail: string | null = null;
+
+        if (branchData && (branchData as any).email_address) {
+          branchEmail = (branchData as any).email_address;
+        } else if (branchData && (branchData as any).trading_as) {
+          const branchRes = await SupabaseService.getBranchByTradingAs((branchData as any).trading_as);
+          if (branchRes.success && branchRes.data && branchRes.data.email_address) {
+            branchEmail = branchRes.data.email_address;
+          }
+        }
+
+        const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
+        const recipient = branchEmail || fallbackEmail;
+
+        if (!recipient) {
+          console.warn('No branch or fallback email configured; skipping quote-created email');
+        } else if (!cutlistPdfUrl) {
+          console.warn('No cutlistPdfUrl available; skipping quote-created email');
+        } else {
+          const emailService = new EmailService();
+          await emailService.sendQuoteCreatedEmail({
+            branchEmail: recipient,
+            quoteNumber: quoteId,
+            customerName,
+            customerPhone: phoneNumber,
+            projectName,
+            cutlistPdfUrl,
+            quotePdfUrl,
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending quote-created email:', emailError);
       }
     }
 

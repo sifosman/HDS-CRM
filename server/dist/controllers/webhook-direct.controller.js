@@ -7,8 +7,8 @@ exports.webhookDirectController = void 0;
 const axios_1 = __importDefault(require("axios"));
 const supabase_service_1 = __importDefault(require("../services/supabase.service"));
 const ocr_disabled_service_1 = require("../services/ocr-disabled.service");
-// Hard-coded webhook URL for direct testing
-const WEBHOOK_URL = 'https://www.botsailor.com/webhook/whatsapp-workflow/145613.157394.183999.1748553417';
+// Hard-coded webhook URL for direct testing (updated)
+const WEBHOOK_URL = 'https://botsailor.com/webhook/whatsapp-workflow/145613.241603.253062.1760952893';
 /**
  * A simplified controller that contains only what's needed to
  * directly test webhook communication, without any OCR or database dependencies
@@ -18,23 +18,30 @@ exports.webhookDirectController = {
      * Test the webhook with a direct payload
      */
     async testWebhook(req, res) {
+        var _a;
         try {
             console.log('==== WEBHOOK DIRECT TEST ====');
             console.log('Testing webhook with direct payload to URL:', WEBHOOK_URL);
-            // Send the exact WhatsApp API format required by Botsailor
+            // Send payload matching the Botsailor template webhook (variable 1 = name, 2 = URL)
             const testPayload = {
-                to: '+27822222222', // Use a test phone number with + prefix
-                type: 'text',
-                text: {
-                    body: 'Test message from Freecut API to Botsailor webhook'
-                }
+                recipient: '+27822222222',
+                customer_name: 'Test User',
+                cutlist_url: 'https://hds-nine.vercel.app/cutlist-edit/TEST-123',
+                dimensions_count: 1,
+                project_name: 'Cutting List Project',
+                template_parameters: [
+                    'Test User',
+                    'https://hds-nine.vercel.app/cutlist-edit/TEST-123'
+                ]
             };
             console.log('Sending test webhook with exact format:', testPayload);
             const response = await axios_1.default.post(WEBHOOK_URL, testPayload, {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                timeout: 10000
+                timeout: 10000,
+                // Prevent axios from converting POST to GET on redirect; surface Location header instead
+                maxRedirects: 0
             });
             console.log('Webhook test response:', response.status, response.statusText);
             console.log('Response data:', response.data);
@@ -53,6 +60,9 @@ exports.webhookDirectController = {
             if (error.response) {
                 console.error('Response status:', error.response.status);
                 console.error('Response data:', error.response.data);
+                if (error.response.status >= 300 && error.response.status < 400) {
+                    console.error('Redirect Location:', (_a = error.response.headers) === null || _a === void 0 ? void 0 : _a.location);
+                }
             }
             return res.status(500).json({
                 success: false,
@@ -65,7 +75,7 @@ exports.webhookDirectController = {
      * Process n8n data with a super simplified approach
      */
     async processN8n(req, res) {
-        var _a, _b;
+        var _a, _b, _c;
         try {
             console.log('==== DIRECT N8N PROCESSING ====');
             console.log('Request body:', JSON.stringify(req.body, null, 2));
@@ -324,24 +334,25 @@ exports.webhookDirectController = {
                 pricingFound: pricingData.length > 0,
                 quoteCreated: !!quoteId
             });
-            // Use only the exact WhatsApp API format required by Botsailor
+            // Send using the Botsailor webhook template payload
             try {
-                // Create the message body
-                const messageBody = quoteId ?
-                    `Your cutting list and quote #${quoteId} are ready! View your cutting list here: ${cutlistUrl}` :
-                    `Your cutting list is ready! View it here: ${cutlistUrl}`;
-                // Exact format as specified by WhatsApp API
                 const payload = {
-                    to: phoneNumber,
-                    type: 'text',
-                    text: {
-                        body: messageBody
-                    }
+                    recipient: phoneNumber,
+                    customer_name: senderName || 'Customer',
+                    cutlist_url: cutlistUrl,
+                    dimensions_count: dimensionsCount,
+                    project_name: 'Cutting List Project',
+                    template_parameters: [
+                        (senderName || 'Customer').trim(),
+                        cutlistUrl
+                    ]
                 };
-                console.log('WEBHOOK DEBUG: Sending with exact WhatsApp API format:', payload);
+                console.log('WEBHOOK DEBUG: Sending Botsailor template payload:', payload);
                 const response = await axios_1.default.post(WEBHOOK_URL, payload, {
                     headers: { 'Content-Type': 'application/json' },
-                    timeout: 10000
+                    timeout: 10000,
+                    // Avoid following redirects that could switch POST to GET
+                    maxRedirects: 0
                 });
                 console.log('Webhook sent successfully:', response.status);
                 return res.status(200).json({
@@ -366,12 +377,15 @@ exports.webhookDirectController = {
                 if (error.response) {
                     console.error('Response status:', error.response.status);
                     console.error('Response data:', error.response.data);
+                    if (error.response.status >= 300 && error.response.status < 400) {
+                        console.error('Redirect Location:', (_b = error.response.headers) === null || _b === void 0 ? void 0 : _b.location);
+                    }
                 }
                 return res.status(500).json({
                     success: false,
                     message: 'Webhook sending failed',
                     error: error.message,
-                    errorResponse: (_b = error.response) === null || _b === void 0 ? void 0 : _b.data
+                    errorResponse: (_c = error.response) === null || _c === void 0 ? void 0 : _c.data
                 });
             }
         }
