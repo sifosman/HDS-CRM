@@ -28,7 +28,7 @@ export interface PaymentConfirmationData {
     cutlistUrl?: string;
   };
 }
-
+//test
 export interface QuoteCreatedEmailData {
   branchEmail: string;
   quoteNumber: string;
