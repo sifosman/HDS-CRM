@@ -11,6 +11,7 @@ import {
   generateAndUploadOptimizationPdf
 } from '../services/optimizer.service';
 import SupabaseService from '../services/supabase.service';
+import EmailService from '../services/email.service';
 
 // Optimize cutting layout
 export const optimizeCutting = async (req: Request, res: Response) => {
@@ -191,6 +192,7 @@ export const generateQuote = async (req: Request, res: Response) => {
     let invoiceNumber: string | null = null;
     let quotePdfUrl = '';
     let invoicePdfUrl = '';
+    let cutlistPdfUrl = '';
     let edgingCostTotal = 0;
     let totalBoardsUsed = 0; // Track total boards used for cutting fee
 
@@ -408,7 +410,6 @@ export const generateQuote = async (req: Request, res: Response) => {
       } catch (e) {
         console.warn('Selective rotation enforcement failed; using legacy behavior', e);
       }
-      
       // 7. Run optimization
       const cutWidth = 3; // 3mm saw blade width
       const layout = 0; // Guillotine layout
@@ -423,28 +424,12 @@ export const generateQuote = async (req: Request, res: Response) => {
         solutionStockPiecesCount: solution.stockPieces?.length || 0,
         solutionStockPieces: JSON.stringify(solution.stockPieces)
       });
-      
-      // Generate and upload cutlist PDF to cutlists bucket
-      try {
-        console.log('Generating cutlist PDF');
-        const cutlistPdfResult = await generateAndUploadOptimizationPdf(solution, unit, cutWidth, layout, dynamicCutlistId);
-        if (cutlistPdfResult.success && cutlistPdfResult.publicUrl) {
-          console.log('Cutlist PDF generated and uploaded successfully:', cutlistPdfResult.publicUrl);
-        } else {
-          console.error('Failed to generate or upload cutlist PDF:', cutlistPdfResult.error);
-        }
-      } catch (pdfError) {
-        console.error('Error generating cutlist PDF:', pdfError);
-      }
-      
       // 8. Calculate boards needed and wastage statistics
       const boardsNeeded = solution.stockPieces.length;
       totalBoardsUsed += boardsNeeded; // Add to total boards for cutting fee
-      
-      // Calculate total board area and used area to determine wastage
       const boardArea = length * width * boardsNeeded;
       let usedArea = 0;
-      
+
       // Calculate the total area of all cut pieces
       for (const piece of validCutPieces) {
         usedArea += piece.length * piece.width * (piece.amount || 1);
@@ -714,7 +699,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         total: grandTotal * 1.15,
         status: 'pending',
         cutlistUrl: quotePdfUrl,
-        branchData: branchData
+        branchData: branchData,
+        cutlistPdfUrl: cutlistPdfUrl
       };
     } catch (dataError) {
       console.error('Error creating quote save data:', dataError);
@@ -745,7 +731,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         subtotal: grandTotal,
         tax: grandTotal * 0.15,
         total: grandTotal * 1.15,
-        status: 'pending'
+        status: 'pending',
+        cutlistPdfUrl: cutlistPdfUrl
       };
     }
     
@@ -794,6 +781,42 @@ export const generateQuote = async (req: Request, res: Response) => {
         console.error('❌ Error creating invoice at quote creation:', invoiceError);
         // Continue without invoice if creation fails - quote is still valid
       }
+    }
+
+    // Send notification email to branch with attached cutlist PDF (best-effort)
+    try {
+      let branchEmail: string | null = null;
+
+      if (branchData && (branchData as any).email_address) {
+        branchEmail = (branchData as any).email_address;
+      } else if (branchData && (branchData as any).trading_as) {
+        const branchRes = await SupabaseService.getBranchByTradingAs((branchData as any).trading_as);
+        if (branchRes.success && branchRes.data && branchRes.data.email_address) {
+          branchEmail = branchRes.data.email_address;
+        }
+      }
+
+      const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
+      const recipient = branchEmail || fallbackEmail;
+
+      if (!recipient) {
+        console.warn('No branch or fallback email configured; skipping quote-created email');
+      } else if (!cutlistPdfUrl) {
+        console.warn('No cutlistPdfUrl available; skipping quote-created email');
+      } else {
+        const emailService = new EmailService();
+        await emailService.sendQuoteCreatedEmail({
+          branchEmail: recipient,
+          quoteNumber: quoteId,
+          customerName,
+          customerPhone: phoneNumber,
+          projectName,
+          cutlistPdfUrl,
+          quotePdfUrl,
+        });
+      }
+    } catch (emailError) {
+      console.error('Error sending quote-created email:', emailError);
     }
 
     // Return the processed data without returning the response object

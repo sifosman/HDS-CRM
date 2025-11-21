@@ -66,6 +66,10 @@ router.get('/products/pricing', function (req, res) {
 router.get('/branches/by-trading-as/:tradingAs', function (req, res) {
     supabase_controller_1.default.getBranchByTradingAs(req, res);
 });
+// List quote PDFs from storage bucket
+router.get('/quotes/storage', function (req, res) {
+    supabase_controller_1.default.listQuotePdfs(req, res);
+});
 // Upload quote PDF to storage
 router.post('/quotes/pdf', upload.single('pdf'), function (req, res) {
     supabase_controller_1.default.uploadQuotePdf(req, res);

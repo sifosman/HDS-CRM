@@ -29,6 +29,16 @@ export interface PaymentConfirmationData {
   };
 }
 
+export interface QuoteCreatedEmailData {
+  branchEmail: string;
+  quoteNumber: string;
+  customerName: string;
+  customerPhone?: string;
+  projectName?: string;
+  cutlistPdfUrl: string;
+  quotePdfUrl?: string;
+}
+
 export class EmailService {
   private transporter;
   private config: EmailConfig;
@@ -153,6 +163,63 @@ export class EmailService {
     }
   }
 
+  async sendQuoteCreatedEmail(data: QuoteCreatedEmailData): Promise<void> {
+    try {
+      // Verify connection before sending to catch networking/cert issues early
+      try {
+        await this.transporter.verify();
+        console.log('[EmailService] SMTP verify succeeded (quote created)');
+      } catch (verr) {
+        console.warn('[EmailService] SMTP verify failed for quote-created email, attempting to send anyway:', verr);
+      }
+
+      const mailOptions: any = {
+        from: `"${this.config.fromName}" <${this.config.fromEmail}>`,
+        to: data.branchEmail,
+        subject: `New Quote Created - ${data.quoteNumber}`,
+        html: this.generateQuoteCreatedTemplate(data),
+        text: this.generatePlainTextQuoteCreated(data),
+        envelope: {
+          from: this.config.fromEmail,
+          to: data.branchEmail
+        },
+        replyTo: process.env.REPLY_TO_EMAIL || this.config.fromEmail,
+        attachments: [
+          {
+            filename: `cutlist-${data.quoteNumber}.pdf`,
+            path: data.cutlistPdfUrl,
+            contentType: 'application/pdf'
+          }
+        ]
+      };
+
+      const isTransient = (err: any) => {
+        const msg = (err && (err.code || err.message || '')) + '';
+        return /ETIMEDOUT|ECONNRESET|ECONNREFUSED|EPIPE|Unexpected socket close/i.test(msg);
+      };
+
+      let attempt = 0;
+      const maxAttempts = 2;
+      while (true) {
+        try {
+          attempt++;
+          const result = await this.transporter.sendMail(mailOptions);
+          console.log('Quote created email sent:', result.messageId);
+          break;
+        } catch (sendErr) {
+          console.warn(`[EmailService] quote-created send attempt ${attempt} failed:`, sendErr);
+          if (attempt >= maxAttempts || !isTransient(sendErr)) {
+            throw sendErr;
+          }
+          await new Promise(res => setTimeout(res, 1500));
+        }
+      }
+    } catch (error) {
+      console.error('Error sending quote-created email:', error);
+      throw error;
+    }
+  }
+
   private generatePaymentConfirmationTemplate(data: PaymentConfirmationData): string {
     const optimization = data.optimizationDetails;
     
@@ -270,6 +337,67 @@ export class EmailService {
     lines.push('4) Update the customer on progress');
     lines.push('');
     lines.push('HDS Group - Order Management System');
+    return lines.join('\n');
+  }
+
+  private generateQuoteCreatedTemplate(data: QuoteCreatedEmailData): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: #007bff; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="margin: 0;">New Quote Created</h2>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">A new quote has been generated in the system.</p>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Quote Details</h3>
+          <p><strong>Quote Number:</strong> ${data.quoteNumber}</p>
+          <p><strong>Customer Name:</strong> ${data.customerName}</p>
+          ${data.customerPhone ? `<p><strong>Customer Phone:</strong> ${data.customerPhone}</p>` : ''}
+          ${data.projectName ? `<p><strong>Project Name:</strong> ${data.projectName}</p>` : ''}
+        </div>
+
+        <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #0c5460;">Cutting List</h3>
+          <p style="margin-bottom: 10px;">The cutting list for this quote is attached to this email as a PDF file.</p>
+          <a href="${data.cutlistPdfUrl}" style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            📋 View Cutlist PDF
+          </a>
+        </div>
+
+        ${data.quotePdfUrl ? `
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #856404;">Quote Document</h3>
+            <p>The full quote PDF is also available online:</p>
+            <a href="${data.quotePdfUrl}" style="display: inline-block; background: #fd7e14; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              📝 View Quote PDF
+            </a>
+          </div>
+        ` : ''}
+
+        <div style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 30px; color: #6c757d; font-size: 14px;">
+          <p>Please review the attached cutting list and proceed with the usual quote follow-up process.</p>
+          <p><strong>HDS Group - Quotation System</strong></p>
+        </div>
+      </div>
+    `;
+  }
+
+  private generatePlainTextQuoteCreated(data: QuoteCreatedEmailData): string {
+    const lines: string[] = [];
+    lines.push('New Quote Created');
+    lines.push('');
+    lines.push(`Quote Number: ${data.quoteNumber}`);
+    lines.push(`Customer Name: ${data.customerName}`);
+    if (data.customerPhone) lines.push(`Customer Phone: ${data.customerPhone}`);
+    if (data.projectName) lines.push(`Project Name: ${data.projectName}`);
+    lines.push('');
+    lines.push('The cutting list for this quote is attached to this email as a PDF file.');
+    lines.push('');
+    lines.push('Links:');
+    lines.push(`Cutlist PDF: ${data.cutlistPdfUrl}`);
+    if (data.quotePdfUrl) lines.push(`Quote PDF: ${data.quotePdfUrl}`);
+    lines.push('');
+    lines.push('HDS Group - Quotation System');
     return lines.join('\n');
   }
 

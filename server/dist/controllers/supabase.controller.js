@@ -61,6 +61,23 @@ const supabaseController = {
         }
     },
     /**
+     * List quote PDFs from hdsquotes storage bucket
+     */
+    async listQuotePdfs(req, res) {
+        try {
+            const prefix = req.query.prefix || '';
+            const result = await supabase_service_1.default.listQuotePdfs(prefix);
+            if (!result.success) {
+                return res.status(500).json({ success: false, message: result.error || 'Failed to list quote PDFs' });
+            }
+            return res.status(200).json({ success: true, data: result.data });
+        }
+        catch (error) {
+            console.error('Error listing quote PDFs:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
+    /**
      * Get product details from Supabase
      */
     async getProductDetails(req, res) {
