@@ -36,6 +36,7 @@ export interface CutlistData {
   unit: string;
   customerName?: string;
   projectName?: string;
+  phoneNumber?: string;
   rawText?: string; // OCR text for direct parsing
 }
 
