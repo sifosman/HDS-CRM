@@ -236,7 +236,9 @@ const sendCutlistLinkViaWhatsApp = async (cutlistId, phoneNumber, customerName) 
 const createFromN8nData = async (req, res) => {
     try {
         console.log('Received data for cutlist creation:', JSON.stringify(req.body, null, 2));
-        const { cutlistData, phoneNumber, senderName, ocrText } = req.body;
+        // n8n sends phone number as 'recipient', but also support 'phoneNumber' for compatibility
+        const { cutlistData, phoneNumber, recipient, senderName, customer_name, ocrText } = req.body;
+        const actualPhoneNumber = phoneNumber || recipient;
         let newCutlist;
         let whatsAppResult = { success: false, message: 'WhatsApp message not sent' };
         // If we don't have cutlist data directly, but we have OCR text, create a new cutlist
@@ -300,9 +302,9 @@ const createFromN8nData = async (req, res) => {
                 dimensions: ocrResults.dimensions || [], // These are the cut pieces extracted from OCR
                 stockPieces: stockPieces,
                 materials: materials,
-                customerName: senderName || 'WhatsApp User',
+                customerName: senderName || customer_name || 'WhatsApp User',
                 projectName: 'Cutting List from WhatsApp',
-                phoneNumber: phoneNumber || '',
+                phoneNumber: actualPhoneNumber || '',
             };
             console.log('\nBEFORE MONGOOSE - Cutlist dimensions to save:');
             cutlistData.dimensions.forEach((dim, idx) => {
@@ -312,20 +314,20 @@ const createFromN8nData = async (req, res) => {
             await newCutlist.save();
             console.log('Created new cutlist with ID:', newCutlist._id);
             // Automatically send the cutlist link via WhatsApp
-            if (phoneNumber) {
-                whatsAppResult = await sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), phoneNumber, senderName || 'WhatsApp User');
+            if (actualPhoneNumber) {
+                whatsAppResult = await sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), actualPhoneNumber, senderName || customer_name || 'WhatsApp User');
             }
         }
         // If we have cutlist data directly, use it
         else if (cutlistData) {
             console.log('Creating cutlist from provided data');
             // Create a new cutlist with the provided data
-            newCutlist = new Cutlist(Object.assign(Object.assign({}, cutlistData), { customerName: senderName || 'WhatsApp User', projectName: 'Cutting List from WhatsApp', phoneNumber: phoneNumber || '' }));
+            newCutlist = new Cutlist(Object.assign(Object.assign({}, cutlistData), { customerName: senderName || customer_name || 'WhatsApp User', projectName: 'Cutting List from WhatsApp', phoneNumber: actualPhoneNumber || '' }));
             await newCutlist.save();
             console.log('Created new cutlist with ID:', newCutlist._id);
             // Automatically send the cutlist link via WhatsApp
-            if (phoneNumber) {
-                whatsAppResult = await sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), phoneNumber, senderName || 'WhatsApp User');
+            if (actualPhoneNumber) {
+                whatsAppResult = await sendCutlistLinkViaWhatsApp(newCutlist._id.toString(), actualPhoneNumber, senderName || customer_name || 'WhatsApp User');
             }
         }
         else {
