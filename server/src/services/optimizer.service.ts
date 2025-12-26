@@ -1542,16 +1542,12 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     date,
     sections,
     grandTotal,
-    phoneNumber,
-    customerPhone,
     branchData,
     bankingDetails,
     edgingLength,
-    edgingCost
+    edgingCost,
+    phoneNumber
   } = quoteData;
-
-  // Support both phoneNumber (from optimizer.quote) and customerPhone (from invoice paths)
-  const contactNumber = phoneNumber || customerPhone;
 
   // Create PDF document
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -1587,7 +1583,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   
   // Add quote details in a professional container layout
   const containerY = 105;
-  const containerHeight = 60;
+  const containerHeight = 80; // Increased from 60 to 80 to accommodate third row
   const containerPadding = 15;
   
   // Draw a light gray container background for quote details
@@ -1597,7 +1593,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   // Set text styling for quote details
   doc.fontSize(11).fillColor('#000000');
   
-  // Create a structured two-row layout with proper spacing
+  // Create a structured three-row layout with proper spacing
   const leftColumnX = 50 + containerPadding;
   const rightColumnX = 320;
   const firstRowY = containerY + containerPadding;
@@ -1625,14 +1621,12 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
      .text('Project:', rightColumnX, secondRowY)
      .font('Helvetica')
      .text(projectName || 'N/A', rightColumnX + 45, secondRowY);
-
-  // Third row: Contact number (if provided)
-  if (contactNumber) {
-    doc.font('Helvetica-Bold')
-       .text('Contact:', leftColumnX, thirdRowY)
-       .font('Helvetica')
-       .text(String(contactNumber), leftColumnX + 60, thirdRowY);
-  }
+  
+  // Third row: Customer Contact
+  doc.font('Helvetica-Bold')
+     .text('Customer Contact:', leftColumnX, thirdRowY)
+     .font('Helvetica')
+     .text(phoneNumber || 'N/A', leftColumnX + 110, thirdRowY);
   
   // Calculate grand total and edging costs first so we can display on first page
   const EDGING_PRICE_PER_METER = 14; // R14 per meter

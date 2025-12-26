@@ -25,8 +25,7 @@ import {
   MenuItem,
   FormHelperText,
   Tabs,
-  Tab,
-  TextField
+  Tab
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -104,9 +103,6 @@ const CutlistEdit: React.FC = () => {
   // Branch selection state
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [selectedBranchData, setSelectedBranchData] = useState<any | null>(null);
-  
-  // Customer phone number state
-  const [customerPhone, setCustomerPhone] = useState<string>('');
   const [branches] = useState([
     { trading_as: "HDS Alberton" },
     { trading_as: "HDS Bloemfontein" },
@@ -452,18 +448,6 @@ const CutlistEdit: React.FC = () => {
             </Select>
             {!selectedBranch && <FormHelperText>Branch is required</FormHelperText>}
           </FormControl>
-          
-          {/* Customer Phone Number Field */}
-          <TextField
-            fullWidth
-            label="Customer Phone Number"
-            value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="+27123456789"
-            helperText="Customer's contact number (will appear on quote PDF)"
-            disabled={isDataConfirmed}
-            sx={{ mb: 2 }}
-          />
         </Box>
       )}
 
@@ -500,7 +484,6 @@ const CutlistEdit: React.FC = () => {
             branchData={selectedBranchData}
             selectedBranch={selectedBranch}
             requireMaterialValidation={true}
-            initialPhoneNumber={customerPhone}
           />
         </Paper>
       )}

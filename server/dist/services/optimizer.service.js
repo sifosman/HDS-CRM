@@ -1287,7 +1287,7 @@ const safeFixed = (value, digits = 2) => {
 };
 // Generate a PDF for quotations
 const generateQuotePdf = (quoteData, isPaid = false) => {
-    const { quoteId, customerName, projectName, date, sections, grandTotal, branchData, bankingDetails, edgingLength, edgingCost } = quoteData;
+    const { quoteId, customerName, projectName, date, sections, grandTotal, branchData, bankingDetails, edgingLength, edgingCost, phoneNumber } = quoteData;
     // Create PDF document
     const doc = new pdfkit_1.default({ size: 'A4', margin: 50 });
     // (Removed branch header from top)
@@ -1314,18 +1314,19 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
     doc.fillColor('#000000');
     // Add quote details in a professional container layout
     const containerY = 105;
-    const containerHeight = 60;
+    const containerHeight = 80; // Increased from 60 to 80 to accommodate third row
     const containerPadding = 15;
     // Draw a light gray container background for quote details
     doc.rect(50, containerY, doc.page.width - 100, containerHeight)
         .fillAndStroke('#f8f9fa', '#e9ecef');
     // Set text styling for quote details
     doc.fontSize(11).fillColor('#000000');
-    // Create a structured two-row layout with proper spacing
+    // Create a structured three-row layout with proper spacing
     const leftColumnX = 50 + containerPadding;
     const rightColumnX = 320;
     const firstRowY = containerY + containerPadding;
     const secondRowY = firstRowY + 20;
+    const thirdRowY = secondRowY + 20;
     // First row: Quote ID and Date
     doc.font('Helvetica-Bold')
         .text('Quote:', leftColumnX, firstRowY)
@@ -1344,6 +1345,11 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
         .text('Project:', rightColumnX, secondRowY)
         .font('Helvetica')
         .text(projectName || 'N/A', rightColumnX + 45, secondRowY);
+    // Third row: Customer Contact
+    doc.font('Helvetica-Bold')
+        .text('Customer Contact:', leftColumnX, thirdRowY)
+        .font('Helvetica')
+        .text(phoneNumber || 'N/A', leftColumnX + 110, thirdRowY);
     // Calculate grand total and edging costs first so we can display on first page
     const EDGING_PRICE_PER_METER = 14; // R14 per meter
     let totalEdgingMeters = 0;

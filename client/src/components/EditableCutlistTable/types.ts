@@ -48,5 +48,4 @@ export interface EditableCutlistTableProps {
   branchData?: any | null;
   selectedBranch?: string;
   requireMaterialValidation?: boolean;
-  initialPhoneNumber?: string;
 }

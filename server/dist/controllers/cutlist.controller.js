@@ -21,9 +21,10 @@ const prepareCutlistData = (cutlistData) => {
         dimensions: cutlistData.dimensions || [],
         unit: cutlistData.unit || 'mm',
         rawText: cutlistData.rawText || '',
-        customerName: cutlistData.customerName || 'Customer',
-        projectName: cutlistData.projectName || 'Cutting List Project',
-        id: cutlistData._id
+        customerName: cutlistData.customerName || cutlistData.customer_name || 'Customer',
+        customerPhone: cutlistData.customerPhone || cutlistData.customer_phone || 'N/A',
+        projectName: cutlistData.projectName || cutlistData.project_name || 'Cutting List Project',
+        id: cutlistData._id || cutlistData.id
     };
 };
 // View cutlist by ID
