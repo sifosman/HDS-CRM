@@ -25,6 +25,7 @@ const prepareCutlistData = (cutlistData: any) => {
     rawText: cutlistData.rawText || '',
     customerName: cutlistData.customerName || 'Customer',
     projectName: cutlistData.projectName || 'Cutting List Project',
+    phoneNumber: cutlistData.phoneNumber || '',
     id: cutlistData._id
   };
 };

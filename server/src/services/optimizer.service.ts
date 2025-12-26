@@ -1542,6 +1542,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     date,
     sections,
     grandTotal,
+    phoneNumber,
     branchData,
     bankingDetails,
     edgingLength,
@@ -1597,6 +1598,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   const rightColumnX = 320;
   const firstRowY = containerY + containerPadding;
   const secondRowY = firstRowY + 20;
+  const thirdRowY = secondRowY + 20;
   
   // First row: Quote ID and Date
   doc.font('Helvetica-Bold')
@@ -1619,6 +1621,14 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
      .text('Project:', rightColumnX, secondRowY)
      .font('Helvetica')
      .text(projectName || 'N/A', rightColumnX + 45, secondRowY);
+
+  // Third row: Contact number (if provided)
+  if (phoneNumber) {
+    doc.font('Helvetica-Bold')
+       .text('Contact:', leftColumnX, thirdRowY)
+       .font('Helvetica')
+       .text(String(phoneNumber), leftColumnX + 60, thirdRowY);
+  }
   
   // Calculate grand total and edging costs first so we can display on first page
   const EDGING_PRICE_PER_METER = 14; // R14 per meter
