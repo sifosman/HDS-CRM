@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "HDS Group Cutlist - Panel cutting optimization application",
   "scripts": {
-    "build": "cd server && npm install && npm run build && cd ../client && npm install && npm run build",
+    "build": "npm --prefix server install && npm --prefix server run build && npm --prefix client install && npm --prefix client run build",
     "start": "node server/dist/index.js",
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm run dev\"",
-    "vercel-build": "cd server && npm install && npm run build && cd ../client && npm install && npm run build"
+    "vercel-build": "npm --prefix server install && npm --prefix server run build && npm --prefix client install && npm --prefix client run build"
   },
   "engines": {
     "node": ">=18.0.0"
