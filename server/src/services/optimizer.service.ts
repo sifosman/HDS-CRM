@@ -1543,11 +1543,15 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     sections,
     grandTotal,
     phoneNumber,
+    customerPhone,
     branchData,
     bankingDetails,
     edgingLength,
     edgingCost
   } = quoteData;
+
+  // Support both phoneNumber (from optimizer.quote) and customerPhone (from invoice paths)
+  const contactNumber = phoneNumber || customerPhone;
 
   // Create PDF document
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -1623,11 +1627,11 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
      .text(projectName || 'N/A', rightColumnX + 45, secondRowY);
 
   // Third row: Contact number (if provided)
-  if (phoneNumber) {
+  if (contactNumber) {
     doc.font('Helvetica-Bold')
        .text('Contact:', leftColumnX, thirdRowY)
        .font('Helvetica')
-       .text(String(phoneNumber), leftColumnX + 60, thirdRowY);
+       .text(String(contactNumber), leftColumnX + 60, thirdRowY);
   }
   
   // Calculate grand total and edging costs first so we can display on first page
