@@ -64,7 +64,8 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   isConfirmed,
   branchData,
   selectedBranch,
-  requireMaterialValidation = false
+  requireMaterialValidation = false,
+  initialPhoneNumber
 }) => {
   const theme = useTheme();
   
@@ -191,7 +192,7 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
   const [unit, setUnit] = useState<string>(initialData?.unit || 'mm');
   const [customerName, setCustomerName] = useState<string>(initialData?.customerName || '');
   const [projectName, setProjectName] = useState<string>(initialData?.projectName || '');
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>(initialPhoneNumber || '');
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [quoteSuccessDialogOpen, setQuoteSuccessDialogOpen] = useState(false);
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
