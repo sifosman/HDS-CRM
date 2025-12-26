@@ -1104,6 +1104,23 @@ const EditableCutlistTable: React.FC<EditableCutlistTableProps> = ({
       setSnackbarSeverity('info');
       setSnackbarOpen(true);
       
+      // Validate customer information
+      if (!customerName || !customerName.trim()) {
+        setSnackbarMessage('Please enter customer name before generating the quote.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        setShowMaterialValidation(true);
+        return;
+      }
+      
+      if (!phoneNumber || !phoneNumber.trim()) {
+        setSnackbarMessage('Please enter contact number before generating the quote.');
+        setSnackbarSeverity('error');
+        setSnackbarOpen(true);
+        setShowMaterialValidation(true);
+        return;
+      }
+      
       // Require a branch to be selected to ensure correct email/banking resolution downstream
       if (!branchData || !branchData.trading_as) {
         setSnackbarMessage('Please select a branch before generating the quote.');
@@ -1388,9 +1405,56 @@ Thank you for your business!
   const sections = getSections();
 
   return (
-    <Paper elevation={3}>
+    <Box sx={{ p: isMobile ? 1 : 3 }}>
+      {/* Customer Information Section - Always visible and required */}
+      <Paper elevation={2} sx={{ p: 3, mb: 3, bgcolor: '#f5f5f5' }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+          Customer Information
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Customer Name"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              fullWidth
+              required
+              error={!customerName && showMaterialValidation}
+              helperText={!customerName && showMaterialValidation ? "Customer name is required" : ""}
+              disabled={isConfirmed}
+              variant="outlined"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Contact Number"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              fullWidth
+              required
+              error={!phoneNumber && showMaterialValidation}
+              helperText={!phoneNumber && showMaterialValidation ? "Contact number is required (e.g., +27791390499)" : "Include country code (e.g., +27791390499)"}
+              disabled={isConfirmed}
+              variant="outlined"
+              placeholder="+27791390499"
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="Project Name"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              fullWidth
+              disabled={isConfirmed}
+              variant="outlined"
+              helperText="Optional - e.g., 'Kitchen Renovation'"
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Mobile Card View */}
       {isMobile ? (
-        // Mobile Card View
         <Box sx={{ p: 2 }}>
           {/* Mobile view heading with add material section button */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -2934,7 +2998,7 @@ Thank you for your business!
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+    </Box>
   );
 };
 
