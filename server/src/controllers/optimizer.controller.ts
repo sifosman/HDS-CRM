@@ -337,9 +337,16 @@ export const generateQuote = async (req: Request, res: Response) => {
       console.log(`Creating stock piece with dimensions: ${length}x${width}mm (quantity: 100)`);
       
       // 5. Prepare all pieces for optimization
+      // Clamp cut piece dimensions to stock piece dimensions — n8n may send
+      // nominal sizes (2750x1830) that exceed actual board sizes (2730x1810)
+      const clampedCutPieces = validCutPieces.map(piece => ({
+        ...piece,
+        length: Math.min(piece.length, length),
+        width: Math.min(piece.width, width)
+      }));
       const allPieces = [
         stockPiece,
-        ...validCutPieces.map(piece => ({
+        ...clampedCutPieces.map(piece => ({
           ...piece,
           kind: 0 // Cut piece
         }))
@@ -354,10 +361,10 @@ export const generateQuote = async (req: Request, res: Response) => {
         cutPieces: JSON.stringify(optimizerCutPieces)
       });
       
-      // Enforce selective rotation: only allow rotation for specific materials (case-insensitive exact match)
+      // Enforce selective rotation: configurable via env vars, falls back to hard-coded list
       try {
-        // Allowed materials for rotation - exact user-provided list (lowercased)
-        const allowedMaterials = [
+        // Default allowed materials for rotation (exact user-provided list, lowercased)
+        const defaultAllowedMaterials = [
           // ACRYLIC / ACRYLIC-UV
           'acrylic black matt 9x4x17',
           'acrylic white matt 9x4x17',
@@ -400,13 +407,21 @@ export const generateQuote = async (req: Request, res: Response) => {
           'uv - caligra 9x6x17mm',
           'uv - cappucinno 9x6x17 pg'
         ];
+
+        // Check env vars for configuration overrides
+        const allowAllRotation = process.env.ALLOW_ROTATION_ALL === 'true';
+        const envMaterials = process.env.ALLOW_ROTATION_MATERIALS;
+        const allowedMaterials = envMaterials
+          ? envMaterials.split(',').map((m: string) => m.toLowerCase().trim()).filter(Boolean)
+          : defaultAllowedMaterials;
+
         const materialKey = String(material || '').toLowerCase().trim();
-        const allowRotationForMaterial = allowedMaterials.includes(materialKey);
+        const allowRotationForMaterial = allowAllRotation || allowedMaterials.includes(materialKey);
         optimizerCutPieces.forEach((cp: any) => {
           // Keep legacy rule (no pattern) and further restrict by material
           cp.canRotate = Boolean(cp.canRotate && allowRotationForMaterial);
         });
-        console.log(`Rotation policy for material "${material}" => ${allowRotationForMaterial ? 'ALLOW' : 'BLOCK'}`);
+        console.log(`Rotation policy for material "${material}" => ${allowRotationForMaterial ? 'ALLOW' : 'BLOCK'} (source: ${allowAllRotation ? 'ALLOW_ALL' : envMaterials ? 'env' : 'default'})`);
       } catch (e) {
         console.warn('Selective rotation enforcement failed; using legacy behavior', e);
       }
@@ -445,8 +460,8 @@ export const generateQuote = async (req: Request, res: Response) => {
       const boardArea = length * width * boardsNeeded;
       let usedArea = 0;
 
-      // Calculate the total area of all cut pieces
-      for (const piece of validCutPieces) {
+      // Calculate the total area of all cut pieces (use clamped dimensions)
+      for (const piece of clampedCutPieces) {
         usedArea += piece.length * piece.width * (piece.amount || 1);
       }
       
@@ -476,7 +491,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       console.log(`\n=== EDGING CALCULATION DEBUG for ${material} ===`);
       console.log(`Cut pieces count: ${validCutPieces.length}`);
       
-      for (const piece of validCutPieces) {
+      for (const piece of clampedCutPieces) {
         // Check each edge (L1, L2, W1, W2) and calculate edging needed
         let pieceEdging = 0;
         let edgingSides: string[] = [];
@@ -574,9 +589,10 @@ export const generateQuote = async (req: Request, res: Response) => {
         }
       };
       processedSections.push(processedSection);
+      edgingCostTotal += processedSection.edging.cost;
       pdfSections.push({
         ...processedSection,
-        cutPieces: validCutPieces.map((p: any) => ({ 
+        cutPieces: clampedCutPieces.map((p: any) => ({ 
           length: p.length, 
           width: p.width, 
           quantity: p.amount || 1,
@@ -870,7 +886,13 @@ export const generateQuote = async (req: Request, res: Response) => {
       console.error('Error sending quote-created email:', emailError);
     }
 
-    // Return the processed data without returning the response object
+    // Calculate final totals (VAT-inclusive)
+    const totalEdgingCost = parseFloat(edgingCostTotal.toFixed(2));
+    const subtotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee).toFixed(2));
+    const vat = parseFloat((subtotal * 0.15).toFixed(2));
+    const finalTotal = parseFloat((subtotal + vat).toFixed(2));
+
+    // Return the processed data with all cost components
     res.status(200).json({
       success: true,
       message: 'Quote generated successfully',
@@ -879,6 +901,11 @@ export const generateQuote = async (req: Request, res: Response) => {
         invoiceNumber,
         sections: processedSections,
         grandTotal,
+        totalEdgingCost,
+        totalCuttingFee,
+        subtotal,
+        vat,
+        finalTotal,
         quotePdfUrl,
         invoicePdfUrl
       }
