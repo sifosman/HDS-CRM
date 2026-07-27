@@ -40,20 +40,15 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-3">
+        <div className="flex items-center justify-center px-2 py-3">
           <Image
             src="/hds-logo.webp"
             alt="HDS Group"
-            width={36}
-            height={36}
-            className="rounded-md"
+            width={120}
+            height={120}
+            className="w-full max-w-[140px] h-auto"
+            priority
           />
-          <div className="flex flex-col">
-            <span className="text-lg font-bold leading-tight">
-              HDS Group
-            </span>
-            <span className="text-xs text-muted-foreground">CRM Dashboard</span>
-          </div>
         </div>
       </SidebarHeader>
 
