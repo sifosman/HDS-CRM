@@ -7,8 +7,8 @@ import {
   CreditCard,
   BarChart3,
   Settings,
-  Building2,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -41,7 +41,13 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-3">
-          <Building2 className="h-7 w-7 text-primary" />
+          <Image
+            src="/hds-logo.webp"
+            alt="HDS Group"
+            width={36}
+            height={36}
+            className="rounded-md"
+          />
           <div className="flex flex-col">
             <span className="text-lg font-heading font-bold leading-tight">
               HDS Group
