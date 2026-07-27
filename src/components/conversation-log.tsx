@@ -46,7 +46,7 @@ export function ConversationLog({
                   </span>
                 )}
                 <p className="whitespace-pre-wrap break-words">
-                  {msg.content?.slice(0, 500) || "—"}
+                  {msg.message_text?.slice(0, 500) || "—"}
                 </p>
               </div>
               <span className="text-xs text-muted-foreground px-1">

@@ -44,13 +44,17 @@ export type CustomerProfile = {
 export type Conversation = {
   id: string;
   phone_number: string;
-  role: "user" | "assistant" | "tool" | "system";
-  content: string;
+  sender_name: string | null;
+  role: "user" | "assistant" | "tool" | "system" | null;
+  message_text: string | null;
+  image_url: string | null;
+  tool_calls: Record<string, unknown> | null;
+  tool_results: Record<string, unknown> | null;
   lead_status: string | null;
   customer_type: string | null;
   quote_id: string | null;
   quote_total: number | null;
-  tool_results: Record<string, unknown> | null;
+  conversation_metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };

@@ -113,7 +113,7 @@ export default async function DashboardPage() {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate mt-1">
-                    {activity.content?.slice(0, 120) || "—"}
+                    {activity.message_text?.slice(0, 120) || "—"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {activity.role} · {timeAgo(activity.created_at)}

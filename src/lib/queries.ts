@@ -17,7 +17,7 @@ export async function getDashboardStats() {
     supabase.from("quotes").select("total, created_at, status"),
     supabase
       .from("ai_conversations")
-      .select("id, phone_number, role, content, lead_status, created_at")
+      .select("id, phone_number, sender_name, role, message_text, lead_status, created_at")
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
@@ -29,7 +29,7 @@ export async function getDashboardStats() {
   >[];
   const recentActivity = (conversationsRes.data || []) as Pick<
     Conversation,
-    "id" | "phone_number" | "role" | "content" | "lead_status" | "created_at"
+    "id" | "phone_number" | "sender_name" | "role" | "message_text" | "lead_status" | "created_at"
   >[];
 
   const totalRevenue = quotes.reduce((sum, q) => sum + Number(q.total || 0), 0);
