@@ -1,0 +1,89 @@
+"use client";
+
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  CreditCard,
+  BarChart3,
+  Settings,
+  Building2,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+
+const navItems = [
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Customers", href: "/customers", icon: Users },
+  { title: "Quotes", href: "/quotes", icon: FileText },
+  { title: "Payments", href: "/payments", icon: CreditCard },
+  { title: "Reports", href: "/reports", icon: BarChart3 },
+  { title: "Settings", href: "/settings", icon: Settings },
+];
+
+export function AppSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <Sidebar>
+      <SidebarHeader>
+        <div className="flex items-center gap-2 px-2 py-3">
+          <Building2 className="h-7 w-7 text-primary" />
+          <div className="flex flex-col">
+            <span className="text-lg font-heading font-bold leading-tight">
+              HDS Group
+            </span>
+            <span className="text-xs text-muted-foreground">CRM Dashboard</span>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      render={
+                        <Link href={item.href}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <div className="px-2 py-2">
+          <SidebarTrigger />
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
