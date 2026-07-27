@@ -49,7 +49,7 @@ export function AppSidebar() {
             className="rounded-md"
           />
           <div className="flex flex-col">
-            <span className="text-lg font-heading font-bold leading-tight">
+            <span className="text-lg font-bold leading-tight">
               HDS Group
             </span>
             <span className="text-xs text-muted-foreground">CRM Dashboard</span>
