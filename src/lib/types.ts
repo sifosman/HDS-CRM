@@ -120,6 +120,18 @@ export type HdsPrice = {
   grade: string | null;
 };
 
+export type IntelligenceReport = {
+  id: string;
+  report_date: string;
+  category: "competitor" | "pricing" | "product_demand" | "industry_trend";
+  insight_summary: string;
+  details: Record<string, unknown>;
+  severity: "info" | "warning" | "critical";
+  conversation_count: number;
+  source_phones: string[];
+  created_at: string;
+};
+
 export type Invoice = {
   id: string;
   invoice_number: string;

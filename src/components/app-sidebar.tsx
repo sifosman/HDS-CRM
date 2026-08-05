@@ -7,6 +7,7 @@ import {
   CreditCard,
   BarChart3,
   Settings,
+  Brain,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,6 +32,7 @@ const navItems = [
   { title: "Quotes", href: "/quotes", icon: FileText },
   { title: "Payments", href: "/payments", icon: CreditCard },
   { title: "Reports", href: "/reports", icon: BarChart3 },
+  { title: "Intelligence", href: "/intelligence", icon: Brain },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 

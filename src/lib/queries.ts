@@ -7,6 +7,7 @@ import type {
   BankingDetail,
   HdsPrice,
   Invoice,
+  IntelligenceReport,
 } from "@/lib/types";
 
 export async function getDashboardStats() {
@@ -192,4 +193,58 @@ export async function getInvoices(): Promise<Invoice[]> {
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Invoice[];
+}
+
+export async function getIntelligenceReports(
+  days = 30
+): Promise<IntelligenceReport[]> {
+  const supabase = await createClient();
+  const dateFrom = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  ).toISOString();
+  const { data, error } = await supabase
+    .from("intelligence_reports")
+    .select("*")
+    .gte("report_date", dateFrom.split("T")[0])
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as IntelligenceReport[];
+}
+
+export async function getIntelligenceStats() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("intelligence_reports")
+    .select("category, severity, report_date, conversation_count");
+  if (error) throw error;
+
+  const reports = data || [];
+  const total = reports.length;
+
+  const byCategory = (
+    ["competitor", "pricing", "product_demand", "industry_trend"] as const
+  ).map((cat) => ({
+    category: cat,
+    count: reports.filter((r) => r.category === cat).length,
+  }));
+
+  const bySeverity = (["info", "warning", "critical"] as const).map((sev) => ({
+    severity: sev,
+    count: reports.filter((r) => r.severity === sev).length,
+  }));
+
+  const today = new Date();
+  const last7 = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+  const recentCount = reports.filter(
+    (r) => r.report_date >= last7
+  ).length;
+
+  return {
+    total,
+    byCategory,
+    bySeverity,
+    recentCount,
+  };
 }

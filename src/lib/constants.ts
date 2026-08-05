@@ -45,6 +45,32 @@ export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
   unknown: "Unknown",
 };
 
+export const INTELLIGENCE_CATEGORY_LABELS: Record<string, string> = {
+  competitor: "Competitor Mentions",
+  pricing: "Pricing Insights",
+  product_demand: "Product Demand",
+  industry_trend: "Industry Trends",
+};
+
+export const INTELLIGENCE_CATEGORY_COLORS: Record<string, string> = {
+  competitor: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  pricing: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  product_demand: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  industry_trend: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+};
+
+export const INTELLIGENCE_SEVERITY_LABELS: Record<string, string> = {
+  info: "Info",
+  warning: "Warning",
+  critical: "Critical",
+};
+
+export const INTELLIGENCE_SEVERITY_COLORS: Record<string, string> = {
+  info: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  warning: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  critical: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+};
+
 export const PIPELINE_STAGES = [
   "new",
   "quoting",
