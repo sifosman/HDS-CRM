@@ -50,6 +50,8 @@ export const INTELLIGENCE_CATEGORY_LABELS: Record<string, string> = {
   pricing: "Pricing Insights",
   product_demand: "Product Demand",
   industry_trend: "Industry Trends",
+  customer_service: "Customer Service",
+  sales_opportunity: "Sales Opportunities",
 };
 
 export const INTELLIGENCE_CATEGORY_COLORS: Record<string, string> = {
@@ -57,6 +59,8 @@ export const INTELLIGENCE_CATEGORY_COLORS: Record<string, string> = {
   pricing: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   product_demand: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   industry_trend: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+  customer_service: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
+  sales_opportunity: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
 };
 
 export const INTELLIGENCE_SEVERITY_LABELS: Record<string, string> = {
