@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp -r src/templates dist/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

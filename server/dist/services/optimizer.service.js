@@ -1285,86 +1285,59 @@ const safeFixed = (value, digits = 2) => {
     const num = Number(value);
     return isFinite(num) ? num.toFixed(digits) : '-';
 };
-// Generate a PDF for quotations
+// Generate a PDF for quotations — Elegant v2 design (black header, red/gold accents)
 const generateQuotePdf = (quoteData, isPaid = false) => {
-    const { quoteId, customerName, projectName, date, sections, grandTotal, branchData, bankingDetails, edgingLength, edgingCost, phoneNumber } = quoteData;
-    // Create PDF document
-    const doc = new pdfkit_1.default({ size: 'A4', margin: 50 });
-    // (Removed branch header from top)
-    // Generate a unique ID for this PDF
+    const { quoteId, customerName, projectName, date, sections, grandTotal, branchData, bankingDetails, phoneNumber } = quoteData;
+    // Colors matching the HTML template
+    const COLOR_BLACK = '#000000';
+    const COLOR_RED = '#EC2329';
+    const COLOR_GOLD = '#DC9826';
+    const COLOR_WHITE = '#FFFFFF';
+    const COLOR_LIGHT_GRAY = '#F8F8FA';
+    const COLOR_BORDER = '#E0E0E0';
+    const COLOR_ROW_BORDER = '#F0F0F0';
+    const COLOR_TEXT_GRAY = '#888888';
+    const COLOR_TEXT_DARK = '#212121';
+    const COLOR_TEXT_MED = '#555555';
+    // Page dimensions (A4)
+    const PAGE_W = 595.28;
+    const PAGE_H = 841.89;
+    const MARGIN = 40;
+    const CONTENT_W = PAGE_W - MARGIN * 2;
+    // Create PDF document with no default margins (we control all positioning)
+    const doc = new pdfkit_1.default({ size: 'A4', margin: 0 });
     const pdfId = quoteId || `Q-${Date.now()}`;
     // Setup buffer to store PDF content
     const buffers = [];
     doc.on('data', buffers.push.bind(buffers));
-    // We'll store the final buffer here
-    let pdfBuffer = null;
-    doc.on('end', () => {
-        // Using concatenated array to avoid TypeScript errors
-        pdfBuffer = buffers.length === 1 ? buffers[0] : buffers;
-    });
-    // Add compact HDS branding header
-    const headerColor = isPaid ? '#28a745' : '#003366'; // Green for paid, blue for quote
-    doc.rect(50, 50, doc.page.width - 100, 40)
-        .fillAndStroke(headerColor, '#000000');
-    const headerText = isPaid ? 'HDS Group Invoice' : 'HDS Group Quotation';
-    doc.fontSize(18)
-        .fillColor('#FFFFFF')
-        .text(headerText, 50, 62, { align: 'center', width: doc.page.width - 100 });
-    // Set default text color to solid black for all content
-    doc.fillColor('#000000');
-    // Add quote details in a professional container layout
-    const containerY = 105;
-    const containerHeight = 80; // Increased from 60 to 80 to accommodate third row
-    const containerPadding = 15;
-    // Draw a light gray container background for quote details
-    doc.rect(50, containerY, doc.page.width - 100, containerHeight)
-        .fillAndStroke('#f8f9fa', '#e9ecef');
-    // Set text styling for quote details
-    doc.fontSize(11).fillColor('#000000');
-    // Create a structured three-row layout with proper spacing
-    const leftColumnX = 50 + containerPadding;
-    const rightColumnX = 320;
-    const firstRowY = containerY + containerPadding;
-    const secondRowY = firstRowY + 20;
-    const thirdRowY = secondRowY + 20;
-    // First row: Quote ID and Date
-    doc.font('Helvetica-Bold')
-        .text('Quote:', leftColumnX, firstRowY)
-        .font('Helvetica')
-        .text(pdfId, leftColumnX + 40, firstRowY);
-    doc.font('Helvetica-Bold')
-        .text('Date:', rightColumnX, firstRowY)
-        .font('Helvetica')
-        .text(new Date(date).toLocaleDateString(), rightColumnX + 35, firstRowY);
-    // Second row: Customer and Project
-    doc.font('Helvetica-Bold')
-        .text('Customer:', leftColumnX, secondRowY)
-        .font('Helvetica')
-        .text(customerName || 'N/A', leftColumnX + 60, secondRowY);
-    doc.font('Helvetica-Bold')
-        .text('Project:', rightColumnX, secondRowY)
-        .font('Helvetica')
-        .text(projectName || 'N/A', rightColumnX + 45, secondRowY);
-    // Third row: Customer Contact
-    doc.font('Helvetica-Bold')
-        .text('Customer Contact:', leftColumnX, thirdRowY)
-        .font('Helvetica')
-        .text(phoneNumber || 'N/A', leftColumnX + 110, thirdRowY);
-    // Calculate grand total and edging costs first so we can display on first page
-    const EDGING_PRICE_PER_METER = 14; // R14 per meter
+    // Try to load the logo (web-downloaded PNG version, falls back to SVG-converted)
+    let logoPath = null;
+    try {
+        const webLogo = path_1.default.join(__dirname, '..', 'templates', 'hds-logo-web.png');
+        if (fs_1.default.existsSync(webLogo)) {
+            logoPath = webLogo;
+        }
+        else {
+            const svgLogo = path_1.default.join(__dirname, '..', 'templates', 'hds-logo.png');
+            if (fs_1.default.existsSync(svgLogo)) {
+                logoPath = svgLogo;
+            }
+        }
+    }
+    catch (e) {
+        console.warn('Logo file not found, proceeding without logo');
+    }
+    // ====== COST CALCULATIONS (same logic as before) ======
+    const EDGING_PRICE_PER_METER = 14;
     let totalEdgingMeters = 0;
     let totalEdgingCost = 0;
-    // Calculate initial grand total from board costs
     let boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
     boardTotal = parseFloat(boardTotal.toFixed(2));
-    // Calculate edging costs for each section (apply 10% allowance to meterage)
     sections.forEach((section) => {
         if (section.edging && section.edging.totalEdging > 0) {
-            // Apply 10% allowance in mm, then convert to meters
             const totalEdgingWithAllowanceMm = Math.round(section.edging.totalEdging * 1.10);
             const edgingMeters = totalEdgingWithAllowanceMm / 1000;
             totalEdgingMeters += edgingMeters;
-            // Always compute edging cost from adjusted meters to ensure consistency
             const computedEdgingCost = parseFloat((edgingMeters * EDGING_PRICE_PER_METER).toFixed(2));
             section.edgingCost = computedEdgingCost;
             totalEdgingCost += computedEdgingCost;
@@ -1373,428 +1346,390 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
             section.edgingCost = 0;
         }
     });
-    // Round the total edging cost to 2 decimal places
     totalEdgingCost = parseFloat(totalEdgingCost.toFixed(2));
-    // Calculate cutting fee (R70 per board)
-    const cuttingFeePerBoard = 70; // R70 per board
+    const cuttingFeePerBoard = 70;
     const totalBoardsUsed = sections.reduce((sum, section) => sum + (section.boardsNeeded || 0), 0);
     const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
-    // Calculate final grand total with edging and cutting fee included
     const finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
-    // Set starting position for material sections (account for new header container)
-    doc.y = containerY + containerHeight + 20; // Start material sections after header container with spacing
-    // For each material section
+    // ====== HELPER: draw a filled rectangle ======
+    const drawRect = (x, y, w, h, fill, stroke) => {
+        if (fill)
+            doc.rect(x, y, w, h).fillAndStroke(fill, stroke || fill);
+        else
+            doc.rect(x, y, w, h).stroke(stroke || COLOR_BORDER);
+    };
+    // ====== HELPER: check remaining space, add page if needed ======
+    const ensureSpace = (needed, yVal) => {
+        if (yVal + needed > PAGE_H - MARGIN) {
+            doc.addPage({ size: 'A4', margin: 0 });
+            return MARGIN; // new page starts at top margin
+        }
+        return yVal; // no page break needed, y stays the same
+    };
+    // ====== 1. HEADER (black background with red/gold gradient bar) ======
+    const headerH = 95;
+    drawRect(MARGIN, MARGIN, CONTENT_W, headerH, COLOR_BLACK);
+    // Red/gold gradient bar at bottom of header (simulate with 3 segments)
+    const barH = 4;
+    const barW = CONTENT_W / 3;
+    drawRect(MARGIN, MARGIN + headerH - barH, barW, barH, COLOR_RED);
+    drawRect(MARGIN + barW, MARGIN + headerH - barH, barW, barH, COLOR_GOLD);
+    drawRect(MARGIN + barW * 2, MARGIN + headerH - barH, barW, barH, COLOR_RED);
+    // Logo (left side) — height ~40pt
+    let headerTextX = MARGIN + 15;
+    if (logoPath) {
+        try {
+            doc.image(logoPath, MARGIN + 15, MARGIN + 15, { height: 40 });
+            headerTextX = MARGIN + 15 + 100;
+        }
+        catch (e) {
+            console.warn('Failed to embed logo image:', e);
+        }
+    }
+    // Company name + tagline (next to logo)
+    doc.fontSize(16).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text('HDS Cut & Edge Group', headerTextX, MARGIN + 15, { width: 200 });
+    doc.fontSize(9).fillColor(COLOR_GOLD).font('Helvetica');
+    doc.text('Creativity from the heart of the wood', headerTextX, MARGIN + 35, { width: 200 });
+    // Right side: QUOTATION title + quote ID
+    doc.fontSize(20).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text(isPaid ? 'INVOICE' : 'QUOTATION', MARGIN + CONTENT_W - 200, MARGIN + 15, {
+        width: 185, align: 'right'
+    });
+    doc.fontSize(10).fillColor('#D2D2D2').font('Helvetica');
+    doc.text(pdfId, MARGIN + CONTENT_W - 200, MARGIN + 40, {
+        width: 185, align: 'right'
+    });
+    // Header bottom row: website, Est. 2001, tagline with red dot separators
+    const headerBottomY = MARGIN + 60;
+    const bottomItems = ['www.hdsgroup.co.za', 'Est. 2001', 'Largest Cut & Edge Distributor in Sub-Saharan Africa'];
+    let bottomX = MARGIN + 15;
+    bottomItems.forEach((item, i) => {
+        if (i > 0) {
+            doc.fillColor(COLOR_RED);
+            doc.circle(bottomX + 2, headerBottomY + 4, 2).fill();
+            bottomX += 10;
+        }
+        doc.fillColor('rgba(255,255,255,0.7)').fontSize(8).font('Helvetica');
+        doc.text(item, bottomX, headerBottomY, { width: item.length * 4.5 });
+        bottomX += item.length * 4.5 + 5;
+    });
+    // ====== 2. QUOTE DETAILS (3-column grid with red left borders) ======
+    let y = MARGIN + headerH + 5;
+    const detailsH = 70;
+    drawRect(MARGIN, y, CONTENT_W, detailsH, COLOR_WHITE, COLOR_BORDER);
+    const detailLabels = ['Date', 'Customer', 'Project', 'Contact', 'Quote Number', 'Valid For'];
+    const detailValues = [
+        new Date(date).toLocaleDateString(),
+        customerName || 'N/A',
+        projectName || 'N/A',
+        phoneNumber || 'N/A',
+        pdfId,
+        '30 Days'
+    ];
+    const colW = CONTENT_W / 3;
+    const rowH = detailsH / 2;
+    for (let i = 0; i < 6; i++) {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const dx = MARGIN + col * colW;
+        const dy = y + row * rowH;
+        // Red left border accent
+        drawRect(dx + 8, dy + 8, 2, rowH - 16, COLOR_RED);
+        // Label
+        doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
+        doc.text(detailLabels[i].toUpperCase(), dx + 14, dy + 10, { width: colW - 20 });
+        // Value
+        doc.fontSize(11).fillColor(COLOR_TEXT_DARK).font('Helvetica-Bold');
+        doc.text(detailValues[i], dx + 14, dy + 24, { width: colW - 20 });
+    }
+    y += detailsH + 15;
+    // ====== 3. MATERIAL BREAKDOWN ======
+    // Section heading with red accent bar
+    drawRect(MARGIN, y, 30, 3, COLOR_RED);
+    doc.fontSize(13).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.text('MATERIAL BREAKDOWN', MARGIN + 38, y - 5, { width: CONTENT_W - 40 });
+    y += 20;
     sections.forEach((section, index) => {
-        const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, cutPieces, wastage, edging } = section;
-        // Check if we need a new page for this section (estimate 150px needed for material section)
-        if (doc.y > doc.page.height - 200) {
-            doc.addPage();
-        }
-        // Removed material header - start directly with table
-        doc.moveDown(0.5);
-        // Create a compact table for this section's details
-        const startY = doc.y;
-        const colWidths = [200, 100, 100, 100];
-        const rowHeight = 20; // Reduced from 25 to 20 for more compact layout
-        // Estimate table height more accurately (material info + edging + totals)
-        const estimatedRows = 4; // Header + data + board total + section total (edging if present)
-        const tableHeight = estimatedRows * rowHeight;
-        // Check if table will fit on current page, if not start new page
-        if (doc.y + tableHeight > doc.page.height - 80) {
-            doc.addPage();
-            // Removed material header on new page - start directly with table
-            doc.moveDown(0.5);
-        }
-        const currentStartY = doc.y;
-        // Header row
-        doc.rect(50, currentStartY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-            .fillAndStroke('#cccccc', '#000000');
-        doc.fontSize(10).fillColor('#000000');
-        doc.text('Description', 55, currentStartY + 8, { width: colWidths[0] - 10 });
-        doc.text('Board Size', 55 + colWidths[0], currentStartY + 8, { width: colWidths[1] - 10 });
-        doc.text('Quantity', 55 + colWidths[0] + colWidths[1], currentStartY + 8, { width: colWidths[2] - 10 });
-        doc.text('Price', 55 + colWidths[0] + colWidths[1] + colWidths[2], currentStartY + 8, { width: colWidths[3] - 10 });
-        // Data row
-        let currentY = currentStartY + rowHeight;
-        // Safely render values even if some fields are missing in the API payload
-        doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-            .stroke();
-        doc.text(material !== null && material !== void 0 ? material : '-', 55, currentY + 8, { width: colWidths[0] - 10 });
-        doc.text(boardSize !== null && boardSize !== void 0 ? boardSize : '-', 55 + colWidths[0], currentY + 8, { width: colWidths[1] - 10 });
-        const boardsNeededDisplay = boardsNeeded !== undefined && boardsNeeded !== null ? boardsNeeded.toString() : '-';
-        doc.text(boardsNeededDisplay, 55 + colWidths[0] + colWidths[1], currentY + 8, { width: colWidths[2] - 10 });
-        const priceDisplay = pricePerBoard !== undefined && pricePerBoard !== null ? `R ${safeFixed(pricePerBoard)}` : '-';
-        doc.text(priceDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-        currentY += rowHeight;
-        // Section total
-        doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-            .stroke();
-        doc.fontSize(10).fillColor('#000000');
-        doc.text('Board Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-        const sectionTotalDisplay = sectionTotal !== undefined && sectionTotal !== null ? `R ${safeFixed(sectionTotal)}` : '-';
-        doc.text(sectionTotalDisplay, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-        currentY += rowHeight;
-        // Add edging information in the same section as boards (if available)
-        if (edging && edging.totalEdging > 0) {
-            // Edging row
-            doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                .stroke();
-            // Recompute display using adjusted meters for this section
+        const { material, boardSize, boardsNeeded, pricePerBoard, sectionTotal, edging } = section;
+        // Estimate card height
+        const hasEdging = edging && edging.totalEdging > 0;
+        const cardH = 25 + 22 + 22 + 22 + (hasEdging ? 44 : 22) + 10;
+        y = ensureSpace(cardH + 15, y);
+        // Material card border
+        drawRect(MARGIN, y, CONTENT_W, cardH, COLOR_WHITE, COLOR_BORDER);
+        // Card header (black background)
+        const cardHeaderH = 25;
+        drawRect(MARGIN, y, CONTENT_W, cardHeaderH, COLOR_BLACK);
+        doc.fontSize(11).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+        doc.text(material !== null && material !== void 0 ? material : '-', MARGIN + 10, y + 7, { width: CONTENT_W * 0.6 });
+        doc.fontSize(9).fillColor('#D2D2D2').font('Helvetica');
+        doc.text(boardSize ? `${boardSize}mm` : '', MARGIN + CONTENT_W * 0.6, y + 8, {
+            width: CONTENT_W * 0.35 - 10, align: 'right'
+        });
+        let ty = y + cardHeaderH;
+        // Table header
+        const tColW = [CONTENT_W * 0.5, CONTENT_W * 0.25, CONTENT_W * 0.25];
+        drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_LIGHT_GRAY);
+        doc.fontSize(9).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
+        doc.text('DESCRIPTION', MARGIN + 10, ty + 7, { width: tColW[0] - 15 });
+        doc.text('QUANTITY', MARGIN + tColW[0], ty + 7, { width: tColW[1] - 10 });
+        doc.text('PRICE', MARGIN + tColW[0] + tColW[1], ty + 7, {
+            width: tColW[2] - 10, align: 'right'
+        });
+        ty += 22;
+        // Data row: material line item
+        drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_WHITE, COLOR_ROW_BORDER);
+        doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+        const descText = `${material !== null && material !== void 0 ? material : '-'} (${boardSize !== null && boardSize !== void 0 ? boardSize : '-'}mm)`;
+        doc.text(descText, MARGIN + 10, ty + 7, { width: tColW[0] - 15 });
+        doc.text(`${boardsNeeded !== null && boardsNeeded !== void 0 ? boardsNeeded : '-'} boards`, MARGIN + tColW[0], ty + 7, { width: tColW[1] - 10 });
+        doc.font('Helvetica-Bold');
+        doc.text(`R ${safeFixed(pricePerBoard)}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
+            width: tColW[2] - 10, align: 'right'
+        });
+        ty += 22;
+        // Board Total row (light gray)
+        drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_LIGHT_GRAY, COLOR_ROW_BORDER);
+        doc.fontSize(10).fillColor(COLOR_TEXT_MED).font('Helvetica-Bold');
+        doc.text('Board Total', MARGIN + 10, ty + 7, { width: tColW[0] + tColW[1] - 15 });
+        doc.text(`R ${safeFixed(sectionTotal)}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
+            width: tColW[2] - 10, align: 'right'
+        });
+        ty += 22;
+        // Edging row (if applicable)
+        if (hasEdging) {
             const edgingMeters = (Math.round(edging.totalEdging * 1.10) / 1000).toFixed(2);
-            const edgingCost = section.edgingCost !== undefined
+            const edgingCostVal = section.edgingCost !== undefined
                 ? section.edgingCost.toFixed(2)
                 : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
-            doc.fontSize(10).fillColor('#000000');
-            doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m):`, 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-            doc.text(`R ${edgingCost}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
-            currentY += rowHeight;
-            // Combined section total (boards + edging)
-            doc.rect(50, currentY, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], rowHeight)
-                .fillAndStroke('#e6e6e6', '#000000');
-            doc.fontSize(10).fillColor('#000000');
-            doc.text('Section Total:', 55, currentY + 8, { width: colWidths[0] + colWidths[1] + colWidths[2] - 10 });
-            const combinedTotal = (parseFloat(sectionTotal || '0') + parseFloat(edgingCost)).toFixed(2);
-            doc.text(`R ${combinedTotal}`, 55 + colWidths[0] + colWidths[1] + colWidths[2], currentY + 8, { width: colWidths[3] - 10 });
+            drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_WHITE, COLOR_ROW_BORDER);
+            doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+            doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m)`, MARGIN + 10, ty + 7, {
+                width: tColW[0] + tColW[1] - 15
+            });
+            doc.font('Helvetica-Bold');
+            doc.text(`R ${edgingCostVal}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
+                width: tColW[2] - 10, align: 'right'
+            });
+            ty += 22;
+            // Section Total row (darker gray with red top border)
+            drawRect(MARGIN, ty, CONTENT_W, 22, '#F0F0F0');
+            drawRect(MARGIN, ty, CONTENT_W, 2, COLOR_RED);
+            doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+            const combinedTotal = (parseFloat(sectionTotal || '0') + parseFloat(edgingCostVal)).toFixed(2);
+            doc.text('Section Total', MARGIN + 10, ty + 7, { width: tColW[0] + tColW[1] - 15 });
+            doc.text(`R ${combinedTotal}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
+                width: tColW[2] - 10, align: 'right'
+            });
+            ty += 22;
         }
-        // Minimal spacing between sections for compact layout
-        doc.moveDown(0.5);
+        else {
+            // Section Total row without edging
+            drawRect(MARGIN, ty, CONTENT_W, 22, '#F0F0F0');
+            drawRect(MARGIN, ty, CONTENT_W, 2, COLOR_RED);
+            doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+            doc.text('Section Total', MARGIN + 10, ty + 7, { width: tColW[0] + tColW[1] - 15 });
+            doc.text(`R ${safeFixed(sectionTotal)}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
+                width: tColW[2] - 10, align: 'right'
+            });
+            ty += 22;
+        }
+        y = ty + 12;
     });
-    // Check if we need a new page for the quote summary
-    const summaryHeight = 200; // Estimate height needed for summary
-    if (doc.y > doc.page.height - summaryHeight) {
-        doc.addPage();
-    }
-    // Add quote summary with minimal spacing
-    doc.moveDown(0.5);
-    // Center the Quote Summary headline properly
-    const pageWidth = doc.page.width - 100; // Account for margins
-    doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-    doc.text('Quote Summary', 50, doc.y, { align: 'center', width: pageWidth });
-    doc.font('Helvetica').fontSize(10).fillColor('#333333');
-    doc.moveDown(0.3);
-    // Create a summary table
-    const summaryStartY = doc.y;
-    const summaryColWidth = (doc.page.width - 100) / 2;
-    const summaryRowHeight = 25;
-    // Table header
-    doc.rect(50, summaryStartY, summaryColWidth * 2, summaryRowHeight)
-        .fillAndStroke('#cccccc', '#000000');
-    doc.fontSize(12).fillColor('#000000');
-    doc.text('Description', 60, summaryStartY + 8);
-    doc.text('Amount', 60 + summaryColWidth, summaryStartY + 8);
-    let summaryY = summaryStartY + summaryRowHeight;
-    // Board costs row
-    doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
-    doc.text('Total Board Cost', 60, summaryY + 8);
-    doc.text(`R ${boardTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-    summaryY += summaryRowHeight;
-    // Edging costs row
-    doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
-    doc.text(`Total Edging Cost (${totalEdgingMeters.toFixed(2)}m @ R${EDGING_PRICE_PER_METER}/m)`, 60, summaryY + 8);
-    doc.text(`R ${totalEdgingCost.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-    summaryY += summaryRowHeight;
-    // Cutting fee row with light green background
-    doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
-        .fillAndStroke('#fffff', '#000000'); // Light green background
-    doc.fillColor('#000000');
-    doc.text(`Cutting Fee (R${cuttingFeePerBoard} per board  ${totalBoardsUsed} board(s))`, 60, summaryY + 8);
-    doc.text(`R ${totalCuttingFee.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-    summaryY += summaryRowHeight;
-    // Grand total row - with only a border and no background
-    doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
-        .stroke('#000000'); // Only black border, no background fill
-    // Make the grand total bold but consistent with other totals
-    doc.fontSize(12).fillColor('#000000'); // Bold text but normal size
-    doc.text('GRAND TOTAL:', 60, summaryY + 8); // Same positioning as other rows
-    doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-    doc.font('Helvetica'); // Reset font
-    // Add minimal space after the total summary
-    doc.moveDown(1);
-    // ===== CONTACT & PAYMENT INFORMATION SECTION =====
-    // Check if we need to add a page break based on remaining space
-    const contactInfoHeight = 250; // Reduced estimate for contact & banking info
-    const remainingSpace = doc.page.height - doc.y - 50; // Space left on current page minus footer
-    // If there's not enough room for contact info, start a new page
-    if (remainingSpace < contactInfoHeight) {
-        doc.addPage();
-    }
-    // Add section header
-    doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
-    doc.text('Contact & Payment Information', 50, doc.y, { align: 'center', width: doc.page.width - 100 });
-    doc.font('Helvetica').fontSize(10);
-    doc.moveDown(0.5);
-    // Use fallback branch data if none is provided
+    // ====== 4. QUOTE SUMMARY ======
+    y = ensureSpace(180, y);
+    y += 5;
+    // Summary title (centered with red underline)
+    doc.fontSize(15).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.text('QUOTE SUMMARY', MARGIN, y, { width: CONTENT_W, align: 'center' });
+    const underlineY = y + 22;
+    drawRect(MARGIN + CONTENT_W / 2 - 30, underlineY, 60, 3, COLOR_RED);
+    y = underlineY + 15;
+    // Summary table (centered, max-width ~350pt)
+    const sumW = 350;
+    const sumX = MARGIN + (CONTENT_W - sumW) / 2;
+    const sumRowH = 28;
+    const sumColW = [sumW * 0.65, sumW * 0.35];
+    const summaryRows = [
+        { label: 'Total Board Cost', value: `R ${boardTotal.toFixed(2)}` },
+        { label: `Total Edging Cost (${totalEdgingMeters.toFixed(2)}m @ R${EDGING_PRICE_PER_METER}/m)`, value: `R ${totalEdgingCost.toFixed(2)}` },
+        { label: `Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, value: `R ${totalCuttingFee.toFixed(2)}` },
+    ];
+    summaryRows.forEach((row) => {
+        drawRect(sumX, y, sumW, sumRowH, COLOR_WHITE, COLOR_BORDER);
+        doc.fontSize(11).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+        doc.text(row.label, sumX + 10, y + 9, { width: sumColW[0] - 15 });
+        doc.font('Helvetica-Bold');
+        doc.text(row.value, sumX + sumColW[0], y + 9, { width: sumColW[1] - 10, align: 'right' });
+        y += sumRowH;
+    });
+    // Grand total row (black background, red amount)
+    drawRect(sumX, y, sumW, sumRowH + 5, COLOR_BLACK);
+    doc.fontSize(14).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text('GRAND TOTAL', sumX + 10, y + 11, { width: sumColW[0] - 15 });
+    doc.fillColor(COLOR_RED);
+    doc.text(`R ${finalTotal.toFixed(2)}`, sumX + sumColW[0], y + 11, {
+        width: sumColW[1] - 10, align: 'right'
+    });
+    y += sumRowH + 5 + 20;
+    // ====== 5. CONTACT & PAYMENT INFO (two side-by-side cards) ======
+    y = ensureSpace(200, y);
+    // Section title
+    doc.fontSize(15).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.text('CONTACT & PAYMENT INFORMATION', MARGIN, y, { width: CONTENT_W, align: 'center' });
+    drawRect(MARGIN + CONTENT_W / 2 - 30, y + 22, 60, 3, COLOR_RED);
+    y += 35;
+    const cardW = (CONTENT_W - 15) / 2;
+    const cardX2 = MARGIN + cardW + 15;
+    const cardHeaderH = 22;
+    // Use fallback branch data
     const quoteBranchData = branchData || {
-        name: 'HDS Products',
-        trading_as: 'HDS Products',
-        address1: 'Please contact us for more information',
+        trading_as: 'HDS Cut & Edge Group',
+        address1: 'Please contact us for branch details',
         phone: '',
-        email: ''
+        email: '',
+        whatsapp: ''
     };
-    // Create a light box for branch info
-    const boxStartY = doc.y;
-    doc.rect(50, boxStartY, doc.page.width - 100, 70).fillAndStroke('#f5f5f5', '#003366');
-    // Draw branch name/title
-    doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-    doc.text(quoteBranchData.trading_as || quoteBranchData.name || 'Branch', 60, boxStartY + 10, { width: doc.page.width - 120 });
-    // Prepare to list branch details
-    doc.fontSize(9).fillColor('#333333').font('Helvetica');
-    let currentY = boxStartY + 28;
-    // List of keys to exclude from rendering (internal IDs, metadata, etc.)
-    const excludeKeys = ['id', 'created_at', 'updated_at', 'uuid', 'branch_id', 'branch_number'];
-    // Define pretty labels for known fields
-    const prettyLabels = {
-        trading_as: 'Trading As',
-        name: 'Name',
-        address1: 'Address 1',
-        address2: 'Address 2',
-        city: 'City',
-        state: 'State',
-        zip: 'ZIP',
-        phone: 'Phone',
-        email: 'Email',
-        website: 'Website',
-        vat: 'VAT Number',
-        registration: 'Company Registration',
-        notes: 'Notes',
-        whatsapp: 'WhatsApp',
-        // Add more known fields as needed
+    // --- Branch Details Card ---
+    drawRect(MARGIN, y, cardW, cardHeaderH, COLOR_BLACK);
+    drawRect(MARGIN, y + cardHeaderH - 3, cardW, 3, COLOR_RED);
+    doc.fontSize(10).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text('BRANCH DETAILS', MARGIN + 10, y + 6, { width: cardW - 20 });
+    // Branch card body
+    const branchBodyY = y + cardHeaderH;
+    const branchBodyH = 100;
+    drawRect(MARGIN, branchBodyY, cardW, branchBodyH, COLOR_WHITE, COLOR_BORDER);
+    doc.fontSize(9).fillColor(COLOR_TEXT_MED).font('Helvetica');
+    let by = branchBodyY + 10;
+    doc.font('Helvetica-Bold').fillColor(COLOR_TEXT_DARK);
+    doc.text(quoteBranchData.trading_as || quoteBranchData.name || 'Branch', MARGIN + 10, by, { width: cardW - 20 });
+    by += 14;
+    doc.font('Helvetica').fillColor(COLOR_TEXT_MED);
+    const branchExclude = ['id', 'created_at', 'updated_at', 'uuid', 'branch_id', 'branch_number', 'trading_as', 'name'];
+    const branchLabels = {
+        address1: 'Address', address2: '', city: 'City', state: 'Province',
+        zip: 'ZIP', phone: 'Phone', email: 'Email', website: 'Website',
+        whatsapp: 'WhatsApp', vat: 'VAT Number', registration: 'Reg Number'
     };
-    // Render all key/value pairs except excluded ones and name/trading_as (already shown)
     Object.keys(quoteBranchData).forEach((key) => {
-        if (excludeKeys.includes(key) || key === 'trading_as' || key === 'name')
+        if (branchExclude.includes(key))
             return;
         const value = quoteBranchData[key];
         if (!value)
             return;
-        const label = prettyLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        doc.text(`${label}: ${value}`, 60, currentY, { width: doc.page.width - 120 });
-        currentY += 12;
+        const label = branchLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        if (label) {
+            doc.text(`${label}: ${value}`, MARGIN + 10, by, { width: cardW - 20 });
+        }
+        else {
+            doc.text(`${value}`, MARGIN + 10, by, { width: cardW - 20 });
+        }
+        by += 13;
     });
-    // Move down past the branch details box
-    doc.y = Math.max(doc.y, boxStartY + 80);
-    doc.moveDown(1);
-    // Add banking details heading
-    doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-    doc.text('Banking Details', 50, doc.y);
-    doc.font('Helvetica').fontSize(10).fillColor('#333333');
-    doc.moveDown(0.5);
-    // First collect all banking detail lines
-    const bankingLines = [];
+    // --- Banking Details Card ---
+    drawRect(cardX2, y, cardW, cardHeaderH, COLOR_BLACK);
+    drawRect(cardX2, y + cardHeaderH - 3, cardW, 3, COLOR_RED);
+    doc.fontSize(10).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text('BANKING DETAILS', cardX2 + 10, y + 6, { width: cardW - 20 });
+    const bankBodyY = y + cardHeaderH;
+    const bankBodyH = 100;
+    drawRect(cardX2, bankBodyY, cardW, bankBodyH, COLOR_WHITE, COLOR_BORDER);
+    doc.fontSize(9).fillColor(COLOR_TEXT_MED).font('Helvetica');
+    let bby = bankBodyY + 10;
     if (bankingDetails && Object.keys(bankingDetails).length > 0) {
-        const excludeKeys = ['id', 'created_at', 'updated_at', 'uuid', 'fx_branch'];
-        const prettyLabels = {
-            account_holder: 'Account Holder',
-            bank: 'Bank',
-            account_number: 'Account Number',
-            branch_code: 'Branch Code',
-            account_type: 'Account Type',
-            reference: 'Reference',
-            swift_code: 'SWIFT Code',
-            iban: 'IBAN',
-            notes: 'Notes',
-            // Add more as needed
+        const bankExclude = ['id', 'created_at', 'updated_at', 'uuid', 'fx_branch'];
+        const bankLabels = {
+            account_holder: 'Account Holder', bank: 'Bank', account_number: 'Account Number',
+            branch_code: 'Branch Code', account_type: 'Account Type', reference: 'Reference',
+            swift_code: 'SWIFT Code', iban: 'IBAN'
         };
         Object.keys(bankingDetails).forEach((key) => {
-            if (excludeKeys.includes(key))
+            if (bankExclude.includes(key))
                 return;
             const value = bankingDetails[key];
             if (!value)
                 return;
-            const label = prettyLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            bankingLines.push(`${label}: ${value}`);
+            const label = bankLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            doc.text(`${label}: ${value}`, cardX2 + 10, bby, { width: cardW - 20 });
+            bby += 13;
         });
-        // Ensure we have at least one line
-        if (bankingLines.length === 0) {
-            bankingLines.push('Please contact us for payment information.');
+        if (bby === bankBodyY + 10) {
+            doc.text('Please contact us for payment information.', cardX2 + 10, bby, { width: cardW - 20 });
         }
     }
     else {
-        // Add fallback banking details
-        bankingLines.push('Bank: Standard Bank');
-        bankingLines.push('Account Type: Business Account');
-        bankingLines.push('Reference: Please use your quote number as reference');
-        bankingLines.push('Please contact us for complete banking details.');
+        doc.text('Bank: Standard Bank', cardX2 + 10, bby, { width: cardW - 20 });
+        bby += 13;
+        doc.text('Account Type: Business Account', cardX2 + 10, bby, { width: cardW - 20 });
+        bby += 13;
+        doc.text(`Reference: ${pdfId}`, cardX2 + 10, bby, { width: cardW - 20 });
     }
-    // Now render all banking details as a single text block with line breaks
-    const bankingText = bankingLines.join('\n');
-    doc.text(bankingText, 50, doc.y, { width: doc.page.width - 100 });
-    // Move down a bit
-    doc.moveDown(2);
-    // ===== ONLINE PAYMENT SECTION =====
-    // Add payment status section
+    y = bankBodyY + bankBodyH + 20;
+    // ====== 6. PAYMENT BUTTON ======
+    y = ensureSpace(60, y);
     if (isPaid) {
-        // Show PAID status
-        doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
-        doc.text('Payment Status', 50, doc.y);
-        doc.font('Helvetica').fontSize(10).fillColor('#333333');
-        doc.moveDown(0.5);
-        const paymentBoxHeight = 80;
-        // Check if we need a new page for the payment section
-        if (doc.y + paymentBoxHeight > doc.page.height - 50) {
-            doc.addPage();
-            doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
-            doc.text('Payment Status', 50, doc.y);
-            doc.font('Helvetica').fontSize(10).fillColor('#333333');
-            doc.moveDown(0.5);
-        }
-        const currentPaymentBoxY = doc.y;
-        // Draw PAID status box with green styling
-        doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
-            .fillAndStroke('#e8f5e8', '#28a745');
-        // Add inner border for professional look
-        doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
-            .stroke('#4caf50');
-        // PAID status header
-        doc.fontSize(18).fillColor('#28a745').font('Helvetica-Bold');
-        doc.text(' PAYMENT RECEIVED', 60, currentPaymentBoxY + 18, {
-            width: doc.page.width - 120,
-            align: 'center'
+        drawRect(MARGIN + CONTENT_W / 2 - 150, y, 300, 40, '#e8f5e8', '#28a745');
+        doc.fontSize(14).fillColor('#28a745').font('Helvetica-Bold');
+        doc.text('PAYMENT RECEIVED', MARGIN + CONTENT_W / 2 - 150, y + 12, {
+            width: 300, align: 'center'
         });
-        doc.fontSize(11).fillColor('#555555').font('Helvetica');
-        doc.text(`Payment Date: ${new Date().toLocaleDateString()}`, 60, currentPaymentBoxY + 45, {
-            width: doc.page.width - 120,
-            align: 'center'
-        });
-        // Move past the payment box
-        doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
+        y += 50;
     }
     else {
-        // Show payment option for unpaid quotes
-        doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-        doc.text('Online Payment Option', 50, doc.y);
-        doc.font('Helvetica').fontSize(10).fillColor('#333333');
-        doc.moveDown(0.5);
-        // Create payment button box - larger and more prominent
-        const paymentBoxStartY = doc.y;
-        const paymentBoxHeight = 120; // Increased height for better visibility
-        // Check if we need a new page for the payment section
-        if (doc.y + paymentBoxHeight > doc.page.height - 50) {
-            doc.addPage();
-            doc.fontSize(12).fillColor('#003366').font('Helvetica-Bold');
-            doc.text('Online Payment Option', 50, doc.y);
-            doc.font('Helvetica').fontSize(10).fillColor('#333333');
-            doc.moveDown(0.5);
-        }
-        const currentPaymentBoxY = doc.y;
-        // Draw main payment box with professional green styling
-        doc.rect(50, currentPaymentBoxY, doc.page.width - 100, paymentBoxHeight)
-            .fillAndStroke('#f0f8f0', '#2d7a2d');
-        // Add inner border for professional look
-        doc.rect(55, currentPaymentBoxY + 5, doc.page.width - 110, paymentBoxHeight - 10)
-            .stroke('#4a934a');
-        // Payment box header with professional styling
-        doc.fontSize(16).fillColor('#2d7a2d').font('Helvetica-Bold');
-        doc.text('SECURE ONLINE PAYMENT', 60, currentPaymentBoxY + 18, {
-            width: doc.page.width - 120,
-            align: 'center'
-        });
-        doc.fontSize(10).fillColor('#555555').font('Helvetica');
-        doc.text('Pay securely with PayFast. All major payment methods accepted.', 60, currentPaymentBoxY + 42, {
-            width: doc.page.width - 120,
-            align: 'center'
-        });
-        // Generate payment URL
+        const btnW = 250;
+        const btnH = 40;
+        const btnX = MARGIN + (CONTENT_W - btnW) / 2;
+        drawRect(btnX, y, btnW, btnH, COLOR_BLACK);
+        drawRect(btnX, y + btnH - 4, btnW, 4, COLOR_RED);
         const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
         const paymentUrl = `${baseUrl}/api/payfast/pay?quoteId=${pdfId}&amount=${finalTotal.toFixed(2)}&customerName=${encodeURIComponent(customerName || 'Customer')}&projectName=${encodeURIComponent(projectName || 'Project')}`;
-        // Create a prominent clickable button area
-        const buttonY = currentPaymentBoxY + 65;
-        const buttonHeight = 35;
-        const buttonWidth = 300;
-        const buttonX = (doc.page.width - buttonWidth) / 2; // Center the button
-        // Draw professional green button with gradient effect
-        doc.rect(buttonX, buttonY, buttonWidth, buttonHeight)
-            .fillAndStroke('#28a745', '#1e7e34');
-        // Add button highlight for 3D effect
-        doc.rect(buttonX + 1, buttonY + 1, buttonWidth - 2, 2)
-            .fillAndStroke('#4caf50', '#4caf50');
-        // Add subtle shadow
-        doc.rect(buttonX + 3, buttonY + 3, buttonWidth, buttonHeight)
-            .stroke('#d4d4d4');
-        // Button text - professional and clear
-        doc.fontSize(13).fillColor('#ffffff').font('Helvetica-Bold');
-        doc.text('PAY NOW SECURELY', buttonX, buttonY + 8, {
-            width: buttonWidth,
-            align: 'center',
-            link: paymentUrl
+        doc.fontSize(13).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+        doc.text(`PAY NOW — R ${finalTotal.toFixed(2)}`, btnX, y + 12, {
+            width: btnW, align: 'center', link: paymentUrl
         });
-        // Add amount display on button with currency symbol
-        doc.fontSize(14).fillColor('#ffffff').font('Helvetica-Bold');
-        doc.text(`R ${finalTotal.toFixed(2)}`, buttonX, buttonY + 22, {
-            width: buttonWidth,
-            align: 'center',
-            link: paymentUrl
-        });
-        // Add professional instruction text below button
-        doc.fontSize(9).fillColor('#666666').font('Helvetica');
-        doc.text('Click the button above to proceed to secure payment', 60, currentPaymentBoxY + 110, {
-            width: doc.page.width - 120,
-            align: 'center'
-        });
-        // Add security badge text
-        doc.fontSize(8).fillColor('#28a745').font('Helvetica-Bold');
-        doc.text('256-bit SSL Encryption  PCI DSS Compliant', 60, currentPaymentBoxY + 125, {
-            width: doc.page.width - 120,
-            align: 'center'
-        });
-        // Move past the payment box
-        doc.y = currentPaymentBoxY + paymentBoxHeight + 15;
-        doc.moveDown(1);
+        y += btnH + 8;
+        doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
+        doc.text('Secure online payment via PayFast — All major payment methods accepted', MARGIN, y, { width: CONTENT_W, align: 'center' });
+        y += 18;
     }
-    // Add a generic footer to the last page
-    // First make sure we're near the bottom of the page
-    if (doc.y < doc.page.height - 100) {
-        doc.y = doc.page.height - 100;
+    // ====== 7. DISCLAIMER ======
+    y = ensureSpace(30, y);
+    y += 5;
+    drawRect(MARGIN, y, CONTENT_W, 30, COLOR_LIGHT_GRAY, COLOR_BORDER);
+    doc.fontSize(7.5).fillColor('#999999').font('Helvetica');
+    doc.text('Prices may vary slightly when purchasing in-store at our branches, as different regions have different pricing structures. This quotation serves as an estimate and is valid for 30 days from the date of issue.', MARGIN + 10, y + 5, { width: CONTENT_W - 20, align: 'center' });
+    y += 35;
+    // ====== 8. FOOTER (black with gradient top border) ======
+    if (y + 50 > PAGE_H - MARGIN) {
+        doc.addPage({ size: 'A4', margin: 0 });
+        y = MARGIN;
     }
-    // Add page numbers to all pages - with enhanced error handling and logging
-    try {
-        // Log the current state of the document before attempting page numbering
-        console.log('Starting page numbering process');
-        // Capture buffered page range - crucial for debugging
-        const range = doc.bufferedPageRange();
-        console.log('PDF bufferedPageRange():', JSON.stringify(range));
-        // Skip page numbering if no pages available or invalid range
-        if (!range || typeof range !== 'object' || !range.count || range.count <= 0) {
-            console.log('Skipping page numbering: No valid pages available');
+    else {
+        y = PAGE_H - MARGIN - 45;
+    }
+    // Gradient top border for footer
+    drawRect(MARGIN, y, CONTENT_W / 3, 3, COLOR_RED);
+    drawRect(MARGIN + CONTENT_W / 3, y, CONTENT_W / 3, 3, COLOR_GOLD);
+    drawRect(MARGIN + CONTENT_W * 2 / 3, y, CONTENT_W / 3, 3, COLOR_RED);
+    drawRect(MARGIN, y + 3, CONTENT_W, 42, COLOR_BLACK);
+    // Footer logo (small)
+    if (logoPath) {
+        try {
+            doc.image(logoPath, MARGIN + 15, y + 10, { height: 20 });
         }
-        else {
-            const totalPages = range.count;
-            const startIdx = range.start || 0;
-            console.log(`Adding page numbers: ${totalPages} pages, starting at index ${startIdx}`);
-            // Loop through each page using the actual available range
-            for (let i = 0; i < totalPages; i++) {
-                try {
-                    const pageIdx = startIdx + i;
-                    console.log(`Attempting to switch to page ${pageIdx}`);
-                    // Switch to the page and add numbering
-                    doc.switchToPage(pageIdx);
-                    // Removed page numbering and disclaimer text per user request
-                    console.log(`Successfully added numbering to page ${pageIdx}`);
-                }
-                catch (pageError) {
-                    console.error(`Error processing page ${startIdx + i}:`, pageError);
-                    // Continue with next page - don't let one page failure stop the process
-                }
-            }
-            // Skip page switching - PDFKit doesn't support switchToPage after content
-        }
+        catch (e) { /* skip */ }
     }
-    catch (error) {
-        // Log the error but allow PDF generation to continue
-        console.error('Error during page numbering process:', error);
-    }
+    doc.fontSize(8).fillColor('rgba(255,255,255,0.7)').font('Helvetica');
+    doc.text('www.hdsgroup.co.za', MARGIN + 80, y + 16, { width: 150 });
+    doc.fontSize(8).fillColor(COLOR_GOLD).font('Helvetica');
+    doc.text('hdsgroup.co.za  |  Est. 2001  |  Largest Cut & Edge Distributor', MARGIN + CONTENT_W - 280, y + 16, { width: 270, align: 'right' });
     // Finalize PDF
     doc.end();
-    // We need to wait for the PDF to be fully generated
     return new Promise((resolve) => {
-        // Wait for the PDF to be fully generated
         doc.on('end', () => {
-            // Return the buffer and ID
             const pdfBuffer = buffer_1.Buffer.concat(buffers);
-            resolve({
-                buffer: pdfBuffer,
-                id: pdfId
-            });
+            resolve({ buffer: pdfBuffer, id: pdfId });
         });
     });
 };
