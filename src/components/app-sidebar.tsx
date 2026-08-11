@@ -55,7 +55,7 @@ const navItems = [
 
 const reportSubItems = [
   { title: "Weekly Reports", href: "/reports", icon: BarChart3 },
-  { title: "AI Reports", href: "/reports/ai", icon: Bot },
+  { title: "AI Performance", href: "/reports/ai-performance", icon: Bot },
 ];
 
 export function AppSidebar() {
