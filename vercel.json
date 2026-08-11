@@ -4,10 +4,7 @@
   "builds": [
     {
       "src": "server/dist/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 60
-      }
+      "use": "@vercel/node"
     },
     {
       "src": "client/dist/**",
