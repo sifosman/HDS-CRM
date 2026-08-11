@@ -321,3 +321,71 @@ export type HealthComponentSummary = {
   degraded_checks_30d: number;
   down_checks_30d: number;
 };
+
+// ---- Phase 2: AI Performance Reporting ----
+
+export type AiTestRunType = "full" | "smoke" | "category" | "scenario";
+
+export type AiTestRun = {
+  id: string;
+  run_id: string;
+  scenario_id: string;
+  scenario_name: string | null;
+  category: string;
+  passed: boolean;
+  skipped: boolean;
+  latency_ms: number | null;
+  tool_calls: string[] | null;
+  assistant_reply_count: number;
+  failure_reason: string | null;
+  failures: Record<string, unknown>[] | null;
+  warnings: Record<string, unknown>[] | null;
+  last_reply: string | null;
+  phone_number: string | null;
+  run_type: AiTestRunType;
+  concurrency: number | null;
+  created_at: string;
+};
+
+export type AiTestRunSummary = {
+  id: string;
+  run_id: string;
+  run_type: AiTestRunType;
+  concurrency: number | null;
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  pass_rate: number;
+  latency_p50_ms: number | null;
+  latency_p95_ms: number | null;
+  latency_avg_ms: number | null;
+  by_category: Record<string, { total: number; passed: number; failed: number }> | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+};
+
+export type AiQualityMetrics = {
+  id: string;
+  metric_date: string;
+  window_hours: number;
+  total_conversations: number;
+  total_messages: number;
+  total_assistant_replies: number;
+  no_reply_count: number;
+  avg_response_latency_ms: number | null;
+  p95_response_latency_ms: number | null;
+  tool_call_count: number;
+  tool_success_count: number;
+  tool_failure_count: number;
+  handover_count: number;
+  objection_count: number;
+  close_attempt_count: number;
+  fallback_count: number;
+  unique_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};

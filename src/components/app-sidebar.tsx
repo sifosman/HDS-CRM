@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Megaphone,
   Filter,
+  Bot,
+  ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,8 +29,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -36,7 +46,6 @@ const navItems = [
   { title: "Segments", href: "/segments", icon: Filter },
   { title: "Quotes", href: "/quotes", icon: FileText },
   { title: "Payments", href: "/payments", icon: CreditCard },
-  { title: "Reports", href: "/reports", icon: BarChart3 },
   { title: "Intelligence", href: "/intelligence", icon: Brain },
   { title: "System Health", href: "/health", icon: HeartPulse },
   { title: "Templates", href: "/templates", icon: MessageSquare },
@@ -44,8 +53,14 @@ const navItems = [
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
+const reportSubItems = [
+  { title: "Weekly Reports", href: "/reports", icon: BarChart3 },
+  { title: "AI Reports", href: "/reports/ai", icon: Bot },
+];
+
 export function AppSidebar() {
   const pathname = usePathname();
+  const reportsActive = pathname.startsWith("/reports");
 
   return (
     <Sidebar>
@@ -85,6 +100,41 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+
+              {/* Reports — collapsible sub-menu */}
+              <Collapsible defaultOpen={reportsActive}>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger
+                    render={
+                      <SidebarMenuButton isActive={reportsActive}>
+                        <BarChart3 className="h-4 w-4" />
+                        <span>Reports</span>
+                        <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[panel-open]/menu-button:rotate-90" />
+                      </SidebarMenuButton>
+                    }
+                  />
+                </SidebarMenuItem>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {reportSubItems.map((sub) => {
+                      const subActive = pathname === sub.href;
+                      return (
+                        <SidebarMenuSubItem key={sub.href}>
+                          <SidebarMenuSubButton
+                            isActive={subActive}
+                            render={
+                              <Link href={sub.href}>
+                                <sub.icon className="h-4 w-4" />
+                                <span>{sub.title}</span>
+                              </Link>
+                            }
+                          />
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

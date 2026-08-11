@@ -16,8 +16,11 @@ import type {
   BroadcastRecipient,
   Segment,
   SegmentFilterRules,
+  AiTestRun,
+  AiTestRunSummary,
+  AiQualityMetrics,
 } from "@/lib/types";
-import { HEALTH_COMPONENT_ORDER } from "@/lib/constants";
+import { HEALTH_COMPONENT_ORDER, TEST_CATEGORY_ORDER } from "@/lib/constants";
 
 export async function getDashboardStats() {
   const supabase = await createClient();
@@ -796,4 +799,607 @@ export async function getCustomerTypeStats() {
       bySource,
     };
   });
+}
+
+// ============================================================================
+// Phase 2 — AI Performance Reporting
+// ============================================================================
+
+/**
+ * Get recent test run summaries for the pass-rate trend chart.
+ * Returns the most recent N run summaries, ordered oldest → newest for charting.
+ */
+export async function getAiTestRunSummaries(
+  limit = 30
+): Promise<AiTestRunSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_test_run_summaries")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  // Reverse for chronological chart order (oldest first)
+  return ((data || []) as AiTestRunSummary[]).reverse();
+}
+
+/**
+ * Get the latest test run summary (most recent run).
+ */
+export async function getLatestAiTestRunSummary(): Promise<AiTestRunSummary | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_test_run_summaries")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (error) return null;
+  return data as AiTestRunSummary;
+}
+
+/**
+ * Get individual scenario results for a specific run_id.
+ */
+export async function getAiTestRunsByRunId(
+  runId: string
+): Promise<AiTestRun[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_test_runs")
+    .select("*")
+    .eq("run_id", runId)
+    .order("category", { ascending: true })
+    .order("scenario_id", { ascending: true });
+  if (error) throw error;
+  return (data || []) as AiTestRun[];
+}
+
+/**
+ * Get recent failed test scenarios across all runs.
+ * Used for the "Recent Failures" table on the AI Performance dashboard.
+ */
+export async function getRecentAiTestFailures(
+  limit = 25
+): Promise<AiTestRun[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_test_runs")
+    .select("*")
+    .eq("passed", false)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []) as AiTestRun[];
+}
+
+/**
+ * Get per-category pass rates aggregated across recent runs.
+ * Returns one entry per category with total/passed/failed counts and pass rate.
+ */
+export async function getAiTestCategoryStats(
+  runsLimit = 5
+): Promise<
+  Array<{
+    category: string;
+    total: number;
+    passed: number;
+    failed: number;
+    passRate: number;
+    avgLatencyMs: number | null;
+  }>
+> {
+  const supabase = await createClient();
+
+  // Get the most recent N run_ids
+  const { data: runData } = await supabase
+    .from("ai_test_run_summaries")
+    .select("run_id")
+    .order("created_at", { ascending: false })
+    .limit(runsLimit);
+
+  const runIds = (runData || []).map((r) => r.run_id);
+  if (runIds.length === 0) {
+    return TEST_CATEGORY_ORDER.map((category) => ({
+      category,
+      total: 0,
+      passed: 0,
+      failed: 0,
+      passRate: 0,
+      avgLatencyMs: null,
+    }));
+  }
+
+  // Fetch all test runs for those run_ids
+  const { data, error } = await supabase
+    .from("ai_test_runs")
+    .select("category, passed, latency_ms")
+    .in("run_id", runIds);
+
+  if (error) throw error;
+
+  const runs = data || [];
+
+  // Build stats per category, including any categories with zero results
+  const allCategories = new Set<string>(TEST_CATEGORY_ORDER);
+  for (const r of runs) allCategories.add(r.category);
+
+  return Array.from(allCategories).map((category) => {
+    const catRuns = runs.filter((r) => r.category === category);
+    const total = catRuns.length;
+    const passed = catRuns.filter((r) => r.passed).length;
+    const failed = total - passed;
+    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+    const latencies = catRuns
+      .filter((r) => r.latency_ms != null)
+      .map((r) => r.latency_ms as number);
+    const avgLatencyMs =
+      latencies.length > 0
+        ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
+        : null;
+    return { category, total, passed, failed, passRate, avgLatencyMs };
+  });
+}
+
+/**
+ * Get latency distribution buckets for the most recent run.
+ * Returns counts per latency bucket for histogram-style display.
+ */
+export async function getAiTestLatencyDistribution(
+  runId?: string
+): Promise<Array<{ bucket: string; count: number }>> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("ai_test_runs")
+    .select("latency_ms")
+    .not("latency_ms", "is", null);
+
+  if (runId) {
+    query = query.eq("run_id", runId);
+  } else {
+    // Use the latest run
+    const { data: latest } = await supabase
+      .from("ai_test_run_summaries")
+      .select("run_id")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (!latest) {
+      return [];
+    }
+    query = query.eq("run_id", latest.run_id);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const latencies = (data || []).map((r) => r.latency_ms as number);
+
+  const buckets = [
+    { bucket: "0-5s", min: 0, max: 5000, count: 0 },
+    { bucket: "5-10s", min: 5000, max: 10000, count: 0 },
+    { bucket: "10-20s", min: 10000, max: 20000, count: 0 },
+    { bucket: "20-30s", min: 20000, max: 30000, count: 0 },
+    { bucket: "30-45s", min: 30000, max: 45000, count: 0 },
+    { bucket: "45s+", min: 45000, max: Infinity, count: 0 },
+  ];
+
+  for (const lat of latencies) {
+    for (const b of buckets) {
+      if (lat >= b.min && lat < b.max) {
+        b.count++;
+        break;
+      }
+    }
+  }
+
+  return buckets.map(({ bucket, count }) => ({ bucket, count }));
+}
+
+/**
+ * Get scenario failure frequency — which scenarios fail most often across
+ * recent runs. Helps identify persistently broken scenarios vs flaky ones.
+ */
+export async function getAiTestFailureFrequency(
+  runsLimit = 10
+): Promise<
+  Array<{
+    scenario_id: string;
+    scenario_name: string | null;
+    category: string;
+    failCount: number;
+    lastFailedAt: string;
+  }>
+> {
+  const supabase = await createClient();
+
+  // Get recent run_ids
+  const { data: runData } = await supabase
+    .from("ai_test_run_summaries")
+    .select("run_id")
+    .order("created_at", { ascending: false })
+    .limit(runsLimit);
+
+  const runIds = (runData || []).map((r) => r.run_id);
+  if (runIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("ai_test_runs")
+    .select("scenario_id, scenario_name, category, created_at")
+    .eq("passed", false)
+    .in("run_id", runIds)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  const runs = data || [];
+  const byScenario = new Map<
+    string,
+    { scenario_name: string | null; category: string; failCount: number; lastFailedAt: string }
+  >();
+
+  for (const r of runs) {
+    const existing = byScenario.get(r.scenario_id);
+    if (existing) {
+      existing.failCount++;
+      if (r.created_at > existing.lastFailedAt) {
+        existing.lastFailedAt = r.created_at;
+      }
+    } else {
+      byScenario.set(r.scenario_id, {
+        scenario_name: r.scenario_name,
+        category: r.category,
+        failCount: 1,
+        lastFailedAt: r.created_at,
+      });
+    }
+  }
+
+  return Array.from(byScenario.entries())
+    .map(([scenario_id, val]) => ({ scenario_id, ...val }))
+    .sort((a, b) => b.failCount - a.failCount);
+}
+
+/**
+ * Get live AI quality metrics for the most recent N days.
+ * Used for the "Live Traffic Quality" section of the dashboard.
+ */
+export async function getAiQualityMetrics(
+  days = 30
+): Promise<AiQualityMetrics[]> {
+  const supabase = await createClient();
+  const dateFrom = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  )
+    .toISOString()
+    .split("T")[0];
+
+  const { data, error } = await supabase
+    .from("ai_quality_metrics")
+    .select("*")
+    .gte("metric_date", dateFrom)
+    .order("metric_date", { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as AiQualityMetrics[];
+}
+
+/**
+ * Get the latest AI quality metrics snapshot.
+ */
+export async function getLatestAiQualityMetrics(): Promise<AiQualityMetrics | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_quality_metrics")
+    .select("*")
+    .order("metric_date", { ascending: false })
+    .limit(1)
+    .single();
+  if (error) return null;
+  return data as AiQualityMetrics;
+}
+
+// ---------------------------------------------------------------------------
+// Live production stats — computed from ai_conversations when the
+// ai_quality_metrics table has no data yet. This gives a real-time view of
+// how the AI bot is performing with actual customers.
+// ---------------------------------------------------------------------------
+
+export type AiProductionStats = {
+  totalConversations: number;
+  uniqueCustomers: number;
+  totalMessages: number;
+  userMessages: number;
+  assistantMessages: number;
+  toolMessages: number;
+  responseRate: number; // % of user messages that got an assistant reply
+  noReplyCount: number; // unique customers with user messages but 0 assistant replies
+  toolCallCount: number;
+  leadStatusCounts: Record<string, number>;
+  closedCount: number;
+  lostCount: number;
+  activeLeads: number;
+  quoteGeneratedCount: number;
+  handoverCount: number;
+  closeAttemptCount: number;
+  fallbackCount: number;
+  periodStart: string | null;
+  periodEnd: string | null;
+};
+
+/**
+ * Compute live AI production quality stats from the ai_conversations table.
+ * This mirrors the ai_quality_metrics schema but is computed on-the-fly so
+ * we have data even before the metrics aggregation job runs.
+ */
+export async function getAiProductionStats(): Promise<AiProductionStats> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_conversations")
+    .select("id, phone_number, role, lead_status, tool_calls, created_at, conversation_metadata");
+
+  if (error) throw error;
+
+  const rows = (data || []) as Array<{
+    id: string;
+    phone_number: string;
+    role: string | null;
+    lead_status: string | null;
+    tool_calls: Record<string, unknown> | null;
+    created_at: string;
+    conversation_metadata: Record<string, unknown> | null;
+  }>;
+
+  const uniquePhones = new Set<string>();
+  const phonesWithUserMsg = new Set<string>();
+  const phonesWithAssistantReply = new Set<string>();
+  const leadStatusCounts: Record<string, number> = {};
+  let userMessages = 0;
+  let assistantMessages = 0;
+  let toolMessages = 0;
+  let toolCallCount = 0;
+  let quoteGeneratedCount = 0;
+  let handoverCount = 0;
+  let closeAttemptCount = 0;
+  let fallbackCount = 0;
+  let periodStart: string | null = null;
+  let periodEnd: string | null = null;
+
+  for (const r of rows) {
+    uniquePhones.add(r.phone_number);
+
+    if (r.created_at && (!periodStart || r.created_at < periodStart)) {
+      periodStart = r.created_at;
+    }
+    if (r.created_at && (!periodEnd || r.created_at > periodEnd)) {
+      periodEnd = r.created_at;
+    }
+
+    if (r.role === "user") {
+      userMessages++;
+      phonesWithUserMsg.add(r.phone_number);
+    } else if (r.role === "assistant") {
+      assistantMessages++;
+      phonesWithAssistantReply.add(r.phone_number);
+    } else if (r.role === "tool") {
+      toolMessages++;
+    }
+
+    if (r.tool_calls) {
+      toolCallCount++;
+      const tc = r.tool_calls;
+      // Check for quote generation tool calls
+      const tcStr = JSON.stringify(tc).toLowerCase();
+      if (tcStr.includes("generate_quote") || tcStr.includes("quote")) {
+        quoteGeneratedCount++;
+      }
+    }
+
+    if (r.lead_status) {
+      leadStatusCounts[r.lead_status] = (leadStatusCounts[r.lead_status] || 0) + 1;
+      if (r.lead_status === "handover") handoverCount++;
+      if (r.lead_status === "closing") closeAttemptCount++;
+    }
+
+    if (r.conversation_metadata) {
+      const meta = r.conversation_metadata;
+      if (meta.close_attempt || meta.close_attempt_count) closeAttemptCount++;
+      if (meta.fallback || meta.handover) {
+        if (meta.fallback) fallbackCount++;
+        if (meta.handover) handoverCount++;
+      }
+    }
+  }
+
+  // no-reply = customers who sent user messages but never got an assistant reply
+  let noReplyCount = 0;
+  for (const phone of phonesWithUserMsg) {
+    if (!phonesWithAssistantReply.has(phone)) noReplyCount++;
+  }
+
+  const responseRate =
+    phonesWithUserMsg.size > 0
+      ? Math.round(((phonesWithUserMsg.size - noReplyCount) / phonesWithUserMsg.size) * 100)
+      : 0;
+
+  const closedCount = leadStatusCounts["closed"] || 0;
+  const lostCount = leadStatusCounts["lost"] || 0;
+  const activeLeads = uniquePhones.size - closedCount - lostCount;
+
+  return {
+    totalConversations: rows.length,
+    uniqueCustomers: uniquePhones.size,
+    totalMessages: userMessages + assistantMessages + toolMessages,
+    userMessages,
+    assistantMessages,
+    toolMessages,
+    responseRate,
+    noReplyCount,
+    toolCallCount,
+    leadStatusCounts,
+    closedCount,
+    lostCount,
+    activeLeads,
+    quoteGeneratedCount,
+    handoverCount,
+    closeAttemptCount,
+    fallbackCount,
+    periodStart,
+    periodEnd,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// AI Performance Score — composite score (0-100) with letter grade.
+// Combines test suite pass rate with live production quality signals.
+// ---------------------------------------------------------------------------
+
+export type AiPerformanceScore = {
+  score: number; // 0-100
+  grade: "A" | "B" | "C" | "D" | "F";
+  label: string;
+  testPassRate: number | null; // % from latest test run, null if no runs
+  testWeight: number; // weight applied (0-100)
+  productionResponseRate: number; // % from live conversations
+  productionWeight: number;
+  hasTestData: boolean;
+  hasProductionData: boolean;
+  components: Array<{
+    name: string;
+    value: number;
+    target: number;
+    weight: number;
+    contribution: number;
+    passing: boolean;
+  }>;
+};
+
+export async function getAiPerformanceScore(): Promise<AiPerformanceScore> {
+  const [latestRun, prodStats] = await Promise.all([
+    getLatestAiTestRunSummary(),
+    getAiProductionStats(),
+  ]);
+
+  const components: AiPerformanceScore["components"] = [];
+  let score = 0;
+  let totalWeight = 0;
+
+  // Component 1: Test suite pass rate (weight 40 if data exists, else 0)
+  const hasTestData = latestRun !== null;
+  const testPassRate = latestRun ? latestRun.pass_rate : null;
+  const testTarget = 90; // 90% pass rate target
+  if (hasTestData && testPassRate !== null) {
+    const weight = 40;
+    const contribution = Math.min(100, (testPassRate / testTarget) * 100) * (weight / 100);
+    score += contribution;
+    totalWeight += weight;
+    components.push({
+      name: "Test Suite Pass Rate",
+      value: testPassRate,
+      target: testTarget,
+      weight,
+      contribution: Math.round(contribution),
+      passing: testPassRate >= testTarget,
+    });
+  }
+
+  // Component 2: Production response rate (weight 30 if production data)
+  const hasProductionData = prodStats.uniqueCustomers > 0;
+  const responseTarget = 80; // 80% of customers who message should get a reply
+  if (hasProductionData) {
+    const weight = 30;
+    const contribution =
+      Math.min(100, (prodStats.responseRate / responseTarget) * 100) * (weight / 100);
+    score += contribution;
+    totalWeight += weight;
+    components.push({
+      name: "Customer Response Rate",
+      value: prodStats.responseRate,
+      target: responseTarget,
+      weight,
+      contribution: Math.round(contribution),
+      passing: prodStats.responseRate >= responseTarget,
+    });
+
+    // Component 3: Lead progression (weight 15) — what % of leads moved past "new"
+    const progressedLeads =
+      prodStats.uniqueCustomers -
+      (prodStats.leadStatusCounts["new"] || 0);
+    const progressionRate =
+      prodStats.uniqueCustomers > 0
+        ? Math.round((progressedLeads / prodStats.uniqueCustomers) * 100)
+        : 0;
+    const progTarget = 50;
+    const progWeight = 15;
+    const progContribution =
+      Math.min(100, (progressionRate / progTarget) * 100) * (progWeight / 100);
+    score += progContribution;
+    totalWeight += progWeight;
+    components.push({
+      name: "Lead Progression Rate",
+      value: progressionRate,
+      target: progTarget,
+      weight: progWeight,
+      contribution: Math.round(progContribution),
+      passing: progressionRate >= progTarget,
+    });
+
+    // Component 4: Quote generation activity (weight 15) — tool calls producing quotes
+    const quoteRate =
+      prodStats.uniqueCustomers > 0
+        ? Math.round((prodStats.quoteGeneratedCount / prodStats.uniqueCustomers) * 100)
+        : 0;
+    const quoteTarget = 30;
+    const quoteWeight = 15;
+    const quoteContribution =
+      Math.min(100, (quoteRate / quoteTarget) * 100) * (quoteWeight / 100);
+    score += quoteContribution;
+    totalWeight += quoteWeight;
+    components.push({
+      name: "Quote Generation Rate",
+      value: quoteRate,
+      target: quoteTarget,
+      weight: quoteWeight,
+      contribution: Math.round(quoteContribution),
+      passing: quoteRate >= quoteTarget,
+    });
+  }
+
+  // Normalize score to 0-100 based on weights actually used
+  const finalScore = totalWeight > 0 ? Math.round((score / totalWeight) * 100) : 0;
+
+  let grade: AiPerformanceScore["grade"] = "F";
+  let label = "No data";
+  if (totalWeight > 0) {
+    if (finalScore >= 90) {
+      grade = "A";
+      label = "Excellent";
+    } else if (finalScore >= 80) {
+      grade = "B";
+      label = "Good";
+    } else if (finalScore >= 70) {
+      grade = "C";
+      label = "Needs Improvement";
+    } else if (finalScore >= 60) {
+      grade = "D";
+      label = "Below Standard";
+    } else {
+      grade = "F";
+      label = "Failing";
+    }
+  }
+
+  return {
+    score: finalScore,
+    grade,
+    label,
+    testPassRate,
+    testWeight: hasTestData ? 40 : 0,
+    productionResponseRate: prodStats.responseRate,
+    productionWeight: hasProductionData ? 60 : 0,
+    hasTestData,
+    hasProductionData,
+    components,
+  };
 }

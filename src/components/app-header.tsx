@@ -3,6 +3,7 @@
 import { Search, Bell } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserNav } from "@/components/user-nav";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -55,6 +56,7 @@ export function AppHeader() {
           <Bell className="h-5 w-5" />
         </Button>
         <ThemeToggle />
+        <UserNav />
       </div>
     </header>
   );

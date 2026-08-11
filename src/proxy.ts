@@ -1,6 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Paths that do not require authentication.
+const PUBLIC_PATHS = ["/login", "/_next", "/favicon.ico"];
+
+function isPublicPath(pathname: string) {
+  if (pathname === "/login") return true;
+  if (pathname.startsWith("/_next")) return true;
+  if (pathname === "/favicon.ico") return true;
+  if (pathname.startsWith("/api/")) return true;
+  if (pathname.startsWith("/static/")) return true;
+  if (pathname.startsWith("/hds-logo")) return true;
+  return false;
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -25,9 +38,25 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // NOTE: Auth refresh — we don't redirect here yet since Supabase Auth
-  // users may not be set up. Once auth is configured, redirect unauthenticated
-  // users to /login except for the login page itself.
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  const pathname = request.nextUrl.pathname;
+
+  // Allow public paths (login, Next.js internals, static assets).
+  if (isPublicPath(pathname)) {
+    return supabaseResponse;
+  }
+
+  // Redirect unauthenticated users to the login page.
+  if (!user) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return supabaseResponse;
 }
+
+export const config = {
+  matcher: "/((?!_next/static|_next/image|favicon.ico|hds-logo|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf)).*)",
+};

@@ -300,3 +300,49 @@ export const OPT_OUT_KEYWORDS = [
   "remove me",
   "take me off",
 ] as const;
+
+// ---- Phase 2: AI Performance Reporting ----
+
+export const TEST_CATEGORY_LABELS: Record<string, string> = {
+  greeting: "Greeting",
+  price_lookup: "Price Lookup",
+  quote_generation: "Quote Generation",
+  branch_banking: "Branch & Banking",
+  sales_closing: "Sales Closing",
+  objection_handling: "Objection Handling",
+  handover: "Handover",
+  returning_customer: "Returning Customer",
+  adversarial_edge: "Adversarial / Edge",
+};
+
+export const TEST_CATEGORY_COLORS: Record<string, string> = {
+  greeting: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  price_lookup: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
+  quote_generation: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  branch_banking: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
+  sales_closing: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  objection_handling: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  handover: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  returning_customer: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+  adversarial_edge: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+};
+
+export const TEST_RUN_TYPE_LABELS: Record<string, string> = {
+  full: "Full Suite",
+  smoke: "Smoke Test",
+  category: "Category Run",
+  scenario: "Single Scenario",
+};
+
+// Order categories appear on the AI Performance dashboard
+export const TEST_CATEGORY_ORDER = [
+  "greeting",
+  "price_lookup",
+  "quote_generation",
+  "branch_banking",
+  "sales_closing",
+  "objection_handling",
+  "handover",
+  "returning_customer",
+  "adversarial_edge",
+] as const;
