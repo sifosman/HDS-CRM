@@ -1,9 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Paths that do not require authentication.
-const PUBLIC_PATHS = ["/login", "/_next", "/favicon.ico"];
-
 function isPublicPath(pathname: string) {
   if (pathname === "/login") return true;
   if (pathname.startsWith("/_next")) return true;
