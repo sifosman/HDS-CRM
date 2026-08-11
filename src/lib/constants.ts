@@ -42,7 +42,25 @@ export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
   carpenter: "Carpenter",
   bulk_buyer: "Bulk Buyer",
   retail: "Retail",
+  homeowner: "Homeowner",
+  diy: "DIY",
   unknown: "Unknown",
+};
+
+export const CUSTOMER_TYPE_COLORS: Record<string, string> = {
+  carpenter: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  bulk_buyer: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  retail: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
+  homeowner: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  diy: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
+  unknown: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+};
+
+export const CLASSIFICATION_SOURCE_LABELS: Record<string, string> = {
+  ai: "AI",
+  backfill: "Backfill",
+  manual: "Manual",
+  unknown: "—",
 };
 
 export const INTELLIGENCE_CATEGORY_LABELS: Record<string, string> = {
@@ -84,6 +102,59 @@ export const PIPELINE_STAGES = [
   "follow_up",
   "handover",
   "closed",
+] as const;
+
+export const HEALTH_STATUS_LABELS: Record<string, string> = {
+  healthy: "Healthy",
+  degraded: "Degraded",
+  down: "Down",
+  unknown: "Unknown",
+};
+
+export const HEALTH_STATUS_COLORS: Record<string, string> = {
+  healthy: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  degraded: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  down: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  unknown: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+};
+
+// Border/card accent colors for health cards
+export const HEALTH_STATUS_BORDER: Record<string, string> = {
+  healthy: "border-l-green-500",
+  degraded: "border-l-amber-500",
+  down: "border-l-red-500",
+  unknown: "border-l-gray-400",
+};
+
+export const HEALTH_COMPONENT_LABELS: Record<string, string> = {
+  n8n: "n8n Workflows",
+  vercel_quote_api: "Vercel Quote API",
+  supabase: "Supabase Database",
+  chatwoot: "Chatwoot Inbox",
+  meta_whatsapp: "Meta WhatsApp Business",
+  meta_access_token: "Meta Access Token",
+  meta_webhook: "Meta Webhook Subscription",
+};
+
+export const HEALTH_COMPONENT_DESCRIPTIONS: Record<string, string> = {
+  n8n: "Chatbot & intelligence workflows active, last execution status",
+  vercel_quote_api: "Quote engine API reachable, /api/optimizer/quote responding",
+  supabase: "Database REST reachable, ai_conversations row freshness",
+  chatwoot: "Chatwoot API reachable, inbox 2 responding for handovers",
+  meta_whatsapp: "Phone number status, quality rating, messaging limit tier",
+  meta_access_token: "WhatsApp Business access token expiry check",
+  meta_webhook: "Webhook subscription status for the WhatsApp Business Account",
+};
+
+// Order components appear on the /health page
+export const HEALTH_COMPONENT_ORDER = [
+  "n8n",
+  "vercel_quote_api",
+  "supabase",
+  "chatwoot",
+  "meta_whatsapp",
+  "meta_access_token",
+  "meta_webhook",
 ] as const;
 
 export function formatCurrency(value: number | null | undefined): string {
@@ -139,3 +210,93 @@ export function timeAgo(value: string | null | undefined): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return formatDate(value);
 }
+
+// ---- Phase 5: WhatsApp Templates & Broadcasts ----
+
+export const WA_TEMPLATE_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  pending: "Pending Review",
+  approved: "Approved",
+  rejected: "Rejected",
+  paused: "Paused",
+  disabled: "Disabled",
+};
+
+export const WA_TEMPLATE_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  pending: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  approved: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  rejected: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  paused: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  disabled: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+};
+
+export const WA_TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  marketing: "Marketing",
+  utility: "Utility",
+  authentication: "Authentication",
+};
+
+export const WA_TEMPLATE_LANGUAGES: { value: string; label: string }[] = [
+  { value: "en_ZA", label: "English (South Africa)" },
+  { value: "en", label: "English" },
+  { value: "af_ZA", label: "Afrikaans" },
+  { value: "zu_ZA", label: "Zulu" },
+  { value: "xh_ZA", label: "Xhosa" },
+];
+
+export const BROADCAST_CAMPAIGN_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  scheduled: "Scheduled",
+  sending: "Sending",
+  sent: "Sent",
+  failed: "Failed",
+  cancelled: "Cancelled",
+};
+
+export const BROADCAST_CAMPAIGN_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  sending: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  sent: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  failed: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  cancelled: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+};
+
+export const BROADCAST_SEGMENT_LABELS: Record<string, string> = {
+  lost_leads: "Lost Leads",
+  carpenters: "Carpenters",
+  bulk_buyers: "Bulk Buyers",
+  quoted_not_closed: "Quoted (Not Closed)",
+  custom: "Custom",
+};
+
+export const BROADCAST_RECIPIENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  sent: "Sent",
+  delivered: "Delivered",
+  read: "Read",
+  failed: "Failed",
+  replied: "Replied",
+};
+
+export const BROADCAST_RECIPIENT_STATUS_COLORS: Record<string, string> = {
+  pending: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  sent: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  delivered: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  read: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  failed: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  replied: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+};
+
+// Opt-out keywords the chatbot should detect (Phase 5 compliance)
+export const OPT_OUT_KEYWORDS = [
+  "stop",
+  "unsubscribe",
+  "opt out",
+  "opt-out",
+  "don't contact me",
+  "do not contact me",
+  "remove me",
+  "take me off",
+] as const;

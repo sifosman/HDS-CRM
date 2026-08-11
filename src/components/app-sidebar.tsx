@@ -8,6 +8,10 @@ import {
   BarChart3,
   Settings,
   Brain,
+  HeartPulse,
+  MessageSquare,
+  Megaphone,
+  Filter,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,10 +33,14 @@ import {
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Customers", href: "/customers", icon: Users },
+  { title: "Segments", href: "/segments", icon: Filter },
   { title: "Quotes", href: "/quotes", icon: FileText },
   { title: "Payments", href: "/payments", icon: CreditCard },
   { title: "Reports", href: "/reports", icon: BarChart3 },
   { title: "Intelligence", href: "/intelligence", icon: Brain },
+  { title: "System Health", href: "/health", icon: HeartPulse },
+  { title: "Templates", href: "/templates", icon: MessageSquare },
+  { title: "Broadcasts", href: "/broadcasts", icon: Megaphone },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 

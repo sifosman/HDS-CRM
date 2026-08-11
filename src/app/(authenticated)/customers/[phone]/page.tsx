@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { ConversationLog } from "@/components/conversation-log";
 import { SalesNotesEditor } from "@/components/sales-notes-editor";
+import { CustomerTypeEditor } from "@/components/customer-type-editor";
 import {
   getCustomerByPhone,
   getConversationsByPhone,
@@ -83,10 +84,11 @@ export default async function CustomerDetailPage({
             <CardTitle className="text-sm">Customer Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge variant="secondary">
-              {CUSTOMER_TYPE_LABELS[customer.customer_type || "unknown"] ||
-                "Unknown"}
-            </Badge>
+            <CustomerTypeEditor
+              phone={customer.phone_number}
+              initialType={customer.customer_type}
+              initialSource={customer.classification_source}
+            />
           </CardContent>
         </Card>
         <Card>

@@ -15,18 +15,27 @@ import {
 } from "@/components/ui/table";
 import { DonutChart, BranchBarChart } from "@/components/charts";
 import { KpiCard } from "@/components/kpi-card";
-import { getCustomers, getAllQuotes, getBranches } from "@/lib/queries";
+import {
+  getCustomers,
+  getAllQuotes,
+  getBranches,
+  getSegmentStats,
+  getCustomerTypeStats,
+} from "@/lib/queries";
 import {
   formatCurrency,
   CUSTOMER_TYPE_LABELS,
+  CUSTOMER_TYPE_COLORS,
 } from "@/lib/constants";
 import { FileText, DollarSign, Users, TrendingUp } from "lucide-react";
 
 export default async function ReportsPage() {
-  const [customers, quotes, branches] = await Promise.all([
+  const [customers, quotes, branches, segmentStats, typeStats] = await Promise.all([
     getCustomers(),
     getAllQuotes(),
     getBranches(),
+    getSegmentStats(),
+    getCustomerTypeStats(),
   ]);
 
   const now = new Date();
@@ -209,6 +218,92 @@ export default async function ReportsPage() {
                   </TableRow>
                 ));
               })()}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Customer Type Breakdown with Conversion */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer Type Segmentation</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Count</TableHead>
+                <TableHead className="text-right">Closed</TableHead>
+                <TableHead className="text-right">Conversion</TableHead>
+                <TableHead className="text-right">Quote Value</TableHead>
+                <TableHead>Classification Source</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {typeStats.map((stat) => (
+                <TableRow key={stat.type}>
+                  <TableCell>
+                    <Badge className={CUSTOMER_TYPE_COLORS[stat.type] || CUSTOMER_TYPE_COLORS.unknown}>
+                      {CUSTOMER_TYPE_LABELS[stat.type] || stat.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{stat.count}</TableCell>
+                  <TableCell className="text-right">{stat.closed}</TableCell>
+                  <TableCell className="text-right">{stat.conversionRate}%</TableCell>
+                  <TableCell className="text-right">{formatCurrency(stat.totalQuoteValue)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    AI: {stat.bySource.ai} · Backfill: {stat.bySource.backfill} · Manual: {stat.bySource.manual} · Unknown: {stat.bySource.unknown}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Saved Segment Performance */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Saved Segment Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Segment</TableHead>
+                <TableHead className="text-right">Recipients</TableHead>
+                <TableHead className="text-right">Closed</TableHead>
+                <TableHead className="text-right">Lost</TableHead>
+                <TableHead className="text-right">Conversion</TableHead>
+                <TableHead className="text-right">Quote Value</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {segmentStats.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    No saved segments. Create segments on the Segments page.
+                  </TableCell>
+                </TableRow>
+              )}
+              {segmentStats.map((stat) => (
+                <TableRow key={stat.id}>
+                  <TableCell className="font-medium">
+                    {stat.name}
+                    {stat.description && (
+                      <span className="block text-xs text-muted-foreground font-normal">
+                        {stat.description}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{stat.count}</TableCell>
+                  <TableCell className="text-right">{stat.closed}</TableCell>
+                  <TableCell className="text-right">{stat.lost}</TableCell>
+                  <TableCell className="text-right">{stat.conversionRate}%</TableCell>
+                  <TableCell className="text-right">{formatCurrency(stat.totalQuoteValue)}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>

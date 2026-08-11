@@ -31,6 +31,7 @@ import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
   CUSTOMER_TYPE_LABELS,
+  CUSTOMER_TYPE_COLORS,
   formatCurrency,
   formatDate,
   formatPhone,
@@ -40,6 +41,19 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
+
+  // Extract unique cities for the filter dropdown
+  const cities = useMemo(() => {
+    const unique = Array.from(
+      new Set(
+        customers
+          .map((c) => c.city)
+          .filter((c): c is string => c !== null && c.trim() !== "")
+      )
+    ).sort();
+    return unique;
+  }, [customers]);
 
   const filtered = useMemo(() => {
     return customers.filter((c) => {
@@ -51,9 +65,11 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
         statusFilter === "all" || c.lead_status === statusFilter;
       const matchesType =
         typeFilter === "all" || c.customer_type === typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesCity =
+        cityFilter === "all" || c.city === cityFilter;
+      return matchesSearch && matchesStatus && matchesType && matchesCity;
     });
-  }, [customers, search, statusFilter, typeFilter]);
+  }, [customers, search, statusFilter, typeFilter, cityFilter]);
 
   return (
     <div className="space-y-4">
@@ -93,6 +109,21 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
             ))}
           </SelectContent>
         </Select>
+        {cities.length > 0 && (
+          <Select value={cityFilter} onValueChange={(v) => setCityFilter(v ?? "all")}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue placeholder="City" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {cities.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <Card>
@@ -132,7 +163,7 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
                     {formatPhone(customer.phone_number)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
+                    <Badge className={CUSTOMER_TYPE_COLORS[customer.customer_type || "unknown"] || CUSTOMER_TYPE_COLORS.unknown}>
                       {CUSTOMER_TYPE_LABELS[customer.customer_type || "unknown"] ||
                         "Unknown"}
                     </Badge>

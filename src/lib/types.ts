@@ -2,7 +2,16 @@ export type CustomerProfile = {
   id: string;
   phone_number: string;
   name: string | null;
-  customer_type: "carpenter" | "bulk_buyer" | "retail" | "unknown" | null;
+  customer_type:
+    | "carpenter"
+    | "bulk_buyer"
+    | "retail"
+    | "homeowner"
+    | "diy"
+    | "unknown"
+    | null;
+  classification_source: "ai" | "backfill" | "manual" | "unknown" | null;
+  classified_at: string | null;
   email: string | null;
   city: string | null;
   total_conversations: number;
@@ -37,6 +46,9 @@ export type CustomerProfile = {
   sale_outcome: "pending" | "won" | "lost" | "follow_up" | null;
   follow_up_needed: boolean;
   follow_up_date: string | null;
+  do_not_contact: boolean;
+  do_not_contact_reason: string | null;
+  do_not_contact_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -142,4 +154,170 @@ export type Invoice = {
   total: number | null;
   status: string | null;
   created_at: string;
+};
+
+export type Segment = {
+  id: string;
+  name: string;
+  description: string | null;
+  filter_rules: SegmentFilterRules;
+  recipient_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SegmentFilterRules = {
+  customer_type?: string[];
+  lead_status?: string[];
+  city?: string;
+  preferred_branch?: string;
+  min_total_quote_value?: number;
+  min_total_quotes?: number;
+  quoted_within_days?: number;
+  interacted_within_days?: number;
+  has_objections?: boolean;
+  sale_outcome?: string[];
+  payment_status?: string[];
+};
+
+// ---- Phase 5: WhatsApp Templates & Broadcasts ----
+
+export type WaTemplateStatus =
+  | "draft"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "paused"
+  | "disabled";
+
+export type WaTemplateCategory =
+  | "marketing"
+  | "utility"
+  | "authentication";
+
+export type WaTemplateButton = {
+  type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER";
+  text: string;
+  url?: string;
+  phone_number?: string;
+};
+
+export type WaTemplate = {
+  id: string;
+  name: string;
+  category: WaTemplateCategory;
+  language: string;
+  header_type: string | null;
+  header_text: string | null;
+  body_text: string;
+  footer: string | null;
+  buttons: WaTemplateButton[] | null;
+  components: Record<string, unknown>[] | null;
+  variable_count: number;
+  meta_template_id: string | null;
+  status: WaTemplateStatus;
+  rejection_reason: string | null;
+  meta_created_at: string | null;
+  last_synced_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BroadcastSegment = {
+  id: string;
+  name: string;
+  description: string | null;
+  segment_type:
+    | "lost_leads"
+    | "carpenters"
+    | "bulk_buyers"
+    | "quoted_not_closed"
+    | "custom";
+  query_condition: Record<string, unknown>;
+  recipient_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BroadcastCampaignStatus =
+  | "draft"
+  | "scheduled"
+  | "sending"
+  | "sent"
+  | "failed"
+  | "cancelled";
+
+export type BroadcastCampaign = {
+  id: string;
+  segment_id: string | null;
+  template_id: string | null;
+  name: string;
+  message_template: string | null;
+  status: BroadcastCampaignStatus;
+  total_recipients: number;
+  sent_count: number;
+  failed_count: number;
+  delivered_count: number;
+  read_count: number;
+  replied_count: number;
+  scheduled_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  test_mode: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BroadcastRecipientStatus =
+  | "pending"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "failed"
+  | "replied";
+
+export type BroadcastRecipient = {
+  id: string;
+  campaign_id: string;
+  phone: string;
+  customer_name: string | null;
+  status: BroadcastRecipientStatus;
+  wa_message_id: string | null;
+  error_code: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  replied_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HealthStatus = "healthy" | "degraded" | "down" | "unknown";
+
+export type HealthCheck = {
+  id: string;
+  component: string;
+  check_name: string;
+  status: HealthStatus;
+  latency_ms: number | null;
+  message: string | null;
+  details: Record<string, unknown> | null;
+  checked_at: string;
+};
+
+export type HealthComponentSummary = {
+  component: string;
+  status: HealthStatus;
+  latency_ms: number | null;
+  message: string | null;
+  last_check_at: string;
+  details: Record<string, unknown> | null;
+  uptime_30d: number;
+  total_checks_30d: number;
+  healthy_checks_30d: number;
+  degraded_checks_30d: number;
+  down_checks_30d: number;
 };
