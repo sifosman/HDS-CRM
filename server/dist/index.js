@@ -27,6 +27,7 @@ const email_test_routes_1 = __importDefault(require("./routes/email-test.routes"
 const email_test_hardcoded_routes_1 = __importDefault(require("./routes/email-test-hardcoded.routes"));
 const test_email_routes_1 = __importDefault(require("./routes/test-email.routes"));
 const test_routes_1 = __importDefault(require("./routes/test.routes"));
+const sketch_routes_1 = __importDefault(require("./routes/sketch.routes"));
 // Load environment variables
 dotenv_1.default.config();
 // Create Express app
@@ -62,6 +63,7 @@ app.use('/api/email', email_test_routes_1.default);
 app.use('/api/email-hardcoded', email_test_hardcoded_routes_1.default);
 app.use('/api/test-email', test_email_routes_1.default);
 app.use('/api/test', test_routes_1.default);
+app.use('/api/sketch', sketch_routes_1.default);
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {
     res.status(200).json({
