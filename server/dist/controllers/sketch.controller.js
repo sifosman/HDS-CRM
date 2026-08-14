@@ -34,18 +34,6 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.renderSketch = void 0;
-const supabase_js_1 = require("@supabase/supabase-js");
-// Initialize Supabase client for storage uploads (lazy init)
-let supabaseClient = null;
-function getSupabase() {
-    if (!supabaseClient) {
-        const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
-        const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-        supabaseClient = (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey);
-    }
-    return supabaseClient;
-}
-const BUCKET = 'hdsquotes';
 /**
  * POST /api/sketch/render
  * Body: { svg: string }
@@ -58,49 +46,82 @@ const renderSketch = async (req, res) => {
             res.status(400).json({ success: false, error: 'SVG string is required in request body' });
             return;
         }
-        // Validate SVG looks reasonable (basic check)
         if (!svg.includes('<svg') || !svg.includes('</svg>')) {
             res.status(400).json({ success: false, error: 'Invalid SVG: must contain <svg> tags' });
             return;
         }
-        // Dynamic import of sharp (avoids loading native module at startup)
-        const sharp = (await Promise.resolve().then(() => __importStar(require('sharp')))).default;
-        // Render SVG to PNG
-        const pngBuffer = await sharp(Buffer.from(svg))
-            .png()
-            .toBuffer();
-        // Generate unique filename
+        // Try sharp with dynamic import
+        let sharpModule;
+        try {
+            sharpModule = await Promise.resolve().then(() => __importStar(require('sharp')));
+        }
+        catch (importErr) {
+            res.status(500).json({
+                success: false,
+                error: 'sharp module failed to load: ' + (importErr.message || String(importErr)),
+                step: 'import'
+            });
+            return;
+        }
+        const sharp = sharpModule.default || sharpModule;
+        let pngBuffer;
+        try {
+            pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+        }
+        catch (renderErr) {
+            res.status(500).json({
+                success: false,
+                error: 'sharp render failed: ' + (renderErr.message || String(renderErr)),
+                step: 'render'
+            });
+            return;
+        }
+        // Upload to Supabase
+        const { createClient } = await Promise.resolve().then(() => __importStar(require('@supabase/supabase-js')));
+        const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
+        const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+        if (!supabaseKey) {
+            res.status(500).json({
+                success: false,
+                error: 'SUPABASE_ANON_KEY not set',
+                step: 'supabase_init'
+            });
+            return;
+        }
+        const supabase = createClient(supabaseUrl, supabaseKey);
         const timestamp = Date.now();
         const fileName = `sketch-${timestamp}.png`;
-        // Upload to Supabase Storage
-        const supabase = getSupabase();
         const { error: uploadError } = await supabase.storage
-            .from(BUCKET)
+            .from('hdsquotes')
             .upload(fileName, pngBuffer, {
             contentType: 'image/png',
             upsert: true,
         });
         if (uploadError) {
-            console.error('Error uploading sketch to Supabase Storage:', uploadError);
-            res.status(500).json({ success: false, error: 'Failed to upload sketch: ' + uploadError.message });
+            res.status(500).json({
+                success: false,
+                error: 'Upload failed: ' + uploadError.message,
+                step: 'upload'
+            });
             return;
         }
-        // Get public URL
         const { data: urlData } = supabase.storage
-            .from(BUCKET)
+            .from('hdsquotes')
             .getPublicUrl(fileName);
-        const publicUrl = urlData.publicUrl;
-        console.log(`Sketch rendered and uploaded: ${fileName} (${pngBuffer.length} bytes)`);
         res.status(200).json({
             success: true,
-            url: publicUrl,
+            url: urlData.publicUrl,
             fileName: fileName,
             size: pngBuffer.length,
         });
     }
     catch (error) {
         console.error('Sketch render error:', error);
-        res.status(500).json({ success: false, error: error.message || 'Failed to render sketch' });
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to render sketch',
+            step: 'unknown'
+        });
     }
 };
 exports.renderSketch = renderSketch;
