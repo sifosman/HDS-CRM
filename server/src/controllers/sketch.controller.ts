@@ -1,11 +1,16 @@
 import { Request, Response } from 'express';
-import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client for storage uploads
-const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Initialize Supabase client for storage uploads (lazy init)
+let supabaseClient: any = null;
+function getSupabase() {
+  if (!supabaseClient) {
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
+    const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+    supabaseClient = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabaseClient;
+}
 
 const BUCKET = 'hdsquotes';
 
@@ -29,7 +34,10 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Render SVG to PNG using sharp
+    // Dynamic import of sharp (avoids loading native module at startup)
+    const sharp = (await import('sharp')).default;
+
+    // Render SVG to PNG
     const pngBuffer = await sharp(Buffer.from(svg))
       .png()
       .toBuffer();
@@ -38,7 +46,8 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
     const timestamp = Date.now();
     const fileName = `sketch-${timestamp}.png`;
 
-    // Upload to Supabase Storage (hdsquotes bucket - already public)
+    // Upload to Supabase Storage
+    const supabase = getSupabase();
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
       .upload(fileName, pngBuffer, {

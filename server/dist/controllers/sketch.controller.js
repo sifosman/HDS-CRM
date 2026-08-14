@@ -1,15 +1,50 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.renderSketch = void 0;
-const sharp_1 = __importDefault(require("sharp"));
 const supabase_js_1 = require("@supabase/supabase-js");
-// Initialize Supabase client for storage uploads
-const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey);
+// Initialize Supabase client for storage uploads (lazy init)
+let supabaseClient = null;
+function getSupabase() {
+    if (!supabaseClient) {
+        const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
+        const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+        supabaseClient = (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey);
+    }
+    return supabaseClient;
+}
 const BUCKET = 'hdsquotes';
 /**
  * POST /api/sketch/render
@@ -28,14 +63,17 @@ const renderSketch = async (req, res) => {
             res.status(400).json({ success: false, error: 'Invalid SVG: must contain <svg> tags' });
             return;
         }
-        // Render SVG to PNG using sharp
-        const pngBuffer = await (0, sharp_1.default)(Buffer.from(svg))
+        // Dynamic import of sharp (avoids loading native module at startup)
+        const sharp = (await Promise.resolve().then(() => __importStar(require('sharp')))).default;
+        // Render SVG to PNG
+        const pngBuffer = await sharp(Buffer.from(svg))
             .png()
             .toBuffer();
         // Generate unique filename
         const timestamp = Date.now();
         const fileName = `sketch-${timestamp}.png`;
-        // Upload to Supabase Storage (hdsquotes bucket - already public)
+        // Upload to Supabase Storage
+        const supabase = getSupabase();
         const { error: uploadError } = await supabase.storage
             .from(BUCKET)
             .upload(fileName, pngBuffer, {
