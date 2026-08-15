@@ -389,3 +389,53 @@ export type AiQualityMetrics = {
   details: Record<string, unknown> | null;
   created_at: string;
 };
+
+// ---- Phase 2b: Live Conversation Quality Tracking ----
+
+export type ConversationQualityFlag =
+  | "greeted"
+  | "quoted"
+  | "close_attempted"
+  | "objection_handled"
+  | "handed_over"
+  | "fallback_used"
+  | "no_reply"
+  | "image_processed";
+
+export type ConversationSummary = {
+  phone_number: string;
+  customer_name: string | null;
+  customer_type: string | null;
+  message_count: number;
+  user_message_count: number;
+  assistant_message_count: number;
+  first_message_at: string;
+  last_message_at: string;
+  lead_status: string | null;
+  quote_id: string | null;
+  quote_total: number | null;
+  quality_flags: ConversationQualityFlag[];
+  quality_score: number; // 0-100
+  tool_call_count: number;
+  has_fallback: boolean;
+  response_latency_ms: number | null; // time between first user msg and first assistant reply
+};
+
+export type AiMonitorAlert = {
+  id: string;
+  report_date: string;
+  category: string;
+  insight_summary: string;
+  details: {
+    issue_type?: string;
+    affected_phones?: string[];
+    affected_count?: number;
+    suggested_fix?: string;
+    severity_detail?: string;
+    [key: string]: unknown;
+  };
+  severity: "info" | "warning" | "critical";
+  conversation_count: number;
+  source_phones: string[];
+  created_at: string;
+};

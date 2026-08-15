@@ -19,6 +19,9 @@ import type {
   AiTestRun,
   AiTestRunSummary,
   AiQualityMetrics,
+  ConversationSummary,
+  ConversationQualityFlag,
+  AiMonitorAlert,
 } from "@/lib/types";
 import { HEALTH_COMPONENT_ORDER, TEST_CATEGORY_ORDER } from "@/lib/constants";
 
@@ -1402,4 +1405,236 @@ export async function getAiPerformanceScore(): Promise<AiPerformanceScore> {
     hasProductionData,
     components,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2b: Live Conversation Quality Tracking
+// ---------------------------------------------------------------------------
+
+/**
+ * Get recent conversations grouped by phone number with quality flags.
+ * Each row represents one customer's conversation thread with quality scoring.
+ */
+export async function getRecentConversationSummaries(
+  limit = 20
+): Promise<ConversationSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_conversations")
+    .select(
+      "id, phone_number, sender_name, role, message_text, lead_status, customer_type, quote_id, quote_total, tool_calls, tool_results, conversation_metadata, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(500); // fetch recent batch, group in memory
+
+  if (error) throw error;
+
+  const rows = (data || []) as Array<{
+    id: string;
+    phone_number: string;
+    sender_name: string | null;
+    role: string | null;
+    message_text: string | null;
+    lead_status: string | null;
+    customer_type: string | null;
+    quote_id: string | null;
+    quote_total: number | null;
+    tool_calls: Record<string, unknown> | null;
+    tool_results: Record<string, unknown> | null;
+    conversation_metadata: Record<string, unknown> | null;
+    created_at: string;
+  }>;
+
+  // Group by phone_number
+  const byPhone = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const arr = byPhone.get(r.phone_number) || [];
+    arr.push(r);
+    byPhone.set(r.phone_number, arr);
+  }
+
+  const summaries: ConversationSummary[] = [];
+
+  for (const [phone, msgs] of byPhone) {
+    // Sort by created_at ascending
+    msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const userMsgs = msgs.filter((m) => m.role === "user");
+    const assistantMsgs = msgs.filter((m) => m.role === "assistant");
+    const toolMsgs = msgs.filter((m) => m.role === "tool");
+
+    const firstMsg = msgs[0];
+    const lastMsg = msgs[msgs.length - 1];
+    const firstUserMsg = userMsgs[0];
+    const firstAssistantReply = assistantMsgs[0];
+
+    // Compute response latency (first user msg → first assistant reply)
+    let responseLatencyMs: number | null = null;
+    if (firstUserMsg && firstAssistantReply) {
+      responseLatencyMs =
+        new Date(firstAssistantReply.created_at).getTime() -
+        new Date(firstUserMsg.created_at).getTime();
+    }
+
+    // Quality flags
+    const flags: ConversationQualityFlag[] = [];
+    const flagsSet = new Set<ConversationQualityFlag>();
+
+    const addFlag = (f: ConversationQualityFlag) => {
+      if (!flagsSet.has(f)) {
+        flagsSet.add(f);
+        flags.push(f);
+      }
+    };
+
+    // Check if greeted (first assistant reply starts with greeting)
+    if (firstAssistantReply) {
+      const text = (firstAssistantReply.message_text || "").toLowerCase();
+      if (/^(hi|hey|hello|welcome|good morning|good afternoon|good evening)/.test(text)) {
+        addFlag("greeted");
+      }
+    }
+
+    // Check if no reply
+    if (userMsgs.length > 0 && assistantMsgs.length === 0) {
+      addFlag("no_reply");
+    }
+
+    // Check if quoted
+    const hasQuote = msgs.some(
+      (m) => m.quote_id || m.quote_total || (m.tool_calls && JSON.stringify(m.tool_calls).toLowerCase().includes("generate_quote"))
+    );
+    if (hasQuote) addFlag("quoted");
+
+    // Check if close attempted
+    const hasCloseAttempt = msgs.some((m) => {
+      if (m.conversation_metadata && (m.conversation_metadata.close_attempt || m.conversation_metadata.close_attempt_count)) {
+        return true;
+      }
+      if (m.lead_status === "closing" || m.lead_status === "closed") return true;
+      const text = (m.message_text || "").toLowerCase();
+      return /shall i|can i|would you like|ready to|process.*order|confirm.*order|place.*order|go ahead/.test(text) && m.role === "assistant";
+    });
+    if (hasCloseAttempt) addFlag("close_attempted");
+
+    // Check if objection handled
+    const hasObjection = msgs.some((m) => {
+      if (m.lead_status === "objection") return true;
+      if (m.tool_results && JSON.stringify(m.tool_results).toLowerCase().includes("objection")) return true;
+      return false;
+    });
+    if (hasObjection) addFlag("objection_handled");
+
+    // Check if handed over
+    const hasHandover = msgs.some(
+      (m) => m.lead_status === "handover" || (m.tool_calls && JSON.stringify(m.tool_calls).toLowerCase().includes("handover"))
+    );
+    if (hasHandover) addFlag("handed_over");
+
+    // Check if fallback was used
+    const hasFallback = msgs.some((m) => {
+      if (m.conversation_metadata && m.conversation_metadata.fallback) return true;
+      const text = (m.message_text || "").toLowerCase();
+      return /having trouble|just a sec|trouble generating|moment.*help|shortly/.test(text) && m.role === "assistant";
+    });
+    if (hasFallback) addFlag("fallback_used");
+
+    // Check if image was processed
+    const hasImage = msgs.some((m) => {
+      if (m.conversation_metadata && m.conversation_metadata.has_image) return true;
+      if (m.tool_calls && JSON.stringify(m.tool_calls).toLowerCase().includes("image")) return true;
+      return false;
+    });
+    if (hasImage) addFlag("image_processed");
+
+    // Compute quality score (0-100)
+    let score = 0;
+    if (flagsSet.has("greeted")) score += 15;
+    if (!flagsSet.has("no_reply")) score += 20;
+    if (flagsSet.has("quoted")) score += 25;
+    if (flagsSet.has("close_attempted")) score += 20;
+    if (flagsSet.has("objection_handled")) score += 10;
+    if (!flagsSet.has("fallback_used")) score += 10;
+    // Bonus for response speed
+    if (responseLatencyMs !== null && responseLatencyMs < 15000) score += 5;
+    else if (responseLatencyMs !== null && responseLatencyMs < 30000) score += 2;
+
+    const customerName = firstMsg?.sender_name || null;
+    const lastLeadStatus = lastMsg?.lead_status || null;
+    const quoteId = msgs.find((m) => m.quote_id)?.quote_id || null;
+    const quoteTotal = msgs.find((m) => m.quote_total)?.quote_total || null;
+    const toolCallCount = msgs.filter((m) => m.tool_calls).length;
+
+    summaries.push({
+      phone_number: phone,
+      customer_name: customerName,
+      customer_type: lastMsg?.customer_type || null,
+      message_count: msgs.length,
+      user_message_count: userMsgs.length,
+      assistant_message_count: assistantMsgs.length,
+      first_message_at: firstMsg?.created_at || "",
+      last_message_at: lastMsg?.created_at || "",
+      lead_status: lastLeadStatus,
+      quote_id: quoteId,
+      quote_total: quoteTotal ? Number(quoteTotal) : null,
+      quality_flags: flags,
+      quality_score: Math.min(100, score),
+      tool_call_count: toolCallCount,
+      has_fallback: flagsSet.has("fallback_used"),
+      response_latency_ms: responseLatencyMs,
+    });
+  }
+
+  // Sort by last message time descending, take top N
+  summaries.sort(
+    (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+  );
+
+  return summaries.slice(0, limit);
+}
+
+/**
+ * Get AI monitor alerts from intelligence_reports where category = 'ai_quality'.
+ */
+export async function getAiMonitorAlerts(
+  days = 30
+): Promise<AiMonitorAlert[]> {
+  const supabase = await createClient();
+  const dateFrom = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  ).toISOString();
+  const { data, error } = await supabase
+    .from("intelligence_reports")
+    .select("*")
+    .eq("category", "ai_quality")
+    .gte("report_date", dateFrom.split("T")[0])
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return (data || []) as AiMonitorAlert[];
+}
+
+/**
+ * Get conversation quality trend from ai_quality_metrics.
+ * Returns daily snapshots for charting.
+ */
+export async function getAiQualityTrend(
+  days = 30
+): Promise<AiQualityMetrics[]> {
+  const supabase = await createClient();
+  const dateFrom = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  )
+    .toISOString()
+    .split("T")[0];
+
+  const { data, error } = await supabase
+    .from("ai_quality_metrics")
+    .select("*")
+    .gte("metric_date", dateFrom)
+    .order("metric_date", { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as AiQualityMetrics[];
 }

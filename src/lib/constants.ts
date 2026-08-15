@@ -346,3 +346,34 @@ export const TEST_CATEGORY_ORDER = [
   "returning_customer",
   "adversarial_edge",
 ] as const;
+
+// ---- Phase 2b: Conversation Quality Flags ----
+
+export const QUALITY_FLAG_LABELS: Record<string, string> = {
+  greeted: "Greeted",
+  quoted: "Quoted",
+  close_attempted: "Close Attempted",
+  objection_handled: "Objection Handled",
+  handed_over: "Handed Over",
+  fallback_used: "Fallback Used",
+  no_reply: "No Reply",
+  image_processed: "Image Processed",
+};
+
+export const QUALITY_FLAG_COLORS: Record<string, string> = {
+  greeted: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  quoted: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  close_attempted: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  objection_handled: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  handed_over: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  fallback_used: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  no_reply: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  image_processed: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
+};
+
+export const QUALITY_SCORE_LABELS: Record<string, string> = {
+  excellent: "Excellent (80+)",
+  good: "Good (60-79)",
+  needs_work: "Needs Work (40-59)",
+  poor: "Poor (<40)",
+};

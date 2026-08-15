@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -20,6 +21,7 @@ import {
   PassRateTrendChart,
   CategoryPassRateChart,
   LatencyDistributionChart,
+  QualityTrendChart,
 } from "@/components/charts";
 import {
   getAiPerformanceScore,
@@ -30,11 +32,21 @@ import {
   getRecentAiTestFailures,
   getAiProductionStats,
   getAiQualityMetrics,
+  getRecentConversationSummaries,
+  getAiMonitorAlerts,
+  getAiQualityTrend,
 } from "@/lib/queries";
 import {
   TEST_CATEGORY_LABELS,
   TEST_CATEGORY_COLORS,
   TEST_RUN_TYPE_LABELS,
+  QUALITY_FLAG_LABELS,
+  QUALITY_FLAG_COLORS,
+  LEAD_STATUS_LABELS,
+  LEAD_STATUS_COLORS,
+  formatPhone,
+  timeAgo,
+  formatCurrency,
 } from "@/lib/constants";
 import {
   Bot,
@@ -47,6 +59,9 @@ import {
   AlertTriangle,
   Activity,
   Zap,
+  Eye,
+  Lightbulb,
+  Wrench,
 } from "lucide-react";
 
 const GRADE_COLORS: Record<string, string> = {
@@ -75,6 +90,9 @@ export default async function AiReportsPage() {
     recentFailures,
     prodStats,
     qualityMetrics,
+    conversationSummaries,
+    monitorAlerts,
+    qualityTrend,
   ] = await Promise.all([
     getAiPerformanceScore(),
     getAiTestRunSummaries(15),
@@ -84,6 +102,9 @@ export default async function AiReportsPage() {
     getRecentAiTestFailures(15),
     getAiProductionStats(),
     getAiQualityMetrics(30),
+    getRecentConversationSummaries(20),
+    getAiMonitorAlerts(30),
+    getAiQualityTrend(30),
   ]);
 
   const hasTestData = score.hasTestData;
@@ -560,6 +581,298 @@ export default async function AiReportsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* AI Monitor Alerts */}
+      {monitorAlerts.length > 0 && (
+        <div>
+          <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
+            <Lightbulb className="h-5 w-5" />
+            AI Monitor Alerts
+            <span className="text-sm font-normal text-muted-foreground">
+              ({monitorAlerts.length} in last 30 days)
+            </span>
+          </h2>
+          <div className="space-y-3">
+            {monitorAlerts.slice(0, 10).map((alert) => (
+              <Card
+                key={alert.id}
+                className={
+                  alert.severity === "critical"
+                    ? "border-l-4 border-l-red-500"
+                    : alert.severity === "warning"
+                      ? "border-l-4 border-l-amber-500"
+                      : "border-l-4 border-l-blue-500"
+                }
+              >
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={
+                            alert.severity === "critical"
+                              ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                              : alert.severity === "warning"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                          }
+                        >
+                          {alert.severity}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(alert.created_at).toLocaleString("en-ZA", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {alert.details.affected_count && (
+                          <span className="text-xs text-muted-foreground">
+                            · {alert.details.affected_count} conversation(s) affected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">{alert.insight_summary}</p>
+                      {alert.details.suggested_fix && (
+                        <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-muted/50 border">
+                          <Wrench className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                              Suggested Fix
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {alert.details.suggested_fix as string}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quality Trend Charts (from ai_quality_metrics) */}
+      {qualityTrend.length > 0 && (
+        <div>
+          <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Quality Trends (Daily Snapshots)
+          </h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Response Rate Trend</CardTitle>
+                <CardDescription>% of conversations that got a reply</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QualityTrendChart
+                  data={qualityTrend.map((m) => ({
+                    ...m,
+                    response_rate:
+                      m.total_conversations > 0
+                        ? Math.round(
+                            ((m.total_conversations - m.no_reply_count) /
+                              m.total_conversations) *
+                              100
+                          )
+                        : 0,
+                  }))}
+                  dataKey="response_rate"
+                  label="Response Rate %"
+                  color="var(--color-chart-2)"
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Tool Success Rate Trend</CardTitle>
+                <CardDescription>% of tool calls that succeeded</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QualityTrendChart
+                  data={qualityTrend.map((m) => ({
+                    ...m,
+                    tool_success_rate:
+                      m.tool_call_count > 0
+                        ? Math.round(
+                            (m.tool_success_count / m.tool_call_count) * 100
+                          )
+                        : 0,
+                  }))}
+                  dataKey="tool_success_rate"
+                  label="Tool Success %"
+                  color="var(--color-chart-1)"
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Fallback Rate Trend</CardTitle>
+                <CardDescription>% of conversations using fallback</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QualityTrendChart
+                  data={qualityTrend.map((m) => ({
+                    ...m,
+                    fallback_rate:
+                      m.total_conversations > 0
+                        ? Math.round(
+                            (m.fallback_count / m.total_conversations) * 100
+                          )
+                        : 0,
+                  }))}
+                  dataKey="fallback_rate"
+                  label="Fallback Rate %"
+                  color="var(--color-chart-5)"
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Avg Response Latency Trend</CardTitle>
+                <CardDescription>Seconds to first reply</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QualityTrendChart
+                  data={qualityTrend.map((m) => ({
+                    ...m,
+                    avg_latency_s: m.avg_response_latency_ms
+                      ? Math.round(m.avg_response_latency_ms / 1000)
+                      : 0,
+                  }))}
+                  dataKey="avg_latency_s"
+                  label="Avg Latency (s)"
+                  color="var(--color-chart-4)"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Conversations Feed with Quality Flags */}
+      <div>
+        <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Recent Conversations
+          <span className="text-sm font-normal text-muted-foreground">
+            (live quality scoring)
+          </span>
+        </h2>
+        {conversationSummaries.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-medium text-lg mb-1">No conversations yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Live conversation data will appear here once the AI bot starts
+                chatting with customers.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead className="text-right">Messages</TableHead>
+                    <TableHead>Quality Flags</TableHead>
+                    <TableHead className="text-right">Score</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Latency</TableHead>
+                    <TableHead>Last Active</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {conversationSummaries.map((conv) => (
+                    <TableRow key={conv.phone_number}>
+                      <TableCell>
+                        <div className="font-medium">
+                          {conv.customer_name || formatPhone(conv.phone_number)}
+                        </div>
+                        {conv.customer_name && (
+                          <div className="text-xs text-muted-foreground">
+                            {formatPhone(conv.phone_number)}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm">{conv.message_count}</span>
+                        <span className="text-xs text-muted-foreground block">
+                          {conv.user_message_count}u / {conv.assistant_message_count}a
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[280px]">
+                          {conv.quality_flags.length === 0 && (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                          {conv.quality_flags.map((flag) => (
+                            <Badge
+                              key={flag}
+                              className={`text-xs ${QUALITY_FLAG_COLORS[flag] || ""}`}
+                            >
+                              {QUALITY_FLAG_LABELS[flag] || flag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span
+                          className={`text-lg font-bold ${
+                            conv.quality_score >= 80
+                              ? "text-green-600 dark:text-green-400"
+                              : conv.quality_score >= 60
+                                ? "text-blue-600 dark:text-blue-400"
+                                : conv.quality_score >= 40
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {conv.quality_score}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {conv.lead_status && (
+                          <Badge className={LEAD_STATUS_COLORS[conv.lead_status] || ""}>
+                            {LEAD_STATUS_LABELS[conv.lead_status] || conv.lead_status}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {conv.response_latency_ms !== null
+                          ? `${(conv.response_latency_ms / 1000).toFixed(1)}s`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {timeAgo(conv.last_message_at)}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/reports/ai-performance/conversations/${encodeURIComponent(conv.phone_number)}`}
+                        >
+                          <button className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                            <Eye className="h-3 w-3" />
+                            View
+                          </button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Period summary footer */}
       {prodStats.periodStart && prodStats.periodEnd && (
