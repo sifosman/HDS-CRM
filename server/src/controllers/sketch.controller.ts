@@ -3,7 +3,8 @@ import { Request, Response } from 'express';
 /**
  * POST /api/sketch/render
  * Body: { svg: string }
- * Renders SVG to PNG using sharp, uploads to Supabase Storage, returns public URL.
+ * Renders SVG to PNG using @resvg/resvg-js (WASM-based, Vercel-safe),
+ * uploads to Supabase Storage, returns public URL.
  */
 export const renderSketch = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -19,29 +20,38 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Try sharp with dynamic import
-    let sharpModule: any;
+    // Sanitize SVG: escape raw & that aren't part of an entity (e.g. "HDS Cut & Edge")
+    // resvg uses strict XML parsing, unlike sharp which was lenient.
+    const sanitizedSvg = svg.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+
+    // resvg-js is a pure-Rust/WASM SVG renderer with no native binaries,
+    // so it works reliably in Vercel serverless functions (unlike sharp).
+    let Resvg: any;
     try {
-      sharpModule = await import('sharp');
+      const resvgModule = await import('@resvg/resvg-js');
+      Resvg = resvgModule.Resvg || resvgModule.default?.Resvg || resvgModule.default;
     } catch (importErr: any) {
-      res.status(500).json({ 
-        success: false, 
-        error: 'sharp module failed to load: ' + (importErr.message || String(importErr)),
-        step: 'import'
+      res.status(500).json({
+        success: false,
+        error: 'resvg module failed to load: ' + (importErr.message || String(importErr)),
+        step: 'import',
       });
       return;
     }
 
-    const sharp = sharpModule.default || sharpModule;
-
     let pngBuffer: Buffer;
     try {
-      pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+      const renderer = new Resvg(sanitizedSvg, {
+        fitTo: { mode: 'width', value: 1600 },
+        background: 'white',
+      });
+      const rendered = renderer.render();
+      pngBuffer = rendered.asPng() as Buffer;
     } catch (renderErr: any) {
-      res.status(500).json({ 
-        success: false, 
-        error: 'sharp render failed: ' + (renderErr.message || String(renderErr)),
-        step: 'render'
+      res.status(500).json({
+        success: false,
+        error: 'resvg render failed: ' + (renderErr.message || String(renderErr)),
+        step: 'render',
       });
       return;
     }
@@ -50,12 +60,12 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
     const { createClient } = await import('@supabase/supabase-js');
     const supabaseUrl = process.env.SUPABASE_URL || 'https://xzsibbbghotreolzwnyk.supabase.co';
     const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-    
+
     if (!supabaseKey) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: 'SUPABASE_ANON_KEY not set',
-        step: 'supabase_init'
+        step: 'supabase_init',
       });
       return;
     }
@@ -72,10 +82,10 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
       });
 
     if (uploadError) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: 'Upload failed: ' + uploadError.message,
-        step: 'upload'
+        step: 'upload',
       });
       return;
     }
@@ -92,10 +102,10 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
     });
   } catch (error: any) {
     console.error('Sketch render error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: error.message || 'Failed to render sketch',
-      step: 'unknown'
+      step: 'unknown',
     });
   }
 };

@@ -18,6 +18,7 @@
   "description": "API for Freecut panel cutting optimizer",
   "dependencies": {
     "@google-cloud/vision": "^4.0.2",
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.50.3",
     "@types/cors": "^2.8.18",
     "@types/handlebars": "^4.0.40",
