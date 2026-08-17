@@ -73,7 +73,7 @@ const renderSketch = async (req, res) => {
         let pngBuffer;
         try {
             const renderer = new Resvg(sanitizedSvg, {
-                fitTo: { mode: 'width', value: 1600 },
+                fitTo: { mode: 'width', value: 2000 },
                 background: 'white',
             });
             const rendered = renderer.render();
