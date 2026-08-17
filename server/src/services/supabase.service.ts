@@ -241,9 +241,157 @@ const SupabaseService = {
   },
 
   /**
+   * Get hardware pricing by product name from the `products` table.
+   * Hardware items are non-board products (handles, hinges, drawer runners, sinks, etc.).
+   * For variable products (e.g. handles that come in multiple sizes), the matching
+   * variations are also returned from the `product_variations` table.
+   *
+   * @param productName Exact or near-exact product name from the WooCommerce catalog
+   * @returns Pricing data including base price, variations (if any), and SKU
+   */
+  async getHardwarePricing(productName: string): Promise<{
+    success: boolean;
+    error?: string;
+    data?: {
+      name: string;
+      price: number;
+      sku: string;
+      type: string;
+      isVariable: boolean;
+      variations?: Array<{ label: string; shortLabel: string; price: number; sku: string }>;
+    };
+  }> {
+    try {
+      if (!productName || !productName.trim()) {
+        return { success: false, error: 'Product name is required' };
+      }
+
+      const trimmed = productName.trim();
+      console.log(`[getHardwarePricing] Looking up hardware pricing for "${trimmed}"`);
+
+      // Hardware category slugs (excludes board materials)
+      const hardwareCategorySlugs = [
+        'hardware', 'handles', 'hinges', 'drawer-runners', 'legs', 'sinks',
+        'adhesives-and-fillers', 'fasteners', 'brackets', 'baskets', 'wire-ware',
+        'waste-bin', 'locks', 'profile', 'silicone', 'thinners', 'tools',
+        'drill-bits-cutting-discs', 'wood-fillers', 'cold-glue', 'contact-glue',
+        'cornice-adhesive', 'pg'
+      ];
+
+      // Try exact match first
+      let { data, error } = await supabase
+        .from('products')
+        .select('woo_id, name, slug, type, price, regular_price, sale_price, sku, categories, is_manufactured, manufacturer')
+        .ilike('name', trimmed);
+
+      // If no exact match, try a partial match
+      if ((!data || data.length === 0) && !error) {
+        console.log(`[getHardwarePricing] No exact match, trying partial match for "${trimmed}"`);
+        ({ data, error } = await supabase
+          .from('products')
+          .select('woo_id, name, slug, type, price, regular_price, sale_price, sku, categories, is_manufactured, manufacturer')
+          .ilike('name', `%${trimmed}%`)
+          .limit(20));
+      }
+
+      if (error) {
+        console.error(`[getHardwarePricing] Error querying products:`, error);
+        return { success: false, error: error.message };
+      }
+
+      if (!data || data.length === 0) {
+        return { success: false, error: `Hardware product not found: "${trimmed}"` };
+      }
+
+      // Filter to hardware categories only (exclude board materials)
+      const isHardwareProduct = (product: any): boolean => {
+        if (!product || !Array.isArray(product.categories)) {
+          // If we can't determine categories, be permissive but exclude known manufactured boards
+          if (product.is_manufactured === true) return false;
+          return true;
+        }
+        const categorySlugs = product.categories.map((c: any) => c?.slug).filter(Boolean);
+        // Exclude board material categories
+        const boardSlugs = [
+          'solid-color', 'pattern', 'wood-grain', 'chrometree-gloss-boards',
+          'chrometree-silktouch', 'foil-boards', 'acrylic-boards',
+          'pvc-waterproof-boards', 'fx-dura', 'flat-pack-kitchen-units',
+          'white-flat-pack-kitchen-units', 'uv-wall-panels', '3d-wall-cladding-panels',
+          'mdf'
+        ];
+        if (categorySlugs.some((s: string) => boardSlugs.includes(s))) {
+          return false;
+        }
+        // Include if it has a hardware category slug
+        if (categorySlugs.some((s: string) => hardwareCategorySlugs.includes(s))) {
+          return true;
+        }
+        // Fallback: include if not manufactured
+        return product.is_manufactured !== true;
+      };
+
+      const hardwareMatches = data.filter(isHardwareProduct);
+
+      if (hardwareMatches.length === 0) {
+        return { success: false, error: `No hardware product found for "${trimmed}" (only board materials matched)` };
+      }
+
+      // Pick the best match — prefer exact name match, then first result
+      const exactMatch = hardwareMatches.find((p: any) =>
+        p.name && p.name.toLowerCase() === trimmed.toLowerCase()
+      );
+      const product = exactMatch || hardwareMatches[0];
+
+      console.log(`[getHardwarePricing] Matched product: "${product.name}" (type: ${product.type}, price: ${product.price})`);
+
+      const isVariable = product.type === 'variable';
+      const basePrice = typeof product.price === 'number' ? product.price : Number(product.price || 0);
+
+      // For variable products, fetch all variations
+      let variations: Array<{ label: string; shortLabel: string; price: number; sku: string }> | undefined;
+      if (isVariable && product.woo_id) {
+        try {
+          const { data: varData, error: varError } = await supabase
+            .from('product_variations')
+            .select('variation_label, short_label, price, sku')
+            .eq('parent_woo_id', product.woo_id)
+            .order('price', { ascending: true });
+
+          if (!varError && varData && varData.length > 0) {
+            variations = varData.map((v: any) => ({
+              label: v.variation_label || '',
+              shortLabel: v.short_label || '',
+              price: typeof v.price === 'number' ? v.price : Number(v.price || 0),
+              sku: v.sku || ''
+            }));
+            console.log(`[getHardwarePricing] Found ${variations.length} variations for "${product.name}"`);
+          }
+        } catch (varErr) {
+          console.warn(`[getHardwarePricing] Error fetching variations:`, varErr);
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          name: product.name,
+          price: basePrice,
+          sku: product.sku || '',
+          type: product.type || 'simple',
+          isVariable,
+          variations
+        }
+      };
+    } catch (error: any) {
+      console.error(`[getHardwarePricing] Error for "${productName}":`, error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Create a new quote in the database
-   * 
-   * Table schema: 
+   *
+   * Table schema:
    * - id (UUID, auto-generated)
    * - filename (text)
    * - created_at (timestamp, auto-generated)

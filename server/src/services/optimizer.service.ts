@@ -1544,7 +1544,9 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     grandTotal,
     branchData,
     bankingDetails,
-    phoneNumber
+    phoneNumber,
+    hardwareItems,
+    hardwareTotal
   } = quoteData;
 
   // Colors matching the HTML template
@@ -1615,7 +1617,8 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   const cuttingFeePerBoard = 70;
   const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
   const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
-  const finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
+  const hwTotal = parseFloat((Number(hardwareTotal || 0)).toFixed(2));
+  const finalTotal = boardTotal + totalEdgingCost + totalCuttingFee + hwTotal;
 
   // ====== HELPER: draw a filled rectangle ======
   const drawRect = (x: number, y: number, w: number, h: number, fill: string, stroke?: string) => {
@@ -1829,6 +1832,87 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     y = ty + 12;
   });
 
+  // ====== 3b. HARDWARE & ACCESSORIES ======
+  // Render only if there are hardware line items
+  if (hardwareItems && Array.isArray(hardwareItems) && hardwareItems.length > 0) {
+    // Estimate section height: heading + table header + one row per item + total row
+    const hwRowH = 22;
+    const hwHeaderH = 25 + 22; // card header + table header
+    const hwTotalH = 22; // total row
+    const estimatedH = hwHeaderH + (hardwareItems.length * hwRowH) + hwTotalH + 30;
+
+    y = ensureSpace(estimatedH, y);
+
+    // Section heading with red accent bar (matches MATERIAL BREAKDOWN style)
+    drawRect(MARGIN, y, 30, 3, COLOR_RED);
+    doc.fontSize(13).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.text('HARDWARE & ACCESSORIES', MARGIN + 38, y - 5, { width: CONTENT_W - 40 });
+    y += 20;
+
+    // Hardware card border
+    const hwCardH = hwHeaderH + (hardwareItems.length * hwRowH) + hwTotalH;
+    drawRect(MARGIN, y, CONTENT_W, hwCardH, COLOR_WHITE, COLOR_BORDER);
+
+    // Card header (black background)
+    const hwCardHeaderH = 25;
+    drawRect(MARGIN, y, CONTENT_W, hwCardHeaderH, COLOR_BLACK);
+    doc.fontSize(11).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text('Hardware Line Items', MARGIN + 10, y + 7, { width: CONTENT_W * 0.6 });
+    doc.fontSize(9).fillColor('#D2D2D2').font('Helvetica');
+    doc.text(`${hardwareItems.length} item(s)`, MARGIN + CONTENT_W * 0.6, y + 8, {
+      width: CONTENT_W * 0.35 - 10, align: 'right'
+    });
+
+    let hwy = y + hwCardHeaderH;
+
+    // Table header row
+    const hwColW = [CONTENT_W * 0.5, CONTENT_W * 0.15, CONTENT_W * 0.175, CONTENT_W * 0.175];
+    drawRect(MARGIN, hwy, CONTENT_W, 22, COLOR_LIGHT_GRAY);
+    doc.fontSize(9).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
+    doc.text('ITEM', MARGIN + 10, hwy + 7, { width: hwColW[0] - 15 });
+    doc.text('QTY', MARGIN + hwColW[0], hwy + 7, { width: hwColW[1] - 10 });
+    doc.text('UNIT PRICE', MARGIN + hwColW[0] + hwColW[1], hwy + 7, {
+      width: hwColW[2] - 10, align: 'right'
+    });
+    doc.text('TOTAL', MARGIN + hwColW[0] + hwColW[1] + hwColW[2], hwy + 7, {
+      width: hwColW[3] - 10, align: 'right'
+    });
+    hwy += 22;
+
+    // Data rows
+    hardwareItems.forEach((hwItem: any, idx: number) => {
+      const rowBg = idx % 2 === 0 ? COLOR_WHITE : COLOR_LIGHT_GRAY;
+      drawRect(MARGIN, hwy, CONTENT_W, hwRowH, rowBg, COLOR_ROW_BORDER);
+      doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+      const itemName = hwItem.name || '-';
+      doc.text(itemName, MARGIN + 10, hwy + 7, { width: hwColW[0] - 15 });
+      doc.text(`${hwItem.quantity || 1}`, MARGIN + hwColW[0], hwy + 7, { width: hwColW[1] - 10 });
+      doc.font('Helvetica');
+      doc.text(`R ${safeFixed(hwItem.unitPrice)}`, MARGIN + hwColW[0] + hwColW[1], hwy + 7, {
+        width: hwColW[2] - 10, align: 'right'
+      });
+      doc.font('Helvetica-Bold');
+      doc.text(`R ${safeFixed(hwItem.lineTotal)}`, MARGIN + hwColW[0] + hwColW[1] + hwColW[2], hwy + 7, {
+        width: hwColW[3] - 10, align: 'right'
+      });
+      hwy += hwRowH;
+    });
+
+    // Hardware total row (darker gray with red top border)
+    drawRect(MARGIN, hwy, CONTENT_W, hwTotalH, '#F0F0F0');
+    drawRect(MARGIN, hwy, CONTENT_W, 2, COLOR_RED);
+    doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.text('Hardware Total', MARGIN + 10, hwy + 7, {
+      width: hwColW[0] + hwColW[1] + hwColW[2] - 15
+    });
+    doc.text(`R ${safeFixed(hwTotal)}`, MARGIN + hwColW[0] + hwColW[1] + hwColW[2], hwy + 7, {
+      width: hwColW[3] - 10, align: 'right'
+    });
+    hwy += hwTotalH;
+
+    y = hwy + 12;
+  }
+
   // ====== 4. QUOTE SUMMARY ======
   y = ensureSpace(180, y);
   y += 5;
@@ -1851,6 +1935,14 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     { label: `Total Edging Cost (${totalEdgingMeters.toFixed(2)}m @ R${EDGING_PRICE_PER_METER}/m)`, value: `R ${totalEdgingCost.toFixed(2)}` },
     { label: `Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, value: `R ${totalCuttingFee.toFixed(2)}` },
   ];
+
+  // Add hardware row if hardware items present
+  if (hardwareItems && Array.isArray(hardwareItems) && hardwareItems.length > 0) {
+    summaryRows.push({
+      label: `Hardware & Accessories (${hardwareItems.length} item(s))`,
+      value: `R ${hwTotal.toFixed(2)}`
+    });
+  }
 
   summaryRows.forEach((row) => {
     drawRect(sumX, y, sumW, sumRowH, COLOR_WHITE, COLOR_BORDER);

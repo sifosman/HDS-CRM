@@ -149,10 +149,12 @@ exports.importIQData = importIQData;
 const generateQuote = async (req, res) => {
     var _a, _b, _c, _d, _e;
     try {
-        const { sections, customerName, projectName, phoneNumber, branchData } = req.body;
-        // Validate input
-        if (!sections || !Array.isArray(sections) || sections.length === 0) {
-            return res.status(400).json({ message: 'Invalid sections data' });
+        const { sections, customerName, projectName, phoneNumber, branchData, hardware } = req.body;
+        // Validate input — allow hardware-only quotes too (no sections required if hardware present)
+        const hasSections = sections && Array.isArray(sections) && sections.length > 0;
+        const hasHardware = hardware && Array.isArray(hardware) && hardware.length > 0;
+        if (!hasSections && !hasHardware) {
+            return res.status(400).json({ message: 'Invalid sections data — provide sections and/or hardware items' });
         }
         if (!customerName) {
             return res.status(400).json({ message: 'Customer name is required' });
@@ -204,7 +206,7 @@ const generateQuote = async (req, res) => {
         // Generate a unique cutlist ID for this quote based on the quote ID
         const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
         console.log('Generated cutlist ID:', dynamicCutlistId);
-        for (const section of sections) {
+        for (const section of (sections || [])) {
             const { material, cutPieces } = section;
             if (!material || !cutPieces || !Array.isArray(cutPieces) || cutPieces.length === 0) {
                 continue; // Skip invalid sections
@@ -525,6 +527,73 @@ const generateQuote = async (req, res) => {
         // Calculate cutting fee (same as in PDF quote - R70 per board)
         const cuttingFeePerBoard = 70; // R70 per board
         const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+        // ====== HARDWARE LINE ITEMS ======
+        // Hardware items (handles, hinges, drawer runners, sinks, etc.) are simple
+        // line items: quantity × unit price. No cutting fee, no edging, no nesting.
+        const hardwareItems = [];
+        let hardwareTotal = 0;
+        const hardwareErrors = [];
+        if (hardware && Array.isArray(hardware) && hardware.length > 0) {
+            console.log(`Processing ${hardware.length} hardware items...`);
+            for (const item of hardware) {
+                const { name, quantity, variation } = item;
+                if (!name || !quantity || quantity < 1) {
+                    hardwareErrors.push(`Skipped invalid hardware item: ${JSON.stringify(item)}`);
+                    continue;
+                }
+                const qty = Math.max(1, Math.floor(Number(quantity) || 1));
+                console.log(`Looking up hardware pricing for: "${name}"${variation ? ` (variation: ${variation})` : ''}`);
+                const hwResult = await supabase_service_1.default.getHardwarePricing(name);
+                if (!hwResult.success || !hwResult.data) {
+                    console.warn(`Hardware pricing not found for "${name}": ${hwResult.error}`);
+                    hardwareErrors.push(`Hardware not found: ${name}`);
+                    continue;
+                }
+                const hw = hwResult.data;
+                let unitPrice = hw.price;
+                let itemSku = hw.sku;
+                let itemLabel = hw.name;
+                // If a variation is specified, find the matching variation price
+                if (variation && hw.isVariable && hw.variations && hw.variations.length > 0) {
+                    const variationLower = String(variation).toLowerCase().trim();
+                    const matchedVar = hw.variations.find(v => (v.shortLabel || '').toLowerCase().trim() === variationLower ||
+                        (v.label || '').toLowerCase().includes(variationLower));
+                    if (matchedVar) {
+                        unitPrice = matchedVar.price;
+                        itemSku = matchedVar.sku || itemSku;
+                        itemLabel = `${hw.name} (${matchedVar.shortLabel || matchedVar.label})`;
+                        console.log(`Matched variation: ${matchedVar.label} -> R${unitPrice}`);
+                    }
+                    else {
+                        console.warn(`Variation "${variation}" not found for "${name}". Using base price R${unitPrice}.`);
+                        itemLabel = `${hw.name} (${variation})`;
+                    }
+                }
+                else if (hw.isVariable && hw.variations && hw.variations.length > 0 && !variation) {
+                    // Variable product with no variation specified — use the cheapest variation as default
+                    const cheapest = hw.variations[0]; // already sorted ascending by price
+                    unitPrice = cheapest.price;
+                    itemSku = cheapest.sku || itemSku;
+                    itemLabel = `${hw.name} (${cheapest.shortLabel || cheapest.label})`;
+                    console.log(`No variation specified, using cheapest: ${cheapest.label} -> R${unitPrice}`);
+                }
+                const lineTotal = parseFloat((unitPrice * qty).toFixed(2));
+                hardwareTotal += lineTotal;
+                hardwareItems.push({
+                    name: itemLabel,
+                    sku: itemSku,
+                    quantity: qty,
+                    unitPrice: parseFloat(unitPrice.toFixed(2)),
+                    lineTotal
+                });
+                console.log(`Hardware item added: ${itemLabel} x${qty} @ R${unitPrice.toFixed(2)} = R${lineTotal.toFixed(2)}`);
+            }
+            hardwareTotal = parseFloat(hardwareTotal.toFixed(2));
+            console.log(`Hardware total: R${hardwareTotal.toFixed(2)} (${hardwareItems.length} items)`);
+            if (hardwareErrors.length > 0) {
+                console.warn(`Hardware errors: ${hardwareErrors.join('; ')}`);
+            }
+        }
         // Get banking details based on branch trading_as (fx_branch)
         let bankingDetails = null;
         if (branchData && branchData.trading_as) {
@@ -553,7 +622,9 @@ const generateQuote = async (req, res) => {
             totalCuttingFee,
             phoneNumber,
             branchData,
-            bankingDetails // Add the matched banking details
+            bankingDetails, // Add the matched banking details
+            hardwareItems,
+            hardwareTotal
         };
         console.log(`Generating PDF quote with ID: ${quoteId}`);
         if (bankingDetails) {
@@ -600,6 +671,11 @@ const generateQuote = async (req, res) => {
             // Continue with quote creation - the cutlist might already exist
         }
         // Save quote to database with all required fields for PayFast integration
+        // Compute the full totals (including hardware) for accurate DB persistence
+        const totalEdgingCostForSave = parseFloat(edgingCostTotal.toFixed(2));
+        const subtotalForSave = parseFloat((grandTotal + totalEdgingCostForSave + totalCuttingFee + hardwareTotal).toFixed(2));
+        const vatForSave = parseFloat((subtotalForSave * 0.15).toFixed(2));
+        const finalTotalForSave = parseFloat((subtotalForSave + vatForSave).toFixed(2));
         let quoteSaveData;
         try {
             quoteSaveData = {
@@ -613,6 +689,8 @@ const generateQuote = async (req, res) => {
                 quoteData: {
                     // Save the processed sections with all edging and cutting data for invoice generation
                     sections: processedSections || [],
+                    hardwareItems: hardwareItems || [],
+                    hardwareTotal: hardwareTotal || 0,
                     items: (pdfSections && Array.isArray(pdfSections)) ? pdfSections.map(section => ({
                         description: `${section.material || 'Material'} - ${(section.pieces && section.pieces.length) || 0} pieces`,
                         quantity: (section.pieces && Array.isArray(section.pieces))
@@ -622,23 +700,28 @@ const generateQuote = async (req, res) => {
                             ? section.pieces.reduce((sum, piece) => sum + (piece.quantity || 1), 0)
                             : 1),
                         total: section.totalCost || 0
-                    })) : [{
+                    })).concat((hardwareItems || []).map((hw) => ({
+                        description: hw.name,
+                        quantity: hw.quantity,
+                        unitPrice: hw.unitPrice,
+                        total: hw.lineTotal
+                    }))) : [{
                             description: 'Quote Items',
                             quantity: 1,
                             unitPrice: grandTotal,
                             total: grandTotal
                         }],
                     totals: {
-                        subtotal: grandTotal,
-                        tax: grandTotal * 0.15, // 15% VAT
-                        finalTotal: grandTotal * 1.15
+                        subtotal: subtotalForSave,
+                        tax: vatForSave, // 15% VAT
+                        finalTotal: finalTotalForSave
                     },
                     // Include explicit branch info for downstream consumers (invoice/email)
                     branchData: branchData || null
                 },
-                subtotal: grandTotal,
-                tax: grandTotal * 0.15,
-                total: grandTotal * 1.15,
+                subtotal: subtotalForSave,
+                tax: vatForSave,
+                total: finalTotalForSave,
                 status: 'pending',
                 cutlistUrl: quotePdfUrl,
                 branchData: branchData,
@@ -700,7 +783,7 @@ const generateQuote = async (req, res) => {
                     method: 'Pending Payment',
                     reference: `QUOTE-${quoteId}`,
                     date: new Date().toISOString(),
-                    amount: grandTotal * 1.15, // Include 15% VAT to match quote total
+                    amount: finalTotalForSave, // Include 15% VAT + hardware to match quote total
                     payment_id: `PENDING-${Date.now()}`
                 });
                 if (invoiceResult.success && ((_e = invoiceResult.data) === null || _e === void 0 ? void 0 : _e.invoiceNumber)) {
@@ -798,9 +881,9 @@ const generateQuote = async (req, res) => {
         catch (emailError) {
             console.error('Error sending quote-created email:', emailError);
         }
-        // Calculate final totals (VAT-inclusive)
+        // Calculate final totals (VAT-inclusive) — hardware included
         const totalEdgingCost = parseFloat(edgingCostTotal.toFixed(2));
-        const subtotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee).toFixed(2));
+        const subtotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee + hardwareTotal).toFixed(2));
         const vat = parseFloat((subtotal * 0.15).toFixed(2));
         const finalTotal = parseFloat((subtotal + vat).toFixed(2));
         // Return the processed data with all cost components
@@ -814,6 +897,9 @@ const generateQuote = async (req, res) => {
                 grandTotal,
                 totalEdgingCost,
                 totalCuttingFee,
+                hardwareItems,
+                hardwareTotal,
+                hardwareErrors: hardwareErrors.length > 0 ? hardwareErrors : undefined,
                 subtotal,
                 vat,
                 finalTotal,
