@@ -217,6 +217,21 @@ const SupabaseService = {
             }
             const trimmed = productName.trim();
             console.log(`[getHardwarePricing] Looking up hardware pricing for "${trimmed}"`);
+            // Helper to decode common HTML entities that WooCommerce embeds in product names
+            const decodeEntities = (s) => {
+                if (!s)
+                    return s;
+                return s
+                    .replace(/&#8211;|&#8212;/g, '–')
+                    .replace(/&#8217;|&#039;|&#39;/g, "'")
+                    .replace(/&#8220;|&#8221;|&#034;|&#34;/g, '"')
+                    .replace(/&#038;|&#38;/g, '&')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&ndash;/g, '–')
+                    .replace(/&mdash;/g, '—')
+                    .replace(/&rsquo;/g, "'")
+                    .replace(/&ldquo;|&rdquo;/g, '"');
+            };
             // Hardware category slugs (excludes board materials)
             const hardwareCategorySlugs = [
                 'hardware', 'handles', 'hinges', 'drawer-runners', 'legs', 'sinks',
@@ -238,6 +253,18 @@ const SupabaseService = {
                     .select('woo_id, name, slug, type, price, regular_price, sale_price, sku, categories, is_manufactured, manufacturer')
                     .ilike('name', `%${trimmed}%`)
                     .limit(20));
+            }
+            // If still no match, try token-based matching (split into keywords, match first token)
+            if ((!data || data.length === 0) && !error) {
+                const tokens = trimmed.split(/\s+/).filter((t) => t.length > 2);
+                if (tokens.length > 0) {
+                    console.log(`[getHardwarePricing] Trying token-based match with first token: "${tokens[0]}"`);
+                    ({ data, error } = await supabase
+                        .from('products')
+                        .select('woo_id, name, slug, type, price, regular_price, sale_price, sku, categories, is_manufactured, manufacturer')
+                        .ilike('name', `%${tokens[0]}%`)
+                        .limit(30));
+                }
             }
             if (error) {
                 console.error(`[getHardwarePricing] Error querying products:`, error);
@@ -280,7 +307,8 @@ const SupabaseService = {
             // Pick the best match — prefer exact name match, then first result
             const exactMatch = hardwareMatches.find((p) => p.name && p.name.toLowerCase() === trimmed.toLowerCase());
             const product = exactMatch || hardwareMatches[0];
-            console.log(`[getHardwarePricing] Matched product: "${product.name}" (type: ${product.type}, price: ${product.price})`);
+            const decodedName = decodeEntities(product.name || '');
+            console.log(`[getHardwarePricing] Matched product: "${decodedName}" (type: ${product.type}, price: ${product.price})`);
             const isVariable = product.type === 'variable';
             const basePrice = typeof product.price === 'number' ? product.price : Number(product.price || 0);
             // For variable products, fetch all variations
@@ -294,12 +322,12 @@ const SupabaseService = {
                         .order('price', { ascending: true });
                     if (!varError && varData && varData.length > 0) {
                         variations = varData.map((v) => ({
-                            label: v.variation_label || '',
-                            shortLabel: v.short_label || '',
+                            label: decodeEntities(v.variation_label || ''),
+                            shortLabel: decodeEntities(v.short_label || ''),
                             price: typeof v.price === 'number' ? v.price : Number(v.price || 0),
                             sku: v.sku || ''
                         }));
-                        console.log(`[getHardwarePricing] Found ${variations.length} variations for "${product.name}"`);
+                        console.log(`[getHardwarePricing] Found ${variations.length} variations for "${decodedName}"`);
                     }
                 }
                 catch (varErr) {
@@ -309,7 +337,7 @@ const SupabaseService = {
             return {
                 success: true,
                 data: {
-                    name: product.name,
+                    name: decodedName,
                     price: basePrice,
                     sku: product.sku || '',
                     type: product.type || 'simple',
