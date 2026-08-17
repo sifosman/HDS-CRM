@@ -309,16 +309,42 @@ const SupabaseService = {
           .limit(20));
       }
 
-      // If still no match, try token-based matching (split into keywords, match first token)
+      // If still no match, try token-based matching: fetch candidates using the most
+      // distinctive token, then score each candidate by how many search tokens it contains.
       if ((!data || data.length === 0) && !error) {
         const tokens = trimmed.split(/\s+/).filter((t: string) => t.length > 2);
         if (tokens.length > 0) {
-          console.log(`[getHardwarePricing] Trying token-based match with first token: "${tokens[0]}"`);
+          // Pick the most distinctive token (longest, most unique-sounding)
+          const distinctiveToken = tokens
+            .slice()
+            .sort((a: string, b: string) => b.length - a.length)[0];
+          console.log(`[getHardwarePricing] Trying token-based match with distinctive token: "${distinctiveToken}"`);
           ({ data, error } = await supabase
             .from('products')
             .select('woo_id, name, slug, type, price, regular_price, sale_price, sku, categories, is_manufactured, manufacturer')
-            .ilike('name', `%${tokens[0]}%`)
-            .limit(30));
+            .ilike('name', `%${distinctiveToken}%`)
+            .limit(50));
+
+          if (data && data.length > 0) {
+            // Score each candidate by counting how many search tokens appear in its name
+            const searchTokensLower = tokens.map((t: string) => t.toLowerCase());
+            const scored = data.map((p: any) => {
+              const nameLower = (p.name || '').toLowerCase();
+              let score = 0;
+              for (const t of searchTokensLower) {
+                if (nameLower.includes(t)) score++;
+              }
+              return { product: p, score };
+            });
+            // Keep only candidates with at least 2 token matches (or 1 if that's all we have)
+            const minScore = Math.min(2, searchTokensLower.length);
+            const goodMatches = scored.filter((s: any) => s.score >= minScore);
+            if (goodMatches.length > 0) {
+              goodMatches.sort((a: any, b: any) => b.score - a.score);
+              data = goodMatches.map((s: any) => s.product);
+              console.log(`[getHardwarePricing] Token scoring: ${data.length} candidates with score >= ${minScore}. Top: "${data[0].name}" (score: ${goodMatches[0].score})`);
+            }
+          }
         }
       }
 
