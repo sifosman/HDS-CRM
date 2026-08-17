@@ -1,11 +1,26 @@
 import { Request, Response } from 'express';
+import { join } from 'path';
 
 /**
  * POST /api/sketch/render
  * Body: { svg: string }
  * Renders SVG to PNG using @resvg/resvg-js (WASM-based, Vercel-safe),
  * uploads to Supabase Storage, returns public URL.
+ *
+ * Fonts: DejaVu Sans (regular + bold) are bundled in src/fonts/ and loaded
+ * explicitly because Vercel serverless functions have no system fonts.
+ * Without this, all <text> elements in the SVG are silently dropped.
  */
+let cachedFontsDir: string | null = null;
+
+function getFontsDir(): string {
+  if (cachedFontsDir) return cachedFontsDir;
+  // In compiled dist/, __dirname is dist/controllers, fonts are in dist/fonts
+  // In Vercel serverless, the path is resolved from the function bundle
+  cachedFontsDir = join(__dirname, '..', 'fonts');
+  return cachedFontsDir;
+}
+
 export const renderSketch = async (req: Request, res: Response): Promise<void> => {
   try {
     const { svg } = req.body;
@@ -24,6 +39,20 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
     // resvg uses strict XML parsing, unlike sharp which was lenient.
     const sanitizedSvg = svg.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
 
+    // Replace Arial/Helvetica/sans-serif font-family references with DejaVu Sans
+    // since that's the font we bundle for Vercel serverless rendering.
+    // Handles both style="font-family: 'Arial', 'Helvetica', sans-serif;" and
+    // font-family="Arial" attribute syntax.
+    const fontFixedSvg = sanitizedSvg
+      .replace(/style="font-family:\s*'Arial',\s*'Helvetica',\s*sans-serif;"/gi, 'style="font-family: DejaVu Sans;"')
+      .replace(/font-family:\s*'Arial'/gi, 'font-family: DejaVu Sans')
+      .replace(/font-family:\s*"Arial"/gi, 'font-family: DejaVu Sans')
+      .replace(/font-family:\s*'Helvetica'/gi, 'font-family: DejaVu Sans')
+      .replace(/font-family:\s*"Helvetica"/gi, 'font-family: DejaVu Sans')
+      .replace(/font-family:\s*sans-serif/gi, 'font-family: DejaVu Sans')
+      .replace(/font-family="Arial"/gi, 'font-family="DejaVu Sans"')
+      .replace(/font-family="Helvetica"/gi, 'font-family="DejaVu Sans"');
+
     // resvg-js is a pure-Rust/WASM SVG renderer with no native binaries,
     // so it works reliably in Vercel serverless functions (unlike sharp).
     let Resvg: any;
@@ -39,11 +68,20 @@ export const renderSketch = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    // Load bundled fonts (DejaVu Sans) — Vercel has no system fonts.
+    // fontDirs with absolute paths works reliably in serverless environments.
+    const fontsDir = getFontsDir();
+
     let pngBuffer: Buffer;
     try {
-      const renderer = new Resvg(sanitizedSvg, {
+      const renderer = new Resvg(fontFixedSvg, {
         fitTo: { mode: 'width', value: 2000 },
         background: 'white',
+        font: {
+          fontDirs: [fontsDir],
+          loadSystemFonts: false,
+          defaultFontFamily: 'DejaVu Sans',
+        },
       });
       const rendered = renderer.render();
       pngBuffer = rendered.asPng() as Buffer;
