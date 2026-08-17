@@ -919,6 +919,27 @@ const SupabaseService = {
                         });
                         return matched.email_address || null;
                     }
+                    // Strategy A2: match by Vercel-style abbreviation (4 chars/word for 2-word names)
+                    // The Vercel quote engine creates branch codes using 4 chars per word for 2-word names
+                    // e.g. "HDS Krugersdorp" -> "HDSKRUG", "HDS Waltloo" -> "HDSWALT"
+                    const deriveVercelAbbr = (name) => {
+                        const words = name.split(/\s+/).filter(w => w.length > 0);
+                        if (words.length === 1)
+                            return words[0].substring(0, 8).toUpperCase();
+                        if (words.length === 2)
+                            return (words[0].substring(0, 4) + words[1].substring(0, 4)).toUpperCase();
+                        return words.slice(0, 3).map(w => w.substring(0, 3).toUpperCase()).join('');
+                    };
+                    if (!matched) {
+                        matched = allBranches.find(b => deriveVercelAbbr(b.trading_as) === branchCode);
+                    }
+                    if (matched) {
+                        console.log('📧 Branch email resolution: matched by Vercel-style abbreviation', {
+                            matchedTradingAs: matched.trading_as,
+                            email: matched.email_address,
+                        });
+                        return matched.email_address || null;
+                    }
                 }
                 // Strategy B: partial name include fallback using branch code fragment
                 const { data: approx, error: approxErr } = await supabase
