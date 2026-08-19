@@ -25,6 +25,7 @@ import emailTestHardcodedRoutes from './routes/email-test-hardcoded.routes';
 import testEmailRoutes from './routes/test-email.routes';
 import testRoutes from './routes/test.routes';
 import sketchRoutes from './routes/sketch.routes';
+import imageRoutes from './routes/image.routes';
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +68,7 @@ app.use('/api/email-hardcoded', emailTestHardcodedRoutes);
 app.use('/api/test-email', testEmailRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/sketch', sketchRoutes);
+app.use('/api/image', imageRoutes);
 
 // Direct test endpoint for n8n integration
 app.get('/api/direct-test', (req, res) => {
