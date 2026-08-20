@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Eye } from "lucide-react";
-import type { CustomerProfile } from "@/lib/types";
+import type { CustomerProfile, CustomerQuoteBreakdownMap } from "@/lib/types";
 import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
@@ -37,7 +37,13 @@ import {
   formatPhone,
 } from "@/lib/constants";
 
-export function CustomersTable({ customers }: { customers: CustomerProfile[] }) {
+export function CustomersTable({
+  customers,
+  quoteBreakdown = {},
+}: {
+  customers: CustomerProfile[];
+  quoteBreakdown?: CustomerQuoteBreakdownMap;
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -134,7 +140,10 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
                 <TableHead>Name</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead className="text-right">Quotes</TableHead>
+                <TableHead className="text-right">Converted</TableHead>
+                <TableHead className="text-right">Pending</TableHead>
+                <TableHead className="text-right">Sent</TableHead>
+                <TableHead className="text-right">Total Quotes</TableHead>
                 <TableHead className="text-right">Total Value</TableHead>
                 <TableHead>Lead Status</TableHead>
                 <TableHead>Last Interaction</TableHead>
@@ -144,12 +153,18 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
             <TableBody>
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                     No customers found
                   </TableCell>
                 </TableRow>
               )}
-              {filtered.map((customer) => (
+              {filtered.map((customer) => {
+                const breakdown = quoteBreakdown[customer.phone_number];
+                const converted = breakdown?.converted ?? 0;
+                const pending = breakdown?.pending ?? 0;
+                const sent = breakdown?.sent ?? 0;
+                const totalQuotes = breakdown?.total ?? customer.total_quotes ?? 0;
+                return (
                 <TableRow key={customer.id} className="cursor-pointer">
                   <TableCell className="font-medium">
                     <Link
@@ -169,7 +184,22 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {customer.total_quotes}
+                    <span className={converted > 0 ? "font-medium text-green-600 dark:text-green-400" : "text-muted-foreground"}>
+                      {converted}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className={pending > 0 ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
+                      {pending}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className={sent > 0 ? "font-medium text-blue-600 dark:text-blue-400" : "text-muted-foreground"}>
+                      {sent}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {totalQuotes}
                   </TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(customer.total_quote_value)}
@@ -196,7 +226,8 @@ export function CustomersTable({ customers }: { customers: CustomerProfile[] }) 
                     </Link>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -25,6 +26,14 @@ import {
 import { Search, FileText, ExternalLink } from "lucide-react";
 import type { Quote } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/constants";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+function quotePdfUrl(q: Quote): string | null {
+  if (q.cutlist_url) return q.cutlist_url;
+  if (!q.filename || !SUPABASE_URL) return null;
+  return `${SUPABASE_URL}/storage/v1/object/public/hdsquotes/${encodeURIComponent(q.filename)}`;
+}
 
 export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const [search, setSearch] = useState("");
@@ -127,13 +136,25 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                   </TableCell>
                 </TableRow>
               )}
-              {filtered.map((q) => (
-                <TableRow key={q.id}>
+              {filtered.map((q) => {
+                const pdfUrl = quotePdfUrl(q);
+                return (
+                <TableRow
+                  key={q.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                >
                   <TableCell className="font-mono text-xs">
-                    {q.quote_number || "—"}
+                    <Link
+                      href={`/quotes/${q.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {q.quote_number || "—"}
+                    </Link>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {q.customer_name || "—"}
+                    <Link href={`/quotes/${q.id}`} className="block">
+                      {q.customer_name || "—"}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {q.customer_phone || "—"}
@@ -148,12 +169,14 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                     <Badge variant="secondary">{q.status || "sent"}</Badge>
                   </TableCell>
                   <TableCell>
-                    {q.cutlist_url ? (
+                    {pdfUrl ? (
                       <a
-                        href={q.cutlist_url}
+                        href={pdfUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline"
+                        className="inline-flex text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Open PDF"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </a>
@@ -162,7 +185,8 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

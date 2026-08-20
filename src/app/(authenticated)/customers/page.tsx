@@ -1,8 +1,11 @@
 import { CustomersTable } from "@/components/customers-table";
-import { getCustomers } from "@/lib/queries";
+import { getCustomers, getCustomerQuoteBreakdown } from "@/lib/queries";
 
 export default async function CustomersPage() {
-  const customers = await getCustomers();
+  const [customers, quoteBreakdown] = await Promise.all([
+    getCustomers(),
+    getCustomerQuoteBreakdown(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -12,7 +15,7 @@ export default async function CustomersPage() {
           Client profiles and lead management
         </p>
       </div>
-      <CustomersTable customers={customers} />
+      <CustomersTable customers={customers} quoteBreakdown={quoteBreakdown} />
     </div>
   );
 }

@@ -94,6 +94,26 @@ export type Quote = {
   branch_trading_as: string | null;
 };
 
+/**
+ * Per-customer quote breakdown.
+ *
+ * Quotes are categorised into:
+ *  - converted: has at least one paid invoice
+ *  - pending:   has a pending invoice (awaiting payment), no paid invoice
+ *  - sent:      quote sent but no invoice yet
+ *
+ * `total` is the sum of the three categories.
+ */
+export type CustomerQuoteBreakdown = {
+  converted: number;
+  pending: number;
+  sent: number;
+  total: number;
+};
+
+/** Map of normalised phone number (no leading "+") → quote breakdown. */
+export type CustomerQuoteBreakdownMap = Record<string, CustomerQuoteBreakdown>;
+
 export type Branch = {
   id: number;
   branch_number: number | null;
