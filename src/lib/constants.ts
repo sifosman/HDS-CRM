@@ -313,6 +313,9 @@ export const TEST_CATEGORY_LABELS: Record<string, string> = {
   handover: "Handover",
   returning_customer: "Returning Customer",
   adversarial_edge: "Adversarial / Edge",
+  new_customer: "New Customer",
+  hardware_upsell: "Hardware Upsell",
+  sales_simulation: "Sales Simulation",
 };
 
 export const TEST_CATEGORY_COLORS: Record<string, string> = {
@@ -325,6 +328,9 @@ export const TEST_CATEGORY_COLORS: Record<string, string> = {
   handover: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
   returning_customer: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
   adversarial_edge: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  new_customer: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
+  hardware_upsell: "bg-lime-100 text-lime-700 dark:bg-lime-950 dark:text-lime-300",
+  sales_simulation: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300",
 };
 
 export const TEST_RUN_TYPE_LABELS: Record<string, string> = {
@@ -345,6 +351,9 @@ export const TEST_CATEGORY_ORDER = [
   "handover",
   "returning_customer",
   "adversarial_edge",
+  "new_customer",
+  "hardware_upsell",
+  "sales_simulation",
 ] as const;
 
 // ---- Phase 2b: Conversation Quality Flags ----
@@ -377,3 +386,21 @@ export const QUALITY_SCORE_LABELS: Record<string, string> = {
   needs_work: "Needs Work (40-59)",
   poor: "Poor (<40)",
 };
+
+// ---------------------------------------------------------------------------
+// RBAC / Roles
+// ---------------------------------------------------------------------------
+
+export const ROLE_LABELS: Record<string, string> = {
+  owner: "Owner",
+  manager: "Sales Manager",
+  sales: "Sales Representative",
+};
+
+export const ROLE_COLORS: Record<string, string> = {
+  owner: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  manager: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  sales: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+};
+
+export const ROLE_ORDER: string[] = ["sales", "manager", "owner"];

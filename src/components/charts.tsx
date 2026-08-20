@@ -230,48 +230,97 @@ export function PassRateTrendChart({
 export function CategoryPassRateChart({
   data,
 }: {
-  data: { category: string; passRate: number; total: number; passed: number }[];
+  data: {
+    category: string;
+    passRate: number;
+    total: number;
+    passed: number;
+    runCount?: number;
+  }[];
 }) {
+  // Filter out categories with no data — they shouldn't show as 0% bars
+  const chartData = data.filter((d) => d.total > 0);
+  const noDataCategories = data.filter((d) => d.total === 0);
+
   return (
-    <ResponsiveContainer width="100%" height={320}>
-      <BarChart data={data} layout="vertical">
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis
-          type="number"
-          domain={[0, 100]}
-          className="text-xs"
-          tickFormatter={(v) => `${v}%`}
-        />
-        <YAxis
-          type="category"
-          dataKey="category"
-          className="text-xs"
-          width={130}
-        />
-        <Tooltip
-          formatter={(v) => [`${v}%`, "Pass Rate"]}
-          contentStyle={{
-            backgroundColor: "var(--color-popover)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "8px",
-          }}
-        />
-        <Bar dataKey="passRate" radius={[0, 4, 4, 0]}>
-          {data.map((d, i) => (
-            <Cell
-              key={i}
-              fill={
-                d.passRate >= 90
-                  ? "var(--color-chart-2)"
-                  : d.passRate >= 70
-                    ? "var(--color-chart-4)"
-                    : "var(--color-chart-5)"
-              }
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <div>
+      <ResponsiveContainer width="100%" height={Math.max(280, chartData.length * 36 + 40)}>
+        <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <XAxis
+            type="number"
+            domain={[0, 100]}
+            className="text-xs"
+            tickFormatter={(v) => `${v}%`}
+          />
+          <YAxis
+            type="category"
+            dataKey="category"
+            className="text-xs"
+            width={140}
+          />
+          <Tooltip
+            cursor={{ fill: "var(--color-muted)", opacity: 0.3 }}
+            content={({ active, payload }) => {
+              if (!active || !payload || payload.length === 0) return null;
+              const d = payload[0].payload as {
+                category: string;
+                passRate: number;
+                total: number;
+                passed: number;
+                runCount?: number;
+              };
+              return (
+                <div
+                  style={{
+                    backgroundColor: "var(--color-popover)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    fontSize: "12px",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {d.category}
+                  </div>
+                  <div style={{ color: "var(--color-muted-foreground)" }}>
+                    Pass Rate: <strong>{d.passRate}%</strong>
+                  </div>
+                  <div style={{ color: "var(--color-muted-foreground)" }}>
+                    {d.passed} of {d.total} scenarios passed
+                  </div>
+                  {d.runCount != null && d.runCount > 0 && (
+                    <div style={{ color: "var(--color-muted-foreground)" }}>
+                      Across {d.runCount} run{d.runCount !== 1 ? "s" : ""}
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          />
+          <Bar dataKey="passRate" radius={[0, 4, 4, 0]} label={{ position: "right", formatter: (v: unknown) => `${v}%`, fontSize: 11 }}>
+            {chartData.map((d, i) => (
+              <Cell
+                key={i}
+                fill={
+                  d.passRate >= 90
+                    ? "var(--color-chart-2)"
+                    : d.passRate >= 70
+                      ? "var(--color-chart-4)"
+                      : "var(--color-chart-5)"
+                }
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      {noDataCategories.length > 0 && (
+        <div className="mt-3 text-xs text-muted-foreground">
+          <span className="font-medium">No data for: </span>
+          {noDataCategories.map((d) => d.category).join(", ")}
+        </div>
+      )}
+    </div>
   );
 }
 

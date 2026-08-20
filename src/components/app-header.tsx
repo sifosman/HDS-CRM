@@ -12,6 +12,7 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { usePathname } from "next/navigation";
+import type { UserRole } from "@/lib/role-utils";
 
 function getPageTitle(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
@@ -27,7 +28,15 @@ function getPageTitle(pathname: string): string {
   return map[segments[0]] || segments[0];
 }
 
-export function AppHeader() {
+export function AppHeader({
+  userEmail = "",
+  userRole = "sales" as UserRole,
+  userName = null,
+}: {
+  userEmail?: string;
+  userRole?: UserRole;
+  userName?: string | null;
+}) {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
 
@@ -56,7 +65,11 @@ export function AppHeader() {
           <Bell className="h-5 w-5" />
         </Button>
         <ThemeToggle />
-        <UserNav />
+        <UserNav
+          userEmail={userEmail}
+          userRole={userRole}
+          userName={userName}
+        />
       </div>
     </header>
   );

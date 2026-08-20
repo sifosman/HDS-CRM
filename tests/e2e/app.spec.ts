@@ -260,11 +260,11 @@ test.describe("Interactions", () => {
     await expect(page).toHaveURL(/\/customers\//);
   });
 
-  test("settings page has role select with Admin/Manager/Viewer", async ({ page }) => {
+  test("settings page shows profile with role badge", async ({ page }) => {
     await page.goto("/settings");
     await expect(page.getByText("Profile", { exact: true })).toBeVisible();
-    // The role select is rendered as a combobox; it shows "admin" by default.
-    await expect(page.getByRole("combobox").first()).toBeVisible();
+    // The role is now displayed as a read-only badge, not a select.
+    await expect(page.getByText(/owner|admin/i).first()).toBeVisible();
   });
 
   test("templates page has a create-template button or empty state", async ({ page }) => {

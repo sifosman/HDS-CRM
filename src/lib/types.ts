@@ -459,3 +459,22 @@ export type AiMonitorAlert = {
   source_phones: string[];
   created_at: string;
 };
+
+// ---------------------------------------------------------------------------
+// RBAC / User Management
+// ---------------------------------------------------------------------------
+
+export type UserRole = "owner" | "manager" | "sales";
+
+export type UserWithRole = {
+  id: string;
+  email: string;
+  role: UserRole;
+  full_name: string | null;
+  branch_id: number | null;
+  created_at: string;
+  updated_at: string;
+  banned_until: string | null;
+  is_active: boolean;
+};
+

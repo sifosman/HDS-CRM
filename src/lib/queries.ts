@@ -24,8 +24,11 @@ import type {
   AiMonitorAlert,
   CustomerQuoteBreakdownMap,
   CustomerQuoteBreakdown,
+  UserWithRole,
+  UserRole,
 } from "@/lib/types";
 import { HEALTH_COMPONENT_ORDER, TEST_CATEGORY_ORDER } from "@/lib/constants";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function getDashboardStats() {
   const supabase = await createClient();
@@ -973,6 +976,8 @@ export async function getCustomerTypeStats() {
 /**
  * Get recent test run summaries for the pass-rate trend chart.
  * Returns the most recent N run summaries, ordered oldest → newest for charting.
+ * Filters out single-scenario runs (run_type=scenario) which are not
+ * representative of overall performance and create noisy trend lines.
  */
 export async function getAiTestRunSummaries(
   limit = 30
@@ -981,6 +986,7 @@ export async function getAiTestRunSummaries(
   const { data, error } = await supabase
     .from("ai_test_run_summaries")
     .select("*")
+    .neq("run_type", "scenario")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -990,9 +996,28 @@ export async function getAiTestRunSummaries(
 
 /**
  * Get the latest test run summary (most recent run).
+ * Prefers smoke runs (which cover all 9 core categories, 1 scenario each)
+ * as they're the most representative of overall bot performance across
+ * all conversation types. Falls back to category runs, then full, then any.
  */
 export async function getLatestAiTestRunSummary(): Promise<AiTestRunSummary | null> {
   const supabase = await createClient();
+
+  // Try smoke runs first (cover all categories, most representative)
+  for (const runType of ["smoke", "category", "full"]) {
+    const { data, error } = await supabase
+      .from("ai_test_run_summaries")
+      .select("*")
+      .eq("run_type", runType)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (!error && data) {
+      return data as AiTestRunSummary;
+    }
+  }
+
+  // Fall back to any run
   const { data, error } = await supabase
     .from("ai_test_run_summaries")
     .select("*")
@@ -1041,6 +1066,13 @@ export async function getRecentAiTestFailures(
 /**
  * Get per-category pass rates aggregated across recent runs.
  * Returns one entry per category with total/passed/failed counts and pass rate.
+ *
+ * IMPORTANT: Only aggregates across runs that actually test each category.
+ * Smoke runs cover all 9 core categories (1 scenario each), so they're the
+ * most reliable source for cross-category comparison. Category runs only test
+ * one category (e.g. 40 new_customer scenarios), so including them would
+ * heavily skew the aggregation. We prefer smoke runs, falling back to any
+ * run type if no smoke runs exist.
  */
 export async function getAiTestCategoryStats(
   runsLimit = 5
@@ -1052,18 +1084,45 @@ export async function getAiTestCategoryStats(
     failed: number;
     passRate: number;
     avgLatencyMs: number | null;
+    runCount: number;
   }>
 > {
   const supabase = await createClient();
 
-  // Get the most recent N run_ids
-  const { data: runData } = await supabase
+  // Prefer smoke runs (they cover all core categories evenly).
+  // Fall back to any run type if not enough smoke runs exist.
+  let runIds: string[] = [];
+
+  const { data: smokeRuns } = await supabase
     .from("ai_test_run_summaries")
     .select("run_id")
+    .eq("run_type", "smoke")
     .order("created_at", { ascending: false })
     .limit(runsLimit);
 
-  const runIds = (runData || []).map((r) => r.run_id);
+  runIds = (smokeRuns || []).map((r) => r.run_id);
+
+  // If fewer than 3 smoke runs, supplement with full runs
+  if (runIds.length < 3) {
+    const { data: fullRuns } = await supabase
+      .from("ai_test_run_summaries")
+      .select("run_id")
+      .eq("run_type", "full")
+      .order("created_at", { ascending: false })
+      .limit(runsLimit - runIds.length);
+    runIds = [...runIds, ...(fullRuns || []).map((r) => r.run_id)];
+  }
+
+  // If still no runs, fall back to any recent runs
+  if (runIds.length === 0) {
+    const { data: anyRuns } = await supabase
+      .from("ai_test_run_summaries")
+      .select("run_id")
+      .order("created_at", { ascending: false })
+      .limit(runsLimit);
+    runIds = (anyRuns || []).map((r) => r.run_id);
+  }
+
   if (runIds.length === 0) {
     return TEST_CATEGORY_ORDER.map((category) => ({
       category,
@@ -1072,18 +1131,20 @@ export async function getAiTestCategoryStats(
       failed: 0,
       passRate: 0,
       avgLatencyMs: null,
+      runCount: 0,
     }));
   }
 
   // Fetch all test runs for those run_ids
   const { data, error } = await supabase
     .from("ai_test_runs")
-    .select("category, passed, latency_ms")
+    .select("category, passed, latency_ms, run_id")
     .in("run_id", runIds);
 
   if (error) throw error;
 
   const runs = data || [];
+  const contributingRunIds = new Set(runIds);
 
   // Build stats per category, including any categories with zero results
   const allCategories = new Set<string>(TEST_CATEGORY_ORDER);
@@ -1102,7 +1163,12 @@ export async function getAiTestCategoryStats(
       latencies.length > 0
         ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
         : null;
-    return { category, total, passed, failed, passRate, avgLatencyMs };
+    // Count how many of the contributing runs actually tested this category
+    const catRunIds = new Set(catRuns.map((r) => r.run_id));
+    const runCount = Array.from(contributingRunIds).filter((id) =>
+      catRunIds.has(id)
+    ).length;
+    return { category, total, passed, failed, passRate, avgLatencyMs, runCount };
   });
 }
 
@@ -1297,29 +1363,63 @@ export type AiProductionStats = {
  * Compute live AI production quality stats from the ai_conversations table.
  * This mirrors the ai_quality_metrics schema but is computed on-the-fly so
  * we have data even before the metrics aggregation job runs.
+ *
+ * IMPORTANT: Filters out test phone numbers (2790000xxx) so only real customer
+ * conversations are counted. Lead status is only counted from user/assistant
+ * messages, not tool messages (tool messages are internal logs).
  */
 export async function getAiProductionStats(): Promise<AiProductionStats> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("ai_conversations")
-    .select("id, phone_number, role, lead_status, tool_calls, created_at, conversation_metadata");
+    .select("id, phone_number, role, lead_status, tool_calls, tool_results, message_text, created_at, conversation_metadata");
 
   if (error) throw error;
 
-  const rows = (data || []) as Array<{
+  const allRows = (data || []) as Array<{
     id: string;
     phone_number: string;
     role: string | null;
     lead_status: string | null;
     tool_calls: Record<string, unknown> | null;
+    tool_results: Record<string, unknown> | null;
+    message_text: string | null;
     created_at: string;
     conversation_metadata: Record<string, unknown> | null;
   }>;
 
+  // Filter out test numbers and invalid phone numbers.
+  // Test harness numbers start with 2790000. Other test/fake numbers
+  // (empty, "unknown", all-zeros, sequential) are also filtered.
+  // Additionally, phone numbers that ONLY have "tool" role messages (no
+  // user or assistant messages) are internal test data, not real conversations.
+  const isTestOrInvalidPhone = (phone: string) => {
+    if (!phone || phone.length < 10) return true;
+    if (phone === "unknown") return true;
+    if (phone.startsWith("2790000")) return true;
+    // All-zeros or mostly zeros (e.g. 27000000000, 27600000000)
+    if (/^2\d?0{6,}$/.test(phone)) return true;
+    // Sequential digits (e.g. 27123456789, 27821234567)
+    if (/012345678|12345678|23456789/.test(phone)) return true;
+    return false;
+  };
+
+  // First pass: identify phone numbers that have at least one user or assistant message
+  const phonesWithConversation = new Set<string>();
+  for (const r of allRows) {
+    if ((r.role === "user" || r.role === "assistant") && !isTestOrInvalidPhone(r.phone_number)) {
+      phonesWithConversation.add(r.phone_number);
+    }
+  }
+
+  // Only include rows for phones that have real conversations
+  const rows = allRows.filter((r) => phonesWithConversation.has(r.phone_number));
+
   const uniquePhones = new Set<string>();
   const phonesWithUserMsg = new Set<string>();
   const phonesWithAssistantReply = new Set<string>();
-  const leadStatusCounts: Record<string, number> = {};
+  // Track lead status per phone (use the latest non-tool message's status)
+  const phoneLeadStatus: Map<string, { status: string; created_at: string }> = new Map();
   let userMessages = 0;
   let assistantMessages = 0;
   let toolMessages = 0;
@@ -1351,20 +1451,41 @@ export async function getAiProductionStats(): Promise<AiProductionStats> {
       toolMessages++;
     }
 
-    if (r.tool_calls) {
+    // Count tool calls from tool role messages (tool_calls column is typically null,
+    // but tool role messages indicate a tool was invoked)
+    if (r.role === "tool") {
       toolCallCount++;
+    }
+    if (r.tool_calls) {
       const tc = r.tool_calls;
-      // Check for quote generation tool calls
       const tcStr = JSON.stringify(tc).toLowerCase();
       if (tcStr.includes("generate_quote") || tcStr.includes("quote")) {
         quoteGeneratedCount++;
       }
     }
+    // Also detect quote generation from tool_results or message text
+    if (r.tool_results) {
+      const trStr = JSON.stringify(r.tool_results).toLowerCase();
+      if (trStr.includes("generate_quote") || trStr.includes("quote_id") || trStr.includes("quote_total")) {
+        quoteGeneratedCount++;
+      }
+    }
+    if (r.role === "assistant" && r.message_text) {
+      const text = r.message_text.toLowerCase();
+      if (/quote\s*id[:\s]|q-\d{8}/.test(text)) {
+        quoteGeneratedCount++;
+      }
+    }
 
-    if (r.lead_status) {
-      leadStatusCounts[r.lead_status] = (leadStatusCounts[r.lead_status] || 0) + 1;
-      if (r.lead_status === "handover") handoverCount++;
-      if (r.lead_status === "closing") closeAttemptCount++;
+    // Track lead status only from user/assistant messages (not tool messages)
+    if (r.lead_status && (r.role === "user" || r.role === "assistant")) {
+      const existing = phoneLeadStatus.get(r.phone_number);
+      if (!existing || new Date(r.created_at) > new Date(existing.created_at)) {
+        phoneLeadStatus.set(r.phone_number, {
+          status: r.lead_status,
+          created_at: r.created_at,
+        });
+      }
     }
 
     if (r.conversation_metadata) {
@@ -1375,6 +1496,14 @@ export async function getAiProductionStats(): Promise<AiProductionStats> {
         if (meta.handover) handoverCount++;
       }
     }
+  }
+
+  // Build lead status counts from per-phone latest status
+  const leadStatusCounts: Record<string, number> = {};
+  for (const { status } of phoneLeadStatus.values()) {
+    leadStatusCounts[status] = (leadStatusCounts[status] || 0) + 1;
+    if (status === "handover") handoverCount++;
+    if (status === "closing") closeAttemptCount++;
   }
 
   // no-reply = customers who sent user messages but never got an assistant reply
@@ -1591,7 +1720,26 @@ export async function getRecentConversationSummaries(
 
   if (error) throw error;
 
-  const rows = (data || []) as Array<{
+  // Filter out test numbers and invalid phone numbers (same logic as getAiProductionStats)
+  const isTestOrInvalidPhone = (phone: string) => {
+    if (!phone || phone.length < 10) return true;
+    if (phone === "unknown") return true;
+    if (phone.startsWith("2790000")) return true;
+    if (/^2\d?0{6,}$/.test(phone)) return true;
+    if (/012345678|12345678|23456789/.test(phone)) return true;
+    return false;
+  };
+
+  // Only include phones that have at least one user or assistant message
+  const phonesWithConversation = new Set<string>();
+  for (const r of (data || [])) {
+    const row = r as { phone_number: string; role: string | null };
+    if ((row.role === "user" || row.role === "assistant") && !isTestOrInvalidPhone(row.phone_number)) {
+      phonesWithConversation.add(row.phone_number);
+    }
+  }
+
+  const rows = ((data || []) as Array<{
     id: string;
     phone_number: string;
     sender_name: string | null;
@@ -1605,7 +1753,7 @@ export async function getRecentConversationSummaries(
     tool_results: Record<string, unknown> | null;
     conversation_metadata: Record<string, unknown> | null;
     created_at: string;
-  }>;
+  }>).filter((r) => phonesWithConversation.has(r.phone_number));
 
   // Group by phone_number
   const byPhone = new Map<string, typeof rows>();
@@ -1799,4 +1947,138 @@ export async function getAiQualityTrend(
 
   if (error) throw error;
   return (data || []) as AiQualityMetrics[];
+}
+
+// ---------------------------------------------------------------------------
+// RBAC / User Management
+// ---------------------------------------------------------------------------
+
+/**
+ * Lists all CRM users with their roles. Uses the admin client to read
+ * auth.users (emails + ban status) and joins with user_roles.
+ */
+export async function listUsers(): Promise<UserWithRole[]> {
+  const admin = createAdminClient();
+
+  const {
+    data: { users },
+    error: usersErr,
+  } = await admin.auth.admin.listUsers();
+
+  if (usersErr) throw usersErr;
+
+  const { data: roles, error: rolesErr } = await admin
+    .from("user_roles")
+    .select("user_id, role, full_name, branch_id, created_at, updated_at");
+
+  if (rolesErr) throw rolesErr;
+
+  const roleMap = new Map(
+    (roles || []).map((r) => [r.user_id as string, r]),
+  );
+
+  return users.map((u) => {
+    const r = roleMap.get(u.id);
+    return {
+      id: u.id,
+      email: u.email ?? "",
+      role: (r?.role as UserRole) ?? "sales",
+      full_name: r?.full_name ?? null,
+      branch_id: r?.branch_id ?? null,
+      created_at: u.created_at ?? "",
+      updated_at: r?.updated_at ?? "",
+      banned_until: u.banned_until ?? null,
+      is_active: !u.banned_until,
+    };
+  });
+}
+
+/**
+ * Creates a new CRM user: auth.users entry + user_roles row.
+ * Returns the new user's id, or throws on error.
+ */
+export async function createUser(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role: UserRole;
+  branchId?: number | null;
+}): Promise<{ id: string }> {
+  const admin = createAdminClient();
+
+  const {
+    data: authData,
+    error: authErr,
+  } = await admin.auth.admin.createUser({
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: { full_name: input.fullName },
+  });
+
+  if (authErr) throw authErr;
+  const userId = authData.user.id;
+
+  const { error: roleErr } = await admin.from("user_roles").insert({
+    user_id: userId,
+    role: input.role,
+    full_name: input.fullName,
+    branch_id: input.branchId ?? null,
+  });
+
+  if (roleErr) {
+    // Best-effort cleanup: remove the auth user if role insert failed.
+    await admin.auth.admin.deleteUser(userId);
+    throw roleErr;
+  }
+
+  return { id: userId };
+}
+
+/**
+ * Updates a user's role / name / branch. Uses admin client to bypass RLS
+ * (managers are additionally constrained by the caller before reaching here).
+ */
+export async function updateUser(
+  userId: string,
+  input: { role?: UserRole; fullName?: string; branchId?: number | null },
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const update: Record<string, unknown> = {};
+  if (input.role !== undefined) update.role = input.role;
+  if (input.fullName !== undefined) update.full_name = input.fullName;
+  if (input.branchId !== undefined) update.branch_id = input.branchId;
+
+  if (Object.keys(update).length === 0) return;
+
+  const { error } = await admin
+    .from("user_roles")
+    .update(update)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
+
+/**
+ * Deactivates (bans) a user so they can no longer sign in. Preserves the
+ * audit trail — does not delete the auth user.
+ */
+export async function deactivateUser(userId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    ban_duration: "876000h", // ~100 years — effectively permanent
+  });
+  if (error) throw error;
+}
+
+/**
+ * Reactivates a previously banned user.
+ */
+export async function reactivateUser(userId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    ban_duration: "none",
+  });
+  if (error) throw error;
 }

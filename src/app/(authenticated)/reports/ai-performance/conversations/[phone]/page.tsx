@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import {
@@ -43,6 +44,9 @@ export default async function ConversationDetailPage({
   params: Promise<{ phone: string }>;
 }) {
   const { phone } = await params;
+
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const decodedPhone = decodeURIComponent(phone);
 
   const [conversations, summaries] = await Promise.all([

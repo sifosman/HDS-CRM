@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import { Megaphone, Send, CheckCircle2, Users } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
 import { BroadcastFormTrigger } from "@/components/broadcast-form";
@@ -12,6 +14,8 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function BroadcastsPage() {
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const [campaigns, templates, segments, stats] = await Promise.all([
     getBroadcastCampaigns(),
     getApprovedWaTemplates(),

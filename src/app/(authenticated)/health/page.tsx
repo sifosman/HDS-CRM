@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import { Activity, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import {
   Card,
@@ -30,6 +32,8 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function HealthPage() {
+  const access = await requireRole(["owner"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const [summaries, failures] = await Promise.all([
     getHealthSummary(),
     getRecentHealthFailures(25),

@@ -2,24 +2,28 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/lib/role-utils";
+import { ROLE_LABELS, ROLE_COLORS } from "@/lib/constants";
 
-export function UserNav({ className }: { className?: string }) {
-  const [user, setUser] = React.useState<{ email?: string } | null>(null);
+export function UserNav({
+  className,
+  userEmail = "",
+  userRole = "sales" as UserRole,
+  userName = null,
+}: {
+  className?: string;
+  userEmail?: string;
+  userRole?: UserRole;
+  userName?: string | null;
+}) {
   const [isLoading, setIsLoading] = React.useState(false);
   const router = useRouter();
-
-  React.useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!error && data.session?.user) {
-        setUser(data.session.user);
-      }
-    });
-  }, []);
 
   async function handleSignOut() {
     setIsLoading(true);
@@ -29,16 +33,31 @@ export function UserNav({ className }: { className?: string }) {
     router.push("/login");
   }
 
-  if (!user) {
-    return null;
-  }
+  const displayName = userName || userEmail;
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
         <User className="h-4 w-4" />
-        <span className="max-w-[160px] truncate">{user.email}</span>
+        <span className="max-w-[140px] truncate">{displayName}</span>
+        <Badge
+          variant="secondary"
+          className={cn("text-[10px] px-1.5 py-0", ROLE_COLORS[userRole])}
+        >
+          {ROLE_LABELS[userRole]}
+        </Badge>
       </div>
+      {(userRole === "owner" || userRole === "manager") && (
+        <Link href="/settings/users">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="User Management"
+          >
+            <Users className="h-5 w-5" />
+          </Button>
+        </Link>
+      )}
       <Button
         variant="ghost"
         size="icon"

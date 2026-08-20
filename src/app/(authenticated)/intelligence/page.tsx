@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import { Brain, TrendingUp, AlertTriangle, DollarSign, Package } from "lucide-react";
 import {
   Card,
@@ -21,6 +23,9 @@ import {
 } from "@/lib/constants";
 
 export default async function IntelligencePage() {
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
+
   const [reports, stats] = await Promise.all([
     getIntelligenceReports(30),
     getIntelligenceStats(),

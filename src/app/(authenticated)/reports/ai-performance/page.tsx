@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import Link from "next/link";
 import {
   Card,
@@ -81,6 +83,8 @@ const GRADE_BG: Record<string, string> = {
 };
 
 export default async function AiReportsPage() {
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const [
     score,
     runSummaries,
@@ -213,19 +217,26 @@ export default async function AiReportsPage() {
         <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
           <Activity className="h-5 w-5" />
           Live Production Quality
+          <span className="text-sm font-normal text-muted-foreground">
+            (real customers only — test numbers excluded)
+          </span>
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
             title="Response Rate"
-            value={`${prodStats.responseRate}%`}
+            value={prodStats.uniqueCustomers > 0 ? `${prodStats.responseRate}%` : "—"}
             icon={MessageSquare}
-            description={`${prodStats.noReplyCount} of ${prodStats.uniqueCustomers} customers unanswered`}
+            description={
+              prodStats.uniqueCustomers > 0
+                ? `${prodStats.noReplyCount} of ${prodStats.uniqueCustomers} customers unanswered`
+                : "No real customer data yet"
+            }
           />
           <KpiCard
             title="Unique Customers"
             value={String(prodStats.uniqueCustomers)}
             icon={Target}
-            description={`${prodStats.totalMessages} total messages`}
+            description={`${prodStats.userMessages} customer · ${prodStats.assistantMessages} bot messages`}
           />
           <KpiCard
             title="Tool Calls"
@@ -295,6 +306,9 @@ export default async function AiReportsPage() {
         <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5" />
           Test Suite Performance
+          <span className="text-sm font-normal text-muted-foreground">
+            (automated scenario tests against live bot)
+          </span>
         </h2>
 
         {/* Latest run KPIs */}
@@ -305,13 +319,13 @@ export default async function AiReportsPage() {
                 title="Latest Run Pass Rate"
                 value={`${latestRun.pass_rate}%`}
                 icon={CheckCircle2}
-                description={`${latestRun.passed}/${latestRun.total} passed`}
+                description={`${latestRun.passed}/${latestRun.total} scenarios passed`}
               />
               <KpiCard
                 title="Run Type"
                 value={TEST_RUN_TYPE_LABELS[latestRun.run_type] || latestRun.run_type}
                 icon={Bot}
-                description={`Concurrency: ${latestRun.concurrency ?? "—"}`}
+                description={`${latestRun.total} scenarios · Concurrency: ${latestRun.concurrency ?? "—"}`}
               />
               <KpiCard
                 title="P95 Latency"
@@ -332,7 +346,9 @@ export default async function AiReportsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Pass Rate Trend</CardTitle>
-                  <CardDescription>Last {runSummaries.length} test runs</CardDescription>
+                  <CardDescription>
+                    Last {runSummaries.length} runs (excludes single-scenario runs)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {runSummaries.length > 0 ? (
@@ -348,7 +364,9 @@ export default async function AiReportsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Pass Rate by Category</CardTitle>
-                  <CardDescription>Aggregated across last 5 runs</CardDescription>
+                  <CardDescription>
+                    Smoke test runs (cover all core categories). Hover for details.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <CategoryPassRateChart
@@ -357,6 +375,7 @@ export default async function AiReportsPage() {
                       passRate: s.passRate,
                       total: s.total,
                       passed: s.passed,
+                      runCount: s.runCount,
                     }))}
                   />
                 </CardContent>
@@ -368,7 +387,7 @@ export default async function AiReportsPage() {
               <CardHeader>
                 <CardTitle>Category Detail</CardTitle>
                 <CardDescription>
-                  Per-category pass rates and latency (last 5 runs)
+                  Per-category pass rates and latency (aggregated from smoke test runs)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -376,6 +395,7 @@ export default async function AiReportsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Runs</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Passed</TableHead>
                       <TableHead className="text-right">Failed</TableHead>
@@ -386,7 +406,12 @@ export default async function AiReportsPage() {
                   </TableHeader>
                   <TableBody>
                     {categoryStats
-                      .sort((a, b) => b.passRate - a.passRate)
+                      .sort((a, b) => {
+                        // Sort: categories with data first (by pass rate), then no-data categories
+                        if (a.total === 0 && b.total > 0) return 1;
+                        if (a.total > 0 && b.total === 0) return -1;
+                        return b.passRate - a.passRate;
+                      })
                       .map((stat) => (
                         <TableRow key={stat.category}>
                           <TableCell>
@@ -395,6 +420,9 @@ export default async function AiReportsPage() {
                             >
                               {TEST_CATEGORY_LABELS[stat.category] || stat.category}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {stat.runCount || 0}
                           </TableCell>
                           <TableCell className="text-right">{stat.total}</TableCell>
                           <TableCell className="text-right text-green-600 dark:text-green-400">

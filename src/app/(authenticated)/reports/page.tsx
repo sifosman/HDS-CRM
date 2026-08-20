@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import {
   Card,
   CardContent,
@@ -30,6 +32,8 @@ import {
 import { FileText, DollarSign, Users, TrendingUp } from "lucide-react";
 
 export default async function ReportsPage() {
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const [customers, quotes, branches, segmentStats, typeStats] = await Promise.all([
     getCustomers(),
     getAllQuotes(),

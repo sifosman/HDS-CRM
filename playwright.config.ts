@@ -1,11 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Playwright config for HDS CRM Dashboard E2E tests (Phase 7).
+ * Playwright config for HDS CRM Dashboard E2E tests.
  *
- * Tests run against the local Next.js dev server. Auth is handled via a
- * global setup that logs in through the Supabase client and stores the
- * session cookies in browser context storageState.
+ * Three role-based projects (owner, manager, sales) each with their own
+ * auth setup and storage state, plus the original admin (mohamed) project
+ * for the existing app.spec.ts suite.
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -26,19 +26,70 @@ export default defineConfig({
   },
 
   projects: [
+    // --- Auth setup projects (run first) ---
     {
-      name: "setup",
-      testMatch: /auth-setup\.ts/,
+      name: "setup-admin",
+      testMatch: /auth-setup\.ts$/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "chromium",
-      dependencies: ["setup"],
+      name: "setup-owner",
+      testMatch: /auth-setup-owner\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "setup-manager",
+      testMatch: /auth-setup-manager\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "setup-sales",
+      testMatch: /auth-setup-sales\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+
+    // --- Admin (mohamed) project: existing app.spec.ts ---
+    {
+      name: "admin",
+      dependencies: ["setup-admin"],
       use: {
         ...devices["Desktop Chrome"],
         storageState: "tests/e2e/.auth/user.json",
       },
-      testIgnore: /auth-setup\.ts/,
+      testMatch: /app\.spec\.ts$/,
+    },
+
+    // --- Owner project: rbac + user-management tests ---
+    {
+      name: "owner",
+      dependencies: ["setup-owner"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "tests/e2e/.auth/owner.json",
+      },
+      testMatch: /rbac\.spec\.ts|user-management\.spec\.ts|dashboard\.spec\.ts|customers\.spec\.ts|quotes\.spec\.ts|payments\.spec\.ts|segments\.spec\.ts|intelligence\.spec\.ts|reports\.spec\.ts|health\.spec\.ts|templates\.spec\.ts|broadcasts\.spec\.ts|settings\.spec\.ts/,
+    },
+
+    // --- Manager project: rbac tests only ---
+    {
+      name: "manager",
+      dependencies: ["setup-manager"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "tests/e2e/.auth/manager.json",
+      },
+      testMatch: /rbac\.spec\.ts|user-management\.spec\.ts/,
+    },
+
+    // --- Sales project: rbac tests only ---
+    {
+      name: "sales",
+      dependencies: ["setup-sales"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "tests/e2e/.auth/sales.json",
+      },
+      testMatch: /rbac\.spec\.ts/,
     },
   ],
 

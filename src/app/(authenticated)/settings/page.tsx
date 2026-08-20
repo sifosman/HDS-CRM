@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -6,18 +7,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Users } from "lucide-react";
 import { getBranches } from "@/lib/queries";
+import { getCurrentUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const branches = await getBranches();
+  const [branches, user] = await Promise.all([getBranches(), getCurrentUser()]);
+
+  const canManageUsers = user?.role === "owner" || user?.role === "manager";
+  const userBranch = branches.find((b) => b.id === user?.branchId);
 
   return (
     <div className="space-y-6">
@@ -37,28 +40,64 @@ export default async function SettingsPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" placeholder="Your name" />
+              <Input
+                id="name"
+                value={user?.fullName ?? ""}
+                placeholder="Your name"
+                readOnly
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@hdsgroup.co.za" />
+              <Input
+                id="email"
+                type="email"
+                value={user?.email ?? ""}
+                readOnly
+              />
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select defaultValue="admin">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Sales Manager</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex h-9 items-center">
+                <Badge
+                  variant="secondary"
+                  className={cn(user ? ROLE_COLORS[user.role] : "")}
+                >
+                  {user ? ROLE_LABELS[user.role] : "—"}
+                </Badge>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Branch</Label>
+              <Input
+                value={userBranch?.trading_as ?? "No branch assigned"}
+                readOnly
+              />
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* User Management link */}
+      {canManageUsers && (
+        <Card>
+          <CardHeader>
+            <CardTitle>User Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Create and manage CRM user accounts, assign roles, and deactivate
+              users.
+            </p>
+            <Link href="/settings/users">
+              <Button>
+                <Users className="mr-2 h-4 w-4" />
+                Manage Users
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Notification Preferences */}
       <Card>
@@ -99,21 +138,6 @@ export default async function SettingsPage() {
               </p>
             </div>
             <Badge variant="secondary">Enabled</Badge>
-          </div>
-          <div className="space-y-2">
-            <Label>Day of week</Label>
-            <Select defaultValue="mon">
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mon">Monday</SelectItem>
-                <SelectItem value="tue">Tuesday</SelectItem>
-                <SelectItem value="wed">Wednesday</SelectItem>
-                <SelectItem value="thu">Thursday</SelectItem>
-                <SelectItem value="fri">Friday</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>

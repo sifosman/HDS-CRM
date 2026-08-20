@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import { MessageSquare } from "lucide-react";
 import { KpiCard } from "@/components/kpi-card";
 import { TemplateFormTrigger } from "@/components/template-form";
@@ -9,6 +11,8 @@ import { isMetaConfigured } from "@/lib/meta/client";
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const [templates, stats] = await Promise.all([
     getWaTemplates(),
     getBroadcastStats(),

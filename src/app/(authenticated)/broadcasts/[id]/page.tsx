@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import { ArrowLeft, Send, Users, CheckCircle2, XCircle } from "lucide-react";
 import {
   Card,
@@ -28,6 +29,9 @@ export default async function BroadcastDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
   const campaign = await getBroadcastCampaign(id);
   if (!campaign) notFound();
 

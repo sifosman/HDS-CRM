@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "@/components/kpi-card";
 import { RevenueTrendChart, PipelineChart } from "@/components/charts";
+import { AccessDeniedBanner } from "@/components/access-denied-banner";
 import { getDashboardStats } from "@/lib/queries";
 import {
   LEAD_STATUS_LABELS,
@@ -21,6 +22,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <AccessDeniedBanner />
       <div>
         <h1 className="text-2xl font-heading font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">

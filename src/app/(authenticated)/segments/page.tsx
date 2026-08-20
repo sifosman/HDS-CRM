@@ -1,8 +1,13 @@
+import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth";
 import { SegmentsManager } from "@/components/segments-manager";
 import { getSegments, getCustomers, applySegmentFilter } from "@/lib/queries";
 import type { Segment } from "@/lib/types";
 
 export default async function SegmentsPage() {
+  const access = await requireRole(["owner", "manager"]);
+  if (access.error) redirect("/dashboard?error=access_denied");
+
   const [segments, customers] = await Promise.all([
     getSegments(),
     getCustomers(),
