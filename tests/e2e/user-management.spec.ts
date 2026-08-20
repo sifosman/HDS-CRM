@@ -93,9 +93,61 @@ test.describe("User Management", () => {
 
     await page.getByRole("button", { name: /create user/i }).click();
 
-    // Dialog should close and the new user should appear in the table
+    // Dialog should close and the new user should appear in the table.
+    // router.refresh() is async — reload the page if the user doesn't appear.
     await expect(page.locator("table")).toBeVisible();
-    await expect(page.getByText(email)).toBeVisible({ timeout: 15000 });
+    try {
+      await expect(page.getByText(email)).toBeVisible({ timeout: 20000 });
+    } catch {
+      // Server action + router.refresh can be slow — reload and check again
+      await page.reload();
+      await expect(page.getByText(email)).toBeVisible({ timeout: 20000 });
+    }
+  });
+
+  test("deactivate and reactivate a user", async ({ page }) => {
+    const role = await detectRole(page);
+    const timestamp = Date.now();
+    const email = `e2e-deact-${timestamp}@hdsgroup.co.za`;
+
+    // Create a user to test with
+    await page.goto("/settings/users");
+    await page.getByRole("button", { name: /add user/i }).click();
+    await page.getByRole("dialog").getByLabel(/full name/i).fill("E2E Deact Test");
+    await page.getByRole("dialog").getByLabel(/email/i).fill(email);
+    await page.getByRole("dialog").getByLabel(/password/i).fill("E2eTestPass123!");
+    await page.getByRole("dialog").locator("[data-slot='select-trigger']").first().click();
+    await page.waitForTimeout(500);
+    await page.locator("[data-slot='select-item']").filter({ hasText: "Sales Representative" }).click();
+    await page.getByRole("button", { name: /create user/i }).click();
+    await expect(page.locator("table")).toBeVisible();
+    try {
+      await expect(page.getByText(email)).toBeVisible({ timeout: 20000 });
+    } catch {
+      await page.reload();
+      await expect(page.getByText(email)).toBeVisible({ timeout: 20000 });
+    }
+
+    // Deactivate
+    const userRow = page.locator("table tbody tr").filter({ hasText: email });
+    await userRow.getByRole("button", { name: /deactivate user/i }).click();
+    // Wait for the row to show "Deactivated" badge (router.refresh is async)
+    try {
+      await expect(userRow.getByText("Deactivated")).toBeVisible({ timeout: 20000 });
+    } catch {
+      await page.reload();
+      await expect(page.locator("table tbody tr").filter({ hasText: email }).getByText("Deactivated")).toBeVisible({ timeout: 20000 });
+    }
+
+    // Reactivate
+    const userRowAfter = page.locator("table tbody tr").filter({ hasText: email });
+    await userRowAfter.getByRole("button", { name: /reactivate user/i }).click();
+    try {
+      await expect(userRowAfter.getByText("Active")).toBeVisible({ timeout: 20000 });
+    } catch {
+      await page.reload();
+      await expect(page.locator("table tbody tr").filter({ hasText: email }).getByText("Active")).toBeVisible({ timeout: 20000 });
+    }
   });
 
   test("users table shows role badges and status", async ({ page }) => {

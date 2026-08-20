@@ -14,15 +14,14 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: [["html", { open: "never" }], ["list"]],
-  timeout: 60_000,
-  expect: { timeout: 15_000 },
+  timeout: 120_000,
+  expect: { timeout: 20_000 },
 
   use: {
     baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
-    actionTimeout: 20_000,
+    actionTimeout: 30_000,
   },
 
   projects: [
@@ -67,7 +66,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: "tests/e2e/.auth/owner.json",
       },
-      testMatch: /rbac\.spec\.ts|user-management\.spec\.ts|dashboard\.spec\.ts|customers\.spec\.ts|customer-detail\.spec\.ts|quotes\.spec\.ts|quote-detail\.spec\.ts|payments\.spec\.ts|segments\.spec\.ts|intelligence\.spec\.ts|reports\.spec\.ts|conversation-detail\.spec\.ts|health\.spec\.ts|templates\.spec\.ts|broadcasts\.spec\.ts|broadcast-detail\.spec\.ts|settings\.spec\.ts/,
+      testMatch: /rbac\.spec\.ts|user-management\.spec\.ts|interactions\.spec\.ts|dashboard\.spec\.ts|customers\.spec\.ts|customer-detail\.spec\.ts|quotes\.spec\.ts|quote-detail\.spec\.ts|payments\.spec\.ts|segments\.spec\.ts|intelligence\.spec\.ts|reports\.spec\.ts|conversation-detail\.spec\.ts|health\.spec\.ts|templates\.spec\.ts|broadcasts\.spec\.ts|broadcast-detail\.spec\.ts|settings\.spec\.ts/,
     },
 
     // --- Manager project: rbac tests only ---

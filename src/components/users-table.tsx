@@ -179,7 +179,11 @@ function UserRow({
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {user.created_at
-          ? new Date(user.created_at).toLocaleDateString()
+          ? new Date(user.created_at).toLocaleDateString("en-GB", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
           : "—"}
       </TableCell>
       <TableCell className="text-right">
