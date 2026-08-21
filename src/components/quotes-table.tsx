@@ -38,6 +38,7 @@ function quotePdfUrl(q: Quote): string | null {
 export function QuotesTable({ quotes }: { quotes: Quote[] }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const filtered = useMemo(() => {
     return quotes.filter((q) => {
@@ -48,9 +49,11 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
         q.customer_phone?.includes(search);
       const matchesStatus =
         statusFilter === "all" || q.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesSource =
+        sourceFilter === "all" || q.source === sourceFilter;
+      return matchesSearch && matchesStatus && matchesSource;
     });
-  }, [quotes, search, statusFilter]);
+  }, [quotes, search, statusFilter, sourceFilter]);
 
   const totalValue = filtered.reduce(
     (sum, q) => sum + Number(q.total || 0),
@@ -111,6 +114,20 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
             <SelectItem value="expired">Expired</SelectItem>
           </SelectContent>
         </Select>
+        <Select
+          value={sourceFilter}
+          onValueChange={(v) => setSourceFilter(v ?? "all")}
+        >
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Source" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sources</SelectItem>
+            <SelectItem value="chatbot">Chatbot</SelectItem>
+            <SelectItem value="web">Web</SelectItem>
+            <SelectItem value="botsailor">Legacy (BotSailor)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -125,13 +142,14 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                 <TableHead className="text-right">Total (incl VAT)</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>PDF</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No quotes found
                   </TableCell>
                 </TableRow>
@@ -167,6 +185,17 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{q.status || "sent"}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {q.source === "chatbot" ? (
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Chatbot</Badge>
+                    ) : q.source === "botsailor" ? (
+                      <Badge variant="outline">Legacy</Badge>
+                    ) : q.source === "web" ? (
+                      <Badge variant="secondary">Web</Badge>
+                    ) : (
+                      <Badge variant="secondary">{q.source || "—"}</Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {pdfUrl ? (

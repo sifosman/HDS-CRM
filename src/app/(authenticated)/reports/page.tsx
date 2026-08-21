@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -19,7 +20,8 @@ import { DonutChart, BranchBarChart } from "@/components/charts";
 import { KpiCard } from "@/components/kpi-card";
 import {
   getCustomers,
-  getAllQuotes,
+  getChatbotQuotes,
+  getHistoricalQuotes,
   getBranches,
   getSegmentStats,
   getCustomerTypeStats,
@@ -30,13 +32,15 @@ import {
   CUSTOMER_TYPE_COLORS,
 } from "@/lib/constants";
 import { FileText, DollarSign, Users, TrendingUp } from "lucide-react";
+import type { Quote } from "@/lib/types";
 
 export default async function ReportsPage() {
   const access = await requireRole(["owner", "manager"]);
   if (access.error) redirect("/dashboard?error=access_denied");
-  const [customers, quotes, branches, segmentStats, typeStats] = await Promise.all([
+  const [customers, chatbotQuotes, historicalQuotes, branches, segmentStats, typeStats] = await Promise.all([
     getCustomers(),
-    getAllQuotes(),
+    getChatbotQuotes(),
+    getHistoricalQuotes(),
     getBranches(),
     getSegmentStats(),
     getCustomerTypeStats(),
@@ -49,185 +53,230 @@ export default async function ReportsPage() {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
 
-  const weekQuotes = quotes.filter((q) => {
-    const qd = new Date(q.created_at);
-    return qd >= weekStart && qd <= weekEnd;
-  });
+  // Helper: compute report data from a quote set
+  function computeReportData(quotes: Quote[]) {
+    const weekQuotes = quotes.filter((q) => {
+      const qd = new Date(q.created_at);
+      return qd >= weekStart && qd <= weekEnd;
+    });
 
-  const totalQuoteValue = weekQuotes.reduce(
-    (sum, q) => sum + Number(q.total || 0),
-    0
-  );
-  const avgQuoteSize =
-    weekQuotes.length > 0 ? totalQuoteValue / weekQuotes.length : 0;
+    const totalQuoteValue = weekQuotes.reduce(
+      (sum, q) => sum + Number(q.total || 0),
+      0
+    );
+    const avgQuoteSize =
+      weekQuotes.length > 0 ? totalQuoteValue / weekQuotes.length : 0;
 
-  const closedLeads = customers.filter(
-    (c) => c.lead_status === "closed"
-  ).length;
-  const conversionRate =
-    customers.length > 0
-      ? Math.round((closedLeads / customers.length) * 100)
-      : 0;
+    const closedLeads = customers.filter(
+      (c) => c.lead_status === "closed"
+    ).length;
+    const conversionRate =
+      customers.length > 0
+        ? Math.round((closedLeads / customers.length) * 100)
+        : 0;
 
-  const newCustomers = customers.filter(
-    (c) => c.first_interaction_at && new Date(c.first_interaction_at) >= weekStart
-  ).length;
-  const returningCustomers = customers.length - newCustomers;
+    const newCustomers = customers.filter(
+      (c) => c.first_interaction_at && new Date(c.first_interaction_at) >= weekStart
+    ).length;
+    const returningCustomers = customers.length - newCustomers;
 
-  // Customer type distribution
-  const typeDistribution = Object.entries(CUSTOMER_TYPE_LABELS).map(
-    ([key, label]) => ({
-      name: label,
-      value: customers.filter((c) => c.customer_type === key).length,
-    })
-  );
+    // Customer type distribution
+    const typeDistribution = Object.entries(CUSTOMER_TYPE_LABELS).map(
+      ([key, label]) => ({
+        name: label,
+        value: customers.filter((c) => c.customer_type === key).length,
+      })
+    );
 
-  // Sales by branch
-  const branchSales = branches
-    .map((b) => ({
-      branch: b.trading_as?.split(" ")[0] || `#${b.id}`,
-      value: quotes
-        .filter(
-          (q) =>
-            q.branch_trading_as === b.trading_as ||
-            q.trading_as === b.trading_as
-        )
-        .reduce((sum, q) => sum + Number(q.total || 0), 0),
-    }))
-    .filter((b) => b.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 15);
+    // Sales by branch
+    const branchSales = branches
+      .map((b) => ({
+        branch: b.trading_as?.split(" ")[0] || `#${b.id}`,
+        value: quotes
+          .filter(
+            (q) =>
+              q.branch_trading_as === b.trading_as ||
+              q.trading_as === b.trading_as
+          )
+          .reduce((sum, q) => sum + Number(q.total || 0), 0),
+      }))
+      .filter((b) => b.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 15);
+
+    // Top quoted materials/customers
+    const productMap: Record<string, { count: number; value: number }> = {};
+    quotes.forEach((q) => {
+      const name = q.customer_name || "Unknown";
+      if (!productMap[name]) productMap[name] = { count: 0, value: 0 };
+      productMap[name].count++;
+      productMap[name].value += Number(q.total || 0);
+    });
+    const topProducts = Object.entries(productMap)
+      .sort((a, b) => b[1].value - a[1].value)
+      .slice(0, 10);
+
+    return {
+      weekQuotes,
+      totalQuoteValue,
+      avgQuoteSize,
+      conversionRate,
+      closedLeads,
+      newCustomers,
+      returningCustomers,
+      typeDistribution,
+      branchSales,
+      topProducts,
+      totalQuotes: quotes.length,
+    };
+  }
+
+  const chatbotData = computeReportData(chatbotQuotes);
+  const historicalData = computeReportData(historicalQuotes);
+
+  // Render a report section (shared between both tabs)
+  function ReportSection({ data, label }: { data: ReturnType<typeof computeReportData>; label: string }) {
+    return (
+      <div className="space-y-6">
+        {/* Summary KPIs */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard
+            title="Quotes Generated"
+            value={String(data.weekQuotes.length)}
+            icon={FileText}
+            description="This week"
+          />
+          <KpiCard
+            title="Total Quote Value"
+            value={formatCurrency(data.totalQuoteValue)}
+            icon={DollarSign}
+            description="This week"
+          />
+          <KpiCard
+            title="Conversion Rate"
+            value={`${data.conversionRate}%`}
+            icon={TrendingUp}
+            description={`${data.closedLeads} closed / ${customers.length} total`}
+          />
+          <KpiCard
+            title="New Customers"
+            value={String(data.newCustomers)}
+            icon={Users}
+            description={`${data.returningCustomers} returning`}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <KpiCard
+            title="Average Quote Size"
+            value={formatCurrency(data.avgQuoteSize)}
+            icon={DollarSign}
+          />
+          <KpiCard
+            title={`Total ${label} Quotes`}
+            value={String(data.totalQuotes)}
+            icon={FileText}
+            description="All time"
+          />
+        </div>
+
+        {/* Charts */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales by Branch</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.branchSales.length > 0 ? (
+                <BranchBarChart data={data.branchSales} />
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No branch sales data available
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lead Source Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DonutChart data={data.typeDistribution} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Top Products */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Quoted Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead className="text-right">Quote Count</TableHead>
+                  <TableHead className="text-right">Total Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.topProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      No data available
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  data.topProducts.map(([name, stats]) => (
+                    <TableRow key={name}>
+                      <TableCell className="font-medium">{name}</TableCell>
+                      <TableCell className="text-right">{stats.count}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(stats.value)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-heading font-bold">Weekly Reports</h1>
+        <h1 className="text-2xl font-heading font-bold">Reports</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Week of {weekStart.toLocaleDateString("en-ZA")} —{" "}
           {weekEnd.toLocaleDateString("en-ZA")}
         </p>
       </div>
 
-      {/* Summary KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          title="Quotes Generated"
-          value={String(weekQuotes.length)}
-          icon={FileText}
-          description="This week"
-        />
-        <KpiCard
-          title="Total Quote Value"
-          value={formatCurrency(totalQuoteValue)}
-          icon={DollarSign}
-          description="This week"
-        />
-        <KpiCard
-          title="Conversion Rate"
-          value={`${conversionRate}%`}
-          icon={TrendingUp}
-          description={`${closedLeads} closed / ${customers.length} total`}
-        />
-        <KpiCard
-          title="New Customers"
-          value={String(newCustomers)}
-          icon={Users}
-          description={`${returningCustomers} returning`}
-        />
-      </div>
+      <Tabs defaultValue="chatbot">
+        <TabsList>
+          <TabsTrigger value="chatbot">
+            New Chatbot ({chatbotQuotes.length})
+          </TabsTrigger>
+          <TabsTrigger value="historical">
+            Historical / Pre-Chatbot ({historicalQuotes.length})
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <KpiCard
-          title="Average Quote Size"
-          value={formatCurrency(avgQuoteSize)}
-          icon={DollarSign}
-        />
-        <KpiCard
-          title="Total Customers"
-          value={String(customers.length)}
-          icon={Users}
-        />
-      </div>
+        <TabsContent value="chatbot" className="space-y-6">
+          <ReportSection data={chatbotData} label="Chatbot" />
+        </TabsContent>
 
-      {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales by Branch</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {branchSales.length > 0 ? (
-              <BranchBarChart data={branchSales} />
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No branch sales data available
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <TabsContent value="historical" className="space-y-6">
+          <ReportSection data={historicalData} label="Historical" />
+        </TabsContent>
+      </Tabs>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Lead Source Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DonutChart data={typeDistribution} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Products */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Quoted Materials</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead className="text-right">Quote Count</TableHead>
-                <TableHead className="text-right">Total Value</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(() => {
-                const productMap: Record<string, { count: number; value: number }> = {};
-                quotes.forEach((q) => {
-                  const name = q.customer_name || "Unknown";
-                  if (!productMap[name]) productMap[name] = { count: 0, value: 0 };
-                  productMap[name].count++;
-                  productMap[name].value += Number(q.total || 0);
-                });
-                const topProducts = Object.entries(productMap)
-                  .sort((a, b) => b[1].value - a[1].value)
-                  .slice(0, 10);
-
-                if (topProducts.length === 0) {
-                  return (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                        No data available
-                      </TableCell>
-                    </TableRow>
-                  );
-                }
-                return topProducts.map(([name, stats]) => (
-                  <TableRow key={name}>
-                    <TableCell className="font-medium">{name}</TableCell>
-                    <TableCell className="text-right">{stats.count}</TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(stats.value)}
-                    </TableCell>
-                  </TableRow>
-                ));
-              })()}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Customer Type Breakdown with Conversion */}
+      {/* Customer Type Breakdown with Conversion (shared — based on all customers) */}
       <Card>
         <CardHeader>
           <CardTitle>Customer Type Segmentation</CardTitle>

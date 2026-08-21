@@ -92,6 +92,7 @@ export type Quote = {
   trading_as: string | null;
   branch: string | null;
   branch_trading_as: string | null;
+  source: string | null;
 };
 
 /**
