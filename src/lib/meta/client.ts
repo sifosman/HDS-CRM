@@ -6,13 +6,12 @@
  *  - WHATSAPP_WABA_ID       (WhatsApp Business Account ID)
  *  - WHATSAPP_PHONE_NUMBER_ID (sender phone number ID)
  *
- * NOTE (Phase 5 blocker): The WABA ID must be confirmed with Meta before
- * template submission will succeed. The value in memory
- * ("122111764437301229 (Glass)") may not be a real WABA ID. Until confirmed,
- * `isMetaConfigured()` returns false and the CRM falls back to draft-only mode.
+ * Graph API version is pinned to v23.0 (latest stable as of 2026).
+ * If any of the three env vars is missing, `isMetaConfigured()` returns
+ * false and the CRM falls back to draft-only mode.
  */
 
-const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
+const GRAPH_API_BASE = "https://graph.facebook.com/v23.0";
 
 export type MetaConfig = {
   accessToken: string;
