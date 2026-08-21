@@ -77,10 +77,10 @@ const padImage = async (req, res) => {
         // Download the original image
         const imageRes = await fetch(url);
         if (!imageRes.ok) {
-            // Return 404 for not-found images (so callers can distinguish missing
-            // images from server errors); 502 for other upstream failures.
-            const status = imageRes.status === 404 ? 404 : 502;
-            res.status(status).json({ success: false, error: `Failed to fetch image: ${imageRes.status}` });
+            // Any non-200 upstream response means the image is not available
+            // (404 not found, 400 bad request, 403 forbidden, etc.). Return 404 so
+            // callers can distinguish "image missing" from a genuine server error.
+            res.status(404).json({ success: false, error: `Failed to fetch image: ${imageRes.status}` });
             return;
         }
         const imageBuffer = Buffer.from(await imageRes.arrayBuffer());
