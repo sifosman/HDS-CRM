@@ -165,7 +165,7 @@ export function CustomersTable({
                 const sent = breakdown?.sent ?? 0;
                 const totalQuotes = breakdown?.total ?? customer.total_quotes ?? 0;
                 return (
-                <TableRow key={customer.id} className="cursor-pointer">
+                <TableRow key={customer.id} className="cursor-pointer transition-colors hover:bg-muted/50 active:bg-muted/80 active:scale-[0.995]">
                   <TableCell className="font-medium">
                     <Link
                       href={`/customers/${encodeURIComponent(customer.phone_number)}`}

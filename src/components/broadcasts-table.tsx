@@ -124,7 +124,7 @@ export function BroadcastsTable({ campaigns }: BroadcastsTableProps) {
                 </TableRow>
               )}
               {campaigns.map((c) => (
-                <TableRow key={c.id}>
+                <TableRow key={c.id} className="transition-colors hover:bg-muted/50 active:bg-muted/80 active:scale-[0.995]">
                   <TableCell className="font-medium">
                     <Link href={`/broadcasts/${c.id}`} className="hover:underline">
                       {c.name}

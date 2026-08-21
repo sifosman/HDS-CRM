@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Save } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function SalesNotesEditor({
@@ -39,7 +39,11 @@ export function SalesNotesEditor({
       />
       <div className="flex items-center gap-3">
         <Button onClick={handleSave} disabled={saving} size="sm">
-          <Save className="h-4 w-4 mr-1" />
+          {saving ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-1" />
+          )}
           {saving ? "Saving..." : "Save Notes"}
         </Button>
         {saved && (

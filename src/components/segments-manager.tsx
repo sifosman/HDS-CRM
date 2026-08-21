@@ -36,7 +36,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Plus, Trash2, Users, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   CUSTOMER_TYPE_LABELS,
@@ -302,7 +302,14 @@ export function SegmentsManager({
               )}
               <DialogClose render={<Button variant="outline">Cancel</Button>} />
               <Button onClick={handleSave} disabled={saving || !name.trim()}>
-                {saving ? "Saving..." : "Save Segment"}
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Segment"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -348,7 +355,11 @@ export function SegmentsManager({
                       onClick={() => handleDelete(seg.id)}
                       disabled={saving}
                     >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      )}
                     </Button>
                   </TableCell>
                 </TableRow>

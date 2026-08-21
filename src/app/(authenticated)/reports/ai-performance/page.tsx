@@ -821,7 +821,7 @@ export default async function AiReportsPage() {
                 </TableHeader>
                 <TableBody>
                   {conversationSummaries.map((conv) => (
-                    <TableRow key={conv.phone_number}>
+                    <TableRow key={conv.phone_number} className="transition-colors hover:bg-muted/50 active:bg-muted/80 active:scale-[0.995]">
                       <TableCell>
                         <div className="font-medium">
                           {conv.customer_name || formatPhone(conv.phone_number)}

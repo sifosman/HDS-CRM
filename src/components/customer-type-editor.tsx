@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   CUSTOMER_TYPE_LABELS,
@@ -69,7 +70,12 @@ export function CustomerTypeEditor({
         </Badge>
         <span className="text-xs text-muted-foreground">
           Source: {CLASSIFICATION_SOURCE_LABELS[source] || "—"}
-          {saving && " (saving...)"}
+          {saving && (
+            <span className="inline-flex items-center gap-1 ml-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              saving...
+            </span>
+          )}
           {saved && " ✓ saved"}
         </span>
       </div>

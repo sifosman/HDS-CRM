@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, User, Users } from "lucide-react";
+import { LogOut, User, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/role-utils";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/constants";
@@ -65,7 +65,11 @@ export function UserNav({
         disabled={isLoading}
         aria-label="Sign out"
       >
-        <LogOut className="h-5 w-5" />
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <LogOut className="h-5 w-5" />
+        )}
       </Button>
     </div>
   );

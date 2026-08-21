@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +16,7 @@ import {
   Bot,
   ChevronRight,
   UserCog,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -70,6 +72,7 @@ const reportSubItems: NavItem[] = [
 
 export function AppSidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
+  const [isPending] = useTransition();
   const reportsActive = pathname.startsWith("/reports");
 
   const navItems = allNavItems.filter((item) => item.roles.includes(role));
@@ -104,13 +107,18 @@ export function AppSidebar({ role }: { role: UserRole }) {
                   (item.href !== "/dashboard" &&
                     item.href !== "/settings" &&
                     pathname.startsWith(item.href));
+                const isNavigating = isPending && isActive;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={isActive}
                       render={
                         <Link href={item.href}>
-                          <item.icon className="h-4 w-4" />
+                          {isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <item.icon className="h-4 w-4" />
+                          )}
                           <span>{item.title}</span>
                         </Link>
                       }
@@ -126,7 +134,11 @@ export function AppSidebar({ role }: { role: UserRole }) {
                     <CollapsibleTrigger
                       render={
                         <SidebarMenuButton isActive={reportsActive}>
-                          <BarChart3 className="h-4 w-4" />
+                          {isPending && reportsActive ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <BarChart3 className="h-4 w-4" />
+                          )}
                           <span>Reports</span>
                           <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[panel-open]/menu-button:rotate-90" />
                         </SidebarMenuButton>
@@ -143,7 +155,11 @@ export function AppSidebar({ role }: { role: UserRole }) {
                               isActive={subActive}
                               render={
                                 <Link href={sub.href}>
-                                  <sub.icon className="h-4 w-4" />
+                                  {isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <sub.icon className="h-4 w-4" />
+                                  )}
                                   <span>{sub.title}</span>
                                 </Link>
                               }

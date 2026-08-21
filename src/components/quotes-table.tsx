@@ -141,7 +141,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                 return (
                 <TableRow
                   key={q.id}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className="cursor-pointer transition-colors hover:bg-muted/50 active:bg-muted/80 active:scale-[0.995]"
                 >
                   <TableCell className="font-mono text-xs">
                     <Link
