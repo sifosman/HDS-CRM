@@ -944,42 +944,6 @@ export const generateQuote = async (req: Request, res: Response) => {
       }
     }
 
-    // Send notification email to branch with attached cutlist PDF (best-effort)
-    try {
-      let branchEmail: string | null = null;
-
-      if (branchData && (branchData as any).email_address) {
-        branchEmail = (branchData as any).email_address;
-      } else if (branchData && (branchData as any).trading_as) {
-        const branchRes = await SupabaseService.getBranchByTradingAs((branchData as any).trading_as);
-        if (branchRes.success && branchRes.data && branchRes.data.email_address) {
-          branchEmail = branchRes.data.email_address;
-        }
-      }
-
-      const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
-      const recipient = branchEmail || fallbackEmail;
-
-      if (!recipient) {
-        console.warn('No branch or fallback email configured; skipping quote-created email');
-      } else if (!cutlistPdfUrl) {
-        console.warn('No cutlistPdfUrl available; skipping quote-created email');
-      } else {
-        const emailService = new EmailService();
-        await emailService.sendQuoteCreatedEmail({
-          branchEmail: recipient,
-          quoteNumber: quoteId,
-          customerName,
-          customerPhone: phoneNumber,
-          projectName,
-          cutlistPdfUrl,
-          quotePdfUrl,
-        });
-      }
-    } catch (emailError) {
-      console.error('Error sending quote-created email:', emailError);
-    }
-
     // Calculate final totals (VAT-inclusive) — hardware included
     const totalEdgingCost = parseFloat(edgingCostTotal.toFixed(2));
     const subtotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee + hardwareTotal).toFixed(2));
