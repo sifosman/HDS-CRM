@@ -173,7 +173,7 @@ export const importIQData = async (req: Request, res: Response) => {
 // Generate a complete quote with optimization, pricing, and PDF
 export const generateQuote = async (req: Request, res: Response) => {
   try {
-    const { sections, customerName, projectName, phoneNumber, branchData, hardware } = req.body;
+    const { sections, customerName, projectName, phoneNumber, branchData, hardware, source } = req.body;
 
     // Validate input — allow hardware-only quotes too (no sections required if hardware present)
     const hasSections = sections && Array.isArray(sections) && sections.length > 0;
@@ -825,7 +825,8 @@ export const generateQuote = async (req: Request, res: Response) => {
         status: 'pending',
         cutlistUrl: quotePdfUrl,
         branchData: branchData,
-        cutlistPdfUrl: cutlistPdfUrl
+        cutlistPdfUrl: cutlistPdfUrl,
+        source: source || 'web'
       };
     } catch (dataError) {
       console.error('Error creating quote save data:', dataError);
@@ -1025,6 +1026,152 @@ export const sendQuoteToWhatsApp = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to send quote to WhatsApp',
+      error: error?.message || 'Unknown error'
+    });
+  }
+};
+
+// Assign a branch to an existing quote (branch resolution flow).
+// Updates the quote record in Supabase with branchData and sends the
+// "New Quote Created" email to the branch manager. Re-sends the email on
+// re-assignment (customer picks a different branch).
+export const assignBranch = async (req: Request, res: Response) => {
+  try {
+    const { quoteId, branchData } = req.body;
+
+    if (!quoteId) {
+      return res.status(400).json({
+        success: false,
+        message: 'quoteId is required'
+      });
+    }
+    if (!branchData || typeof branchData !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'branchData object is required'
+      });
+    }
+
+    const tradingAs = branchData.trading_as || branchData.tradingAs || '';
+    if (!tradingAs) {
+      return res.status(400).json({
+        success: false,
+        message: 'branchData.trading_as is required'
+      });
+    }
+
+    console.log(`assignBranch: assigning branch "${tradingAs}" to quote "${quoteId}"`);
+
+    // 1. Update the quote record with branch fields + quote_data.branchData
+    const assignResult = await SupabaseService.assignBranchToQuote(quoteId, branchData);
+    if (!assignResult.success) {
+      console.error('assignBranch: failed to update quote:', assignResult.error);
+      return res.status(404).json({
+        success: false,
+        message: 'Failed to assign branch to quote',
+        error: assignResult.error
+      });
+    }
+
+    const previousBranch = assignResult.previousBranch || null;
+    const updatedQuote = assignResult.quote || assignResult.data;
+    const isReassignment = !!previousBranch && previousBranch !== tradingAs;
+
+    // 2. Resolve the branch email (prefer branchData.email_address, else lookup)
+    let branchEmail: string | null = null;
+    if (branchData.email_address) {
+      branchEmail = branchData.email_address;
+    } else {
+      const branchRes = await SupabaseService.getBranchByTradingAs(tradingAs);
+      if (branchRes.success && branchRes.data && branchRes.data.email_address) {
+        branchEmail = branchRes.data.email_address;
+      }
+    }
+
+    // 3. Fetch quote details needed for the email (PDF URLs, customer info)
+    let quotePdfUrl: string | undefined;
+    let cutlistPdfUrl: string | undefined;
+    let customerName = '';
+    let customerPhone: string | undefined;
+    let projectName: string | undefined;
+
+    try {
+      const quoteRes = await SupabaseService.fetchQuoteByNumber(quoteId);
+      if (quoteRes.success && quoteRes.data) {
+        const q = quoteRes.data;
+        customerName = q.customer_name || '';
+        customerPhone = q.customer_phone || undefined;
+        projectName = q.project_name || undefined;
+        quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
+        cutlistPdfUrl = q.cutlist_pdf_url || undefined;
+        // Fallback: construct quote PDF URL from filename if not stored
+        if (!quotePdfUrl && q.filename) {
+          const supabaseUrl = process.env.SUPABASE_URL || '';
+          if (supabaseUrl) {
+            quotePdfUrl = `${supabaseUrl}/storage/v1/object/public/hdsquotes/${q.filename}`;
+          }
+        }
+      }
+    } catch (fetchErr) {
+      console.warn('assignBranch: could not fetch quote details for email:', fetchErr);
+    }
+
+    // 4. Send the "New Quote Created" email to the branch manager
+    let emailSent = false;
+    let emailError: string | undefined;
+    try {
+      const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
+      const recipient = branchEmail || fallbackEmail;
+
+      if (!recipient) {
+        console.warn('assignBranch: no branch or fallback email configured; skipping quote-created email');
+      } else if (!cutlistPdfUrl) {
+        console.warn('assignBranch: no cutlistPdfUrl available; skipping quote-created email');
+      } else {
+        const emailService = new EmailService();
+        await emailService.sendQuoteCreatedEmail({
+          branchEmail: recipient,
+          quoteNumber: quoteId,
+          customerName: customerName || 'Customer',
+          customerPhone,
+          projectName,
+          cutlistPdfUrl,
+          quotePdfUrl,
+        });
+        emailSent = true;
+        console.log(`assignBranch: quote-created email sent to ${recipient}${isReassignment ? ' (re-assignment)' : ''}`);
+      }
+    } catch (emailErr: any) {
+      emailError = emailErr?.message || String(emailErr);
+      console.error('assignBranch: error sending quote-created email:', emailErr);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: isReassignment
+        ? `Branch updated from "${previousBranch}" to "${tradingAs}" and notification email sent.`
+        : `Branch "${tradingAs}" assigned to quote and notification email sent.`,
+      data: {
+        quoteId,
+        tradingAs,
+        previousBranch,
+        isReassignment,
+        branchEmail: branchEmail || null,
+        emailSent,
+        emailError,
+        quote: {
+          customerName,
+          projectName,
+          quotePdfUrl,
+          cutlistPdfUrl,
+        }
+      }
+    });
+  } catch (error: any) {
+    console.error('assignBranch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error assigning branch to quote',
       error: error?.message || 'Unknown error'
     });
   }

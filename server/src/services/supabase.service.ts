@@ -515,7 +515,9 @@ const SupabaseService = {
         quote.project_name = quoteData.projectName;
       }
       if (quoteData.quoteData) {
-        quote.quote_data = JSON.stringify(quoteData.quoteData);
+        // Pass the object directly — Supabase handles jsonb serialization.
+        // Using JSON.stringify here causes double-encoding (string within jsonb).
+        quote.quote_data = quoteData.quoteData;
       }
       if (quoteData.subtotal !== undefined) {
         quote.subtotal = quoteData.subtotal;
@@ -526,8 +528,17 @@ const SupabaseService = {
       if (quoteData.total !== undefined) {
         quote.total = quoteData.total;
       }
-      if (quoteData.cutlistPdfUrl) {
-        quote.cutlist_pdf_url = quoteData.cutlistPdfUrl;
+      // Map cutlistUrl (quote PDF URL) to the cutlist_url column.
+      // Fall back to cutlistPdfUrl (optimization PDF URL) if cutlistUrl not set.
+      // NOTE: the quotes table has cutlist_url, NOT cutlist_pdf_url.
+      if (quoteData.cutlistUrl) {
+        quote.cutlist_url = quoteData.cutlistUrl;
+      } else if (quoteData.cutlistPdfUrl) {
+        quote.cutlist_url = quoteData.cutlistPdfUrl;
+      }
+      // Pass through the source field (defaults to 'web' via DB column default)
+      if (quoteData.source) {
+        quote.source = quoteData.source;
       }
 
       // Extract and set branch fields explicitly on the quote for reliable email resolution
@@ -569,18 +580,19 @@ const SupabaseService = {
       let insertResult = await doInsert(quote);
       let { data, error } = insertResult as { data: any; error: any };
 
-      // Fallback: if branch columns don't exist in quotes table, retry without them
+      // Fallback: if branch or source columns don't exist in quotes table, retry without them
       if (
         error && (
           (typeof error.code === 'string' && error.code === 'PGRST204') ||
-          (typeof error.message === 'string' && /trading_as|branch_trading_as|\bbranch\b/.test(error.message))
+          (typeof error.message === 'string' && /trading_as|branch_trading_as|\bbranch\b|source/.test(error.message))
         )
       ) {
         const fallbackQuote = { ...quote };
         delete (fallbackQuote as any).trading_as;
         delete (fallbackQuote as any).branch_trading_as;
         delete (fallbackQuote as any).branch;
-        console.warn("quotes table missing one or more branch columns (trading_as/branch/branch_trading_as). Retrying insert without these fields.");
+        delete (fallbackQuote as any).source;
+        console.warn("quotes table missing one or more columns (trading_as/branch/branch_trading_as/source). Retrying insert without these fields.");
         const retry = await doInsert(fallbackQuote);
         data = retry.data;
         error = retry.error;
@@ -968,6 +980,117 @@ const SupabaseService = {
       return { success: true, data };
     } catch (error: any) {
       console.error(`Error in updateQuotePdfUrl for ${quoteId}:`, error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Assign a branch to an existing quote.
+   *
+   * Updates the `quotes` table with branch fields (trading_as, branch,
+   * branch_trading_as) and merges branchData into the `quote_data` JSON so
+   * that downstream consumers (PayFast ITN email resolution, invoice
+   * generation) can resolve the correct branch.
+   *
+   * @param quoteNumber The quote identifier (quote_number or filename)
+   * @param branchData  Branch object from the `branches` table:
+   *                    { trading_as, branch_address, branch_telephone, email_address, ... }
+   * @returns Promise with the updated quote record
+   */
+  async assignBranchToQuote(quoteNumber: string, branchData: any): Promise<any> {
+    try {
+      if (!quoteNumber) {
+        return { success: false, error: 'Missing quoteNumber' };
+      }
+      if (!branchData || typeof branchData !== 'object') {
+        return { success: false, error: 'Missing branchData' };
+      }
+
+      // Resolve the existing quote record (handles filename / quote_number variants)
+      const resolved = await this.fetchQuoteByNumber(quoteNumber);
+      if (!resolved?.success || !resolved.data) {
+        console.error(`assignBranchToQuote: quote not found for "${quoteNumber}"`);
+        return { success: false, error: 'Quote not found' };
+      }
+      const existing = resolved.data;
+
+      const tradingAs = branchData.trading_as || branchData.tradingAs || '';
+      const branchTradingAs = branchData.branch_trading_as || branchData.branchTradingAs || tradingAs;
+      // `branch` column stores the trading_as as a plain string for simple resolution
+      const branchCol = tradingAs;
+
+      // Merge branchData into the existing quote_data JSON (preserve other fields)
+      let mergedQuoteData: any = {};
+      try {
+        mergedQuoteData = typeof existing.quote_data === 'string'
+          ? JSON.parse(existing.quote_data || '{}')
+          : (existing.quote_data || {});
+      } catch (e) {
+        console.warn('assignBranchToQuote: failed to parse existing quote_data, starting fresh');
+        mergedQuoteData = {};
+      }
+      mergedQuoteData.branchData = branchData;
+
+      const updatePayload: any = {
+        trading_as: tradingAs,
+        branch: branchCol,
+        branch_trading_as: branchTradingAs,
+        quote_data: mergedQuoteData,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update by the resolved quote_number (unique) — fall back to filename
+      let updateQuery = supabase.from('quotes').update(updatePayload);
+      if (existing.quote_number) {
+        updateQuery = updateQuery.eq('quote_number', existing.quote_number);
+      } else {
+        updateQuery = updateQuery.eq('filename', existing.filename);
+      }
+
+      const { data, error } = await updateQuery.select().single();
+
+      // Fallback: if branch columns don't exist, retry without them (keep quote_data)
+      if (
+        error && (
+          (typeof error.code === 'string' && error.code === 'PGRST204') ||
+          (typeof error.message === 'string' && /trading_as|branch_trading_as|\bbranch\b/.test(error.message))
+        )
+      ) {
+        console.warn('assignBranchToQuote: branch columns missing on quotes table, retrying with quote_data only');
+        const fallbackPayload = { ...updatePayload };
+        delete fallbackPayload.trading_as;
+        delete fallbackPayload.branch;
+        delete fallbackPayload.branch_trading_as;
+        let retryQuery = supabase.from('quotes').update(fallbackPayload);
+        if (existing.quote_number) {
+          retryQuery = retryQuery.eq('quote_number', existing.quote_number);
+        } else {
+          retryQuery = retryQuery.eq('filename', existing.filename);
+        }
+        const retry = await retryQuery.select().single();
+        if (retry.error) {
+          console.error('assignBranchToQuote: retry failed:', retry.error);
+          return { success: false, error: retry.error.message };
+        }
+        console.log('assignBranchToQuote: updated quote_data only (branch columns absent)');
+        return { success: true, data: retry.data, quote: retry.data, previousBranch: existing.trading_as || existing.branch_trading_as || null };
+      }
+
+      if (error) {
+        console.error('assignBranchToQuote: update error:', error);
+        return { success: false, error: error.message };
+      }
+
+      const previousBranch = existing.trading_as || existing.branch_trading_as || null;
+      console.log('assignBranchToQuote: success', {
+        quoteNumber: existing.quote_number,
+        trading_as: tradingAs,
+        previousBranch,
+      });
+
+      return { success: true, data, quote: data, previousBranch };
+    } catch (error: any) {
+      console.error('Error in assignBranchToQuote:', error);
       return { success: false, error: error.message };
     }
   },
