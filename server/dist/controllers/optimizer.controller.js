@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exports.exportIQData = exports.downloadPdf = exports.optimizeCutting = void 0;
+exports.assignBranch = exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exports.exportIQData = exports.downloadPdf = exports.optimizeCutting = void 0;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const optimizer_service_1 = require("../services/optimizer.service");
@@ -149,7 +149,7 @@ exports.importIQData = importIQData;
 const generateQuote = async (req, res) => {
     var _a, _b, _c, _d, _e;
     try {
-        const { sections, customerName, projectName, phoneNumber, branchData, hardware } = req.body;
+        const { sections, customerName, projectName, phoneNumber, branchData, hardware, source } = req.body;
         // Validate input — allow hardware-only quotes too (no sections required if hardware present)
         const hasSections = sections && Array.isArray(sections) && sections.length > 0;
         const hasHardware = hardware && Array.isArray(hardware) && hardware.length > 0;
@@ -725,7 +725,8 @@ const generateQuote = async (req, res) => {
                 status: 'pending',
                 cutlistUrl: quotePdfUrl,
                 branchData: branchData,
-                cutlistPdfUrl: cutlistPdfUrl
+                cutlistPdfUrl: cutlistPdfUrl,
+                source: source || 'web'
             };
         }
         catch (dataError) {
@@ -845,42 +846,6 @@ const generateQuote = async (req, res) => {
                 console.error('Error sending quote-created email:', emailError);
             }
         }
-        // Send notification email to branch with attached cutlist PDF (best-effort)
-        try {
-            let branchEmail = null;
-            if (branchData && branchData.email_address) {
-                branchEmail = branchData.email_address;
-            }
-            else if (branchData && branchData.trading_as) {
-                const branchRes = await supabase_service_1.default.getBranchByTradingAs(branchData.trading_as);
-                if (branchRes.success && branchRes.data && branchRes.data.email_address) {
-                    branchEmail = branchRes.data.email_address;
-                }
-            }
-            const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
-            const recipient = branchEmail || fallbackEmail;
-            if (!recipient) {
-                console.warn('No branch or fallback email configured; skipping quote-created email');
-            }
-            else if (!cutlistPdfUrl) {
-                console.warn('No cutlistPdfUrl available; skipping quote-created email');
-            }
-            else {
-                const emailService = new email_service_1.default();
-                await emailService.sendQuoteCreatedEmail({
-                    branchEmail: recipient,
-                    quoteNumber: quoteId,
-                    customerName,
-                    customerPhone: phoneNumber,
-                    projectName,
-                    cutlistPdfUrl,
-                    quotePdfUrl,
-                });
-            }
-        }
-        catch (emailError) {
-            console.error('Error sending quote-created email:', emailError);
-        }
         // Calculate final totals (VAT-inclusive) — hardware included
         const totalEdgingCost = parseFloat(edgingCostTotal.toFixed(2));
         const subtotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee + hardwareTotal).toFixed(2));
@@ -962,3 +927,144 @@ const sendQuoteToWhatsApp = async (req, res) => {
     }
 };
 exports.sendQuoteToWhatsApp = sendQuoteToWhatsApp;
+// Assign a branch to an existing quote (branch resolution flow).
+// Updates the quote record in Supabase with branchData and sends the
+// "New Quote Created" email to the branch manager. Re-sends the email on
+// re-assignment (customer picks a different branch).
+const assignBranch = async (req, res) => {
+    try {
+        const { quoteId, branchData } = req.body;
+        if (!quoteId) {
+            return res.status(400).json({
+                success: false,
+                message: 'quoteId is required'
+            });
+        }
+        if (!branchData || typeof branchData !== 'object') {
+            return res.status(400).json({
+                success: false,
+                message: 'branchData object is required'
+            });
+        }
+        const tradingAs = branchData.trading_as || branchData.tradingAs || '';
+        if (!tradingAs) {
+            return res.status(400).json({
+                success: false,
+                message: 'branchData.trading_as is required'
+            });
+        }
+        console.log(`assignBranch: assigning branch "${tradingAs}" to quote "${quoteId}"`);
+        // 1. Update the quote record with branch fields + quote_data.branchData
+        const assignResult = await supabase_service_1.default.assignBranchToQuote(quoteId, branchData);
+        if (!assignResult.success) {
+            console.error('assignBranch: failed to update quote:', assignResult.error);
+            return res.status(404).json({
+                success: false,
+                message: 'Failed to assign branch to quote',
+                error: assignResult.error
+            });
+        }
+        const previousBranch = assignResult.previousBranch || null;
+        const updatedQuote = assignResult.quote || assignResult.data;
+        const isReassignment = !!previousBranch && previousBranch !== tradingAs;
+        // 2. Resolve the branch email (prefer branchData.email_address, else lookup)
+        let branchEmail = null;
+        if (branchData.email_address) {
+            branchEmail = branchData.email_address;
+        }
+        else {
+            const branchRes = await supabase_service_1.default.getBranchByTradingAs(tradingAs);
+            if (branchRes.success && branchRes.data && branchRes.data.email_address) {
+                branchEmail = branchRes.data.email_address;
+            }
+        }
+        // 3. Fetch quote details needed for the email (PDF URLs, customer info)
+        let quotePdfUrl;
+        let cutlistPdfUrl;
+        let customerName = '';
+        let customerPhone;
+        let projectName;
+        try {
+            const quoteRes = await supabase_service_1.default.fetchQuoteByNumber(quoteId);
+            if (quoteRes.success && quoteRes.data) {
+                const q = quoteRes.data;
+                customerName = q.customer_name || '';
+                customerPhone = q.customer_phone || undefined;
+                projectName = q.project_name || undefined;
+                quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
+                cutlistPdfUrl = q.cutlist_pdf_url || undefined;
+                // Fallback: construct quote PDF URL from filename if not stored
+                if (!quotePdfUrl && q.filename) {
+                    const supabaseUrl = process.env.SUPABASE_URL || '';
+                    if (supabaseUrl) {
+                        quotePdfUrl = `${supabaseUrl}/storage/v1/object/public/hdsquotes/${q.filename}`;
+                    }
+                }
+            }
+        }
+        catch (fetchErr) {
+            console.warn('assignBranch: could not fetch quote details for email:', fetchErr);
+        }
+        // 4. Send the "New Quote Created" email to the branch manager
+        let emailSent = false;
+        let emailError;
+        try {
+            const fallbackEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || '';
+            const recipient = branchEmail || fallbackEmail;
+            if (!recipient) {
+                console.warn('assignBranch: no branch or fallback email configured; skipping quote-created email');
+            }
+            else if (!cutlistPdfUrl) {
+                console.warn('assignBranch: no cutlistPdfUrl available; skipping quote-created email');
+            }
+            else {
+                const emailService = new email_service_1.default();
+                await emailService.sendQuoteCreatedEmail({
+                    branchEmail: recipient,
+                    quoteNumber: quoteId,
+                    customerName: customerName || 'Customer',
+                    customerPhone,
+                    projectName,
+                    cutlistPdfUrl,
+                    quotePdfUrl,
+                });
+                emailSent = true;
+                console.log(`assignBranch: quote-created email sent to ${recipient}${isReassignment ? ' (re-assignment)' : ''}`);
+            }
+        }
+        catch (emailErr) {
+            emailError = (emailErr === null || emailErr === void 0 ? void 0 : emailErr.message) || String(emailErr);
+            console.error('assignBranch: error sending quote-created email:', emailErr);
+        }
+        return res.status(200).json({
+            success: true,
+            message: isReassignment
+                ? `Branch updated from "${previousBranch}" to "${tradingAs}" and notification email sent.`
+                : `Branch "${tradingAs}" assigned to quote and notification email sent.`,
+            data: {
+                quoteId,
+                tradingAs,
+                previousBranch,
+                isReassignment,
+                branchEmail: branchEmail || null,
+                emailSent,
+                emailError,
+                quote: {
+                    customerName,
+                    projectName,
+                    quotePdfUrl,
+                    cutlistPdfUrl,
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('assignBranch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error assigning branch to quote',
+            error: (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error'
+        });
+    }
+};
+exports.assignBranch = assignBranch;

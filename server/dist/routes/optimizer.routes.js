@@ -45,6 +45,8 @@ router.post('/optimize', optimizerController.optimizeCutting);
 router.post('/import-iq', optimizerController.importIQData);
 // POST generate quotes with optimization, pricing, and PDF
 router.post('/quote', optimizerController.generateQuote);
+// POST assign a branch to an existing quote (branch resolution flow)
+router.post('/assign-branch', optimizerController.assignBranch);
 // GET download a PDF result
 router.get('/pdf/:id', optimizerController.downloadPdf);
 // POST export IQ data
