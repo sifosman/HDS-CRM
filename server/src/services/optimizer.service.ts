@@ -1335,7 +1335,13 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       doc.fontSize(8).fillColor('#666666');
       doc.text('Thank you for your business!', 50, doc.page.height - 100, { align: 'center', width: doc.page.width - 100 });
       doc.text('This invoice was generated automatically. Please contact us if you have any questions.', 50, doc.page.height - 85, { align: 'center', width: doc.page.width - 100 });
-      
+
+      // Set PDF metadata (shows as the document title on phone previews instead of "Untitled")
+      doc.info.Title = `HDS Invoice ${invoiceNumber} - ${customerName}`;
+      doc.info.Author = 'HDS Cut & Edge Group';
+      doc.info.Subject = 'Invoice';
+      doc.info.Keywords = 'HDS, invoice, cut and edge, boards';
+
       doc.end();
       
     } catch (error: any) {
@@ -2129,6 +2135,16 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   doc.fontSize(8).fillColor(COLOR_GOLD).font('Helvetica');
   doc.text('hdsgroup.co.za  |  Est. 2001  |  Largest Cut & Edge Distributor',
     MARGIN + CONTENT_W - 280, y + 16, { width: 270, align: 'right' });
+
+  // Set PDF metadata (shows as the document title on phone previews instead of "Untitled")
+  const safeCustomer = (customerName && customerName !== 'N/A') ? customerName : 'Valued Customer';
+  const safeProject = (projectName && projectName !== 'N/A') ? projectName : '';
+  const titleParts = [pdfId, safeCustomer];
+  if (safeProject) titleParts.push(safeProject);
+  doc.info.Title = `HDS Quote ${titleParts.join(' - ')}`;
+  doc.info.Author = 'HDS Cut & Edge Group';
+  doc.info.Subject = isPaid ? 'Invoice' : 'Quotation';
+  doc.info.Keywords = 'HDS, quote, quotation, cut and edge, boards';
 
   // Finalize PDF
   doc.end();
