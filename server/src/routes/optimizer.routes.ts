@@ -15,6 +15,9 @@ router.post('/quote', optimizerController.generateQuote as RequestHandler);
 // POST assign a branch to an existing quote (branch resolution flow)
 router.post('/assign-branch', optimizerController.assignBranch as RequestHandler);
 
+// POST set payment method on a quote (payfast / eft / branch)
+router.post('/set-payment-method', optimizerController.setPaymentMethod as RequestHandler);
+
 // GET download a PDF result
 router.get('/pdf/:id', optimizerController.downloadPdf as RequestHandler);
 

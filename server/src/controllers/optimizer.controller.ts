@@ -1031,6 +1031,42 @@ export const sendQuoteToWhatsApp = async (req: Request, res: Response) => {
   }
 };
 
+// Set the payment method on a quote (payfast / eft / branch).
+// Called by the chatbot after the customer states how they want to pay.
+export const setPaymentMethod = async (req: Request, res: Response) => {
+  try {
+    const { quoteId, paymentMethod } = req.body;
+
+    if (!quoteId) {
+      return res.status(400).json({ success: false, message: 'quoteId is required' });
+    }
+    if (!paymentMethod) {
+      return res.status(400).json({ success: false, message: 'paymentMethod is required (payfast, eft, or branch)' });
+    }
+
+    const valid = ['payfast', 'eft', 'branch'];
+    if (!valid.includes(paymentMethod)) {
+      return res.status(400).json({ success: false, message: `paymentMethod must be one of: ${valid.join(', ')}` });
+    }
+
+    console.log(`setPaymentMethod: quote="${quoteId}" method="${paymentMethod}"`);
+
+    const result = await SupabaseService.setPaymentMethodOnQuote(quoteId, paymentMethod);
+    if (!result.success) {
+      return res.status(404).json({ success: false, message: result.error || 'Failed to set payment method' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Payment method set to "${paymentMethod}" for quote ${quoteId}`,
+      data: { quoteId, paymentMethod }
+    });
+  } catch (error: any) {
+    console.error('setPaymentMethod error:', error);
+    res.status(500).json({ success: false, message: 'Error setting payment method', error: error?.message });
+  }
+};
+
 // Assign a branch to an existing quote (branch resolution flow).
 // Updates the quote record in Supabase with branchData and sends the
 // "New Quote Created" email to the branch manager. Re-sends the email on

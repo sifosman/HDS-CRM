@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.assignBranch = exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exports.exportIQData = exports.downloadPdf = exports.optimizeCutting = void 0;
+exports.assignBranch = exports.setPaymentMethod = exports.sendQuoteToWhatsApp = exports.generateQuote = exports.importIQData = exports.exportIQData = exports.downloadPdf = exports.optimizeCutting = void 0;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const optimizer_service_1 = require("../services/optimizer.service");
@@ -927,6 +927,38 @@ const sendQuoteToWhatsApp = async (req, res) => {
     }
 };
 exports.sendQuoteToWhatsApp = sendQuoteToWhatsApp;
+// Set the payment method on a quote (payfast / eft / branch).
+// Called by the chatbot after the customer states how they want to pay.
+const setPaymentMethod = async (req, res) => {
+    try {
+        const { quoteId, paymentMethod } = req.body;
+        if (!quoteId) {
+            return res.status(400).json({ success: false, message: 'quoteId is required' });
+        }
+        if (!paymentMethod) {
+            return res.status(400).json({ success: false, message: 'paymentMethod is required (payfast, eft, or branch)' });
+        }
+        const valid = ['payfast', 'eft', 'branch'];
+        if (!valid.includes(paymentMethod)) {
+            return res.status(400).json({ success: false, message: `paymentMethod must be one of: ${valid.join(', ')}` });
+        }
+        console.log(`setPaymentMethod: quote="${quoteId}" method="${paymentMethod}"`);
+        const result = await supabase_service_1.default.setPaymentMethodOnQuote(quoteId, paymentMethod);
+        if (!result.success) {
+            return res.status(404).json({ success: false, message: result.error || 'Failed to set payment method' });
+        }
+        return res.status(200).json({
+            success: true,
+            message: `Payment method set to "${paymentMethod}" for quote ${quoteId}`,
+            data: { quoteId, paymentMethod }
+        });
+    }
+    catch (error) {
+        console.error('setPaymentMethod error:', error);
+        res.status(500).json({ success: false, message: 'Error setting payment method', error: error === null || error === void 0 ? void 0 : error.message });
+    }
+};
+exports.setPaymentMethod = setPaymentMethod;
 // Assign a branch to an existing quote (branch resolution flow).
 // Updates the quote record in Supabase with branchData and sends the
 // "New Quote Created" email to the branch manager. Re-sends the email on

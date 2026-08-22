@@ -967,6 +967,79 @@ const SupabaseService = {
         }
     },
     /**
+     * Set the payment method on a quote (payfast, eft, or branch).
+     * Used by the chatbot branch resolution flow when the customer states
+     * how they intend to pay.
+     */
+    async setPaymentMethodOnQuote(quoteNumber, paymentMethod) {
+        try {
+            if (!quoteNumber) {
+                return { success: false, error: 'Missing quoteNumber' };
+            }
+            const valid = ['payfast', 'eft', 'branch'];
+            if (!valid.includes(paymentMethod)) {
+                return { success: false, error: `Invalid paymentMethod. Must be one of: ${valid.join(', ')}` };
+            }
+            const resolved = await this.fetchQuoteByNumber(quoteNumber);
+            if (!(resolved === null || resolved === void 0 ? void 0 : resolved.success) || !resolved.data) {
+                return { success: false, error: 'Quote not found' };
+            }
+            const existing = resolved.data;
+            // Merge payment_method into quote_data as well for visibility
+            let mergedQuoteData = {};
+            try {
+                mergedQuoteData = typeof existing.quote_data === 'string'
+                    ? JSON.parse(existing.quote_data || '{}')
+                    : (existing.quote_data || {});
+            }
+            catch (e) {
+                mergedQuoteData = {};
+            }
+            mergedQuoteData.paymentMethod = paymentMethod;
+            const updatePayload = {
+                payment_method: paymentMethod,
+                quote_data: mergedQuoteData,
+                updated_at: new Date().toISOString(),
+            };
+            let updateQuery = supabase.from('quotes').update(updatePayload);
+            if (existing.quote_number) {
+                updateQuery = updateQuery.eq('quote_number', existing.quote_number);
+            }
+            else {
+                updateQuery = updateQuery.eq('filename', existing.filename);
+            }
+            const { data, error } = await updateQuery.select().single();
+            // Fallback: if payment_method column doesn't exist, retry with quote_data only
+            if (error && ((typeof error.code === 'string' && error.code === 'PGRST204') ||
+                (typeof error.message === 'string' && /payment_method/.test(error.message)))) {
+                console.warn('setPaymentMethodOnQuote: payment_method column missing, retrying with quote_data only');
+                const fallbackPayload = { quote_data: mergedQuoteData, updated_at: new Date().toISOString() };
+                let retryQuery = supabase.from('quotes').update(fallbackPayload);
+                if (existing.quote_number) {
+                    retryQuery = retryQuery.eq('quote_number', existing.quote_number);
+                }
+                else {
+                    retryQuery = retryQuery.eq('filename', existing.filename);
+                }
+                const retry = await retryQuery.select().single();
+                if (retry.error) {
+                    return { success: false, error: retry.error.message };
+                }
+                return { success: true, data: retry.data, quote: retry.data };
+            }
+            if (error) {
+                console.error('setPaymentMethodOnQuote: update error:', error);
+                return { success: false, error: error.message };
+            }
+            console.log('setPaymentMethodOnQuote: success', { quoteNumber: existing.quote_number, paymentMethod });
+            return { success: true, data, quote: data };
+        }
+        catch (error) {
+            console.error('Error in setPaymentMethodOnQuote:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    /**
      * Upload a PDF buffer to the Supabase hdsquotes bucket
      * @param fileBuffer The PDF file buffer
      * @param fileName The name for the uploaded file

@@ -47,6 +47,8 @@ router.post('/import-iq', optimizerController.importIQData);
 router.post('/quote', optimizerController.generateQuote);
 // POST assign a branch to an existing quote (branch resolution flow)
 router.post('/assign-branch', optimizerController.assignBranch);
+// POST set payment method on a quote (payfast / eft / branch)
+router.post('/set-payment-method', optimizerController.setPaymentMethod);
 // GET download a PDF result
 router.get('/pdf/:id', optimizerController.downloadPdf);
 // POST export IQ data
