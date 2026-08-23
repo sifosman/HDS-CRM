@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DonutChart, BranchBarChart } from "@/components/charts";
+import { DonutChart, BranchBarChart, CountBarChart } from "@/components/charts";
 import { KpiCard } from "@/components/kpi-card";
 import {
   getCustomers,
@@ -45,10 +45,14 @@ export default async function ReportsPage() {
 
   const now = new Date();
   const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay() + 1);
+  // getDay() returns 0 for Sunday. Convert to Monday-based index (0=Mon..6=Sun)
+  // so the week start is always the Monday of the current week.
+  const mondayOffset = (now.getDay() + 6) % 7;
+  weekStart.setDate(now.getDate() - mondayOffset);
   weekStart.setHours(0, 0, 0, 0);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
 
   // Helper: compute report data from a quote set
   function computeReportData(quotes: Quote[]) {
@@ -101,7 +105,25 @@ export default async function ReportsPage() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 15);
 
-    // Top quoted materials/customers
+    // Daily quote activity for the current week (Mon–Sun)
+    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const quotesByDay = dayLabels.map((label, i) => {
+      const dayStart = new Date(weekStart);
+      dayStart.setDate(weekStart.getDate() + i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+      const dayQuotes = quotes.filter((q) => {
+        const qd = new Date(q.created_at);
+        return qd >= dayStart && qd <= dayEnd;
+      });
+      return {
+        day: label,
+        count: dayQuotes.length,
+        value: dayQuotes.reduce((sum, q) => sum + Number(q.total || 0), 0),
+      };
+    });
+
+    // Top quoted customers
     const productMap: Record<string, { count: number; value: number }> = {};
     quotes.forEach((q) => {
       const name = q.customer_name || "Unknown";
@@ -123,6 +145,7 @@ export default async function ReportsPage() {
       returningCustomers,
       typeDistribution,
       branchSales,
+      quotesByDay,
       topProducts,
       totalQuotes: quotes.length,
     };
@@ -180,14 +203,23 @@ export default async function ReportsPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Sales by Branch</CardTitle>
+              <CardTitle>Daily Quote Activity</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Quotes and value per day (this week)
+              </p>
             </CardHeader>
             <CardContent>
-              {data.branchSales.length > 0 ? (
-                <BranchBarChart data={data.branchSales} />
+              {data.quotesByDay.some((d) => d.count > 0) ? (
+                <CountBarChart
+                  data={data.quotesByDay.map((d) => ({
+                    label: d.day,
+                    value: d.count,
+                  }))}
+                  label="Quotes"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No branch sales data available
+                  No quotes generated this week
                 </p>
               )}
             </CardContent>
@@ -198,10 +230,41 @@ export default async function ReportsPage() {
               <CardTitle>Lead Source Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <DonutChart data={data.typeDistribution} />
+              {data.typeDistribution.filter((t) => t.value > 0).length > 1 ? (
+                <DonutChart
+                  data={data.typeDistribution.filter((t) => t.value > 0)}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <DonutChart
+                    data={data.typeDistribution.filter((t) => t.value > 0)}
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    All customers are classified as a single type. Customer
+                    type classification will diversify as the AI bot gathers
+                    more conversation data.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Sales by Branch — only show if branch data exists */}
+        {data.branchSales.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales by Branch</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Quote value attributed to branches (chatbot quotes may lack
+                branch assignment)
+              </p>
+            </CardHeader>
+            <CardContent>
+              <BranchBarChart data={data.branchSales} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Top Products */}
         <Card>

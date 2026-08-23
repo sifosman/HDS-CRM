@@ -181,6 +181,33 @@ export function BranchBarChart({
   );
 }
 
+export function CountBarChart({
+  data,
+  label = "Count",
+}: {
+  data: { label: string; value: number }[];
+  label?: string;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <XAxis dataKey="label" className="text-xs" />
+        <YAxis className="text-xs" allowDecimals={false} />
+        <Tooltip
+          formatter={(v) => [v, label]}
+          contentStyle={{
+            backgroundColor: "var(--color-popover)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "8px",
+          }}
+        />
+        <Bar dataKey="value" fill="var(--color-chart-2)" radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 // ---- Phase 2: AI Performance Charts ----
 
 export function PassRateTrendChart({

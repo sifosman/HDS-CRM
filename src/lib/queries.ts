@@ -1235,7 +1235,7 @@ export async function getAiTestRunSummaries(
   const { data, error } = await supabase
     .from("ai_test_run_summaries")
     .select("*")
-    .neq("run_type", "scenario")
+    .in("run_type", ["smoke", "category", "full"])
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -1438,10 +1438,12 @@ export async function getAiTestLatencyDistribution(
   if (runId) {
     query = query.eq("run_id", runId);
   } else {
-    // Use the latest run
+    // Use the latest non-scenario run (scenario runs have only 1 test,
+    // which produces a useless single-bar histogram)
     const { data: latest } = await supabase
       .from("ai_test_run_summaries")
       .select("run_id")
+      .in("run_type", ["smoke", "category", "full"])
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
@@ -1705,26 +1707,27 @@ export async function getAiProductionStats(): Promise<AiProductionStats> {
     if (r.role === "tool") {
       toolCallCount++;
     }
+    // Detect quote generation — check all signals but only count once per row
+    let rowIndicatesQuote = false;
     if (r.tool_calls) {
-      const tc = r.tool_calls;
-      const tcStr = JSON.stringify(tc).toLowerCase();
+      const tcStr = JSON.stringify(r.tool_calls).toLowerCase();
       if (tcStr.includes("generate_quote") || tcStr.includes("quote")) {
-        quoteGeneratedCount++;
+        rowIndicatesQuote = true;
       }
     }
-    // Also detect quote generation from tool_results or message text
-    if (r.tool_results) {
+    if (!rowIndicatesQuote && r.tool_results) {
       const trStr = JSON.stringify(r.tool_results).toLowerCase();
       if (trStr.includes("generate_quote") || trStr.includes("quote_id") || trStr.includes("quote_total")) {
-        quoteGeneratedCount++;
+        rowIndicatesQuote = true;
       }
     }
-    if (r.role === "assistant" && r.message_text) {
+    if (!rowIndicatesQuote && r.role === "assistant" && r.message_text) {
       const text = r.message_text.toLowerCase();
       if (/quote\s*id[:\s]|q-\d{8}/.test(text)) {
-        quoteGeneratedCount++;
+        rowIndicatesQuote = true;
       }
     }
+    if (rowIndicatesQuote) quoteGeneratedCount++;
 
     // Track lead status only from user/assistant messages (not tool messages)
     if (r.lead_status && (r.role === "user" || r.role === "assistant")) {
@@ -1737,17 +1740,17 @@ export async function getAiProductionStats(): Promise<AiProductionStats> {
       }
     }
 
+    // Count fallback from metadata (handover/close_attempt are derived from
+    // lead_status below to avoid double-counting)
     if (r.conversation_metadata) {
       const meta = r.conversation_metadata;
-      if (meta.close_attempt || meta.close_attempt_count) closeAttemptCount++;
-      if (meta.fallback || meta.handover) {
-        if (meta.fallback) fallbackCount++;
-        if (meta.handover) handoverCount++;
-      }
+      if (meta.fallback) fallbackCount++;
     }
   }
 
-  // Build lead status counts from per-phone latest status
+  // Build lead status counts from per-phone latest status.
+  // handoverCount and closeAttemptCount are derived solely from lead_status
+  // to avoid double-counting with conversation_metadata signals above.
   const leadStatusCounts: Record<string, number> = {};
   for (const { status } of phoneLeadStatus.values()) {
     leadStatusCounts[status] = (leadStatusCounts[status] || 0) + 1;

@@ -685,7 +685,7 @@ export default async function AiReportsPage() {
       )}
 
       {/* Quality Trend Charts (from ai_quality_metrics) */}
-      {qualityTrend.length > 0 && (
+      {qualityTrend.length > 1 && (
         <div>
           <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
