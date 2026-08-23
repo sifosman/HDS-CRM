@@ -1664,18 +1664,18 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   }
 
   // Company name + tagline (next to logo)
-  doc.fontSize(16).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+  doc.fontSize(13).fillColor(COLOR_WHITE).font('Helvetica-Bold');
   doc.text('HDS Cut & Edge Group', headerTextX, MARGIN + 15, { width: 200 });
-  doc.fontSize(9).fillColor(COLOR_GOLD).font('Helvetica');
-  doc.text('Creativity from the heart of the wood', headerTextX, MARGIN + 35, { width: 200 });
+  doc.fontSize(8).fillColor(COLOR_GOLD).font('Helvetica');
+  doc.text('Creativity from the heart of the wood', headerTextX, MARGIN + 33, { width: 200 });
 
   // Right side: QUOTATION title + quote ID
-  doc.fontSize(20).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+  doc.fontSize(16).fillColor(COLOR_WHITE).font('Helvetica-Bold');
   doc.text(isPaid ? 'INVOICE' : 'QUOTATION', MARGIN + CONTENT_W - 200, MARGIN + 15, {
     width: 185, align: 'right'
   });
-  doc.fontSize(10).fillColor('#D2D2D2').font('Helvetica');
-  doc.text(pdfId, MARGIN + CONTENT_W - 200, MARGIN + 40, {
+  doc.fontSize(9).fillColor('#D2D2D2').font('Helvetica');
+  doc.text(pdfId, MARGIN + CONTENT_W - 200, MARGIN + 38, {
     width: 185, align: 'right'
   });
 
@@ -1689,7 +1689,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
       doc.circle(bottomX + 2, headerBottomY + 4, 2).fill();
       bottomX += 10;
     }
-    doc.fillColor('rgba(255,255,255,0.7)').fontSize(8).font('Helvetica');
+    doc.fillColor('rgba(255,255,255,0.7)').fontSize(7).font('Helvetica');
     doc.text(item, bottomX, headerBottomY, { width: item.length * 4.5 });
     bottomX += item.length * 4.5 + 5;
   });
@@ -1721,11 +1721,11 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     drawRect(dx + 8, dy + 8, 2, rowH - 16, COLOR_RED);
 
     // Label
-    doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
+    doc.fontSize(7).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
     doc.text(detailLabels[i].toUpperCase(), dx + 14, dy + 10, { width: colW - 20 });
 
     // Value
-    doc.fontSize(11).fillColor(COLOR_TEXT_DARK).font('Helvetica-Bold');
+    doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica-Bold');
     doc.text(detailValues[i], dx + 14, dy + 24, { width: colW - 20 });
   }
 
@@ -1734,7 +1734,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   // ====== 3. MATERIAL BREAKDOWN ======
   // Section heading with red accent bar
   drawRect(MARGIN, y, 30, 3, COLOR_RED);
-  doc.fontSize(13).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+  doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
   doc.text('MATERIAL BREAKDOWN', MARGIN + 38, y - 5, { width: CONTENT_W - 40 });
   y += 20;
 
@@ -1754,9 +1754,9 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     const cardHeaderH = 25;
     drawRect(MARGIN, y, CONTENT_W, cardHeaderH, COLOR_BLACK);
 
-    doc.fontSize(11).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.fontSize(10).fillColor(COLOR_WHITE).font('Helvetica-Bold');
     doc.text(material ?? '-', MARGIN + 10, y + 7, { width: CONTENT_W * 0.6 });
-    doc.fontSize(9).fillColor('#D2D2D2').font('Helvetica');
+    doc.fontSize(8).fillColor('#D2D2D2').font('Helvetica');
     doc.text(boardSize ? `${boardSize}mm` : '', MARGIN + CONTENT_W * 0.6, y + 8, {
       width: CONTENT_W * 0.35 - 10, align: 'right'
     });
@@ -1766,7 +1766,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     // Table header
     const tColW = [CONTENT_W * 0.5, CONTENT_W * 0.25, CONTENT_W * 0.25];
     drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_LIGHT_GRAY);
-    doc.fontSize(9).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
+    doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
     doc.text('DESCRIPTION', MARGIN + 10, ty + 7, { width: tColW[0] - 15 });
     doc.text('QUANTITY', MARGIN + tColW[0], ty + 7, { width: tColW[1] - 10 });
     doc.text('PRICE', MARGIN + tColW[0] + tColW[1], ty + 7, {
@@ -1776,7 +1776,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
     // Data row: material line item
     drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_WHITE, COLOR_ROW_BORDER);
-    doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+    doc.fontSize(9).fillColor(COLOR_TEXT_DARK).font('Helvetica');
     const descText = `${material ?? '-'} (${boardSize ?? '-'}mm)`;
     doc.text(descText, MARGIN + 10, ty + 7, { width: tColW[0] - 15 });
     doc.text(`${boardsNeeded ?? '-'} boards`, MARGIN + tColW[0], ty + 7, { width: tColW[1] - 10 });
@@ -1788,7 +1788,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
     // Board Total row (light gray)
     drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_LIGHT_GRAY, COLOR_ROW_BORDER);
-    doc.fontSize(10).fillColor(COLOR_TEXT_MED).font('Helvetica-Bold');
+    doc.fontSize(9).fillColor(COLOR_TEXT_MED).font('Helvetica-Bold');
     doc.text('Board Total', MARGIN + 10, ty + 7, { width: tColW[0] + tColW[1] - 15 });
     doc.text(`R ${safeFixed(sectionTotal)}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
       width: tColW[2] - 10, align: 'right'
@@ -1803,7 +1803,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
         : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
 
       drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_WHITE, COLOR_ROW_BORDER);
-      doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+      doc.fontSize(9).fillColor(COLOR_TEXT_DARK).font('Helvetica');
       doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m)`, MARGIN + 10, ty + 7, {
         width: tColW[0] + tColW[1] - 15
       });
@@ -1816,7 +1816,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
       // Section Total row (darker gray with red top border)
       drawRect(MARGIN, ty, CONTENT_W, 22, '#F0F0F0');
       drawRect(MARGIN, ty, CONTENT_W, 2, COLOR_RED);
-      doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+      doc.fontSize(10).fillColor(COLOR_BLACK).font('Helvetica-Bold');
       const combinedTotal = (parseFloat(sectionTotal || '0') + parseFloat(edgingCostVal)).toFixed(2);
       doc.text('Section Total', MARGIN + 10, ty + 7, { width: tColW[0] + tColW[1] - 15 });
       doc.text(`R ${combinedTotal}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
@@ -1827,7 +1827,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
       // Section Total row without edging
       drawRect(MARGIN, ty, CONTENT_W, 22, '#F0F0F0');
       drawRect(MARGIN, ty, CONTENT_W, 2, COLOR_RED);
-      doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+      doc.fontSize(10).fillColor(COLOR_BLACK).font('Helvetica-Bold');
       doc.text('Section Total', MARGIN + 10, ty + 7, { width: tColW[0] + tColW[1] - 15 });
       doc.text(`R ${safeFixed(sectionTotal)}`, MARGIN + tColW[0] + tColW[1], ty + 7, {
         width: tColW[2] - 10, align: 'right'
@@ -1851,7 +1851,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
     // Section heading with red accent bar (matches MATERIAL BREAKDOWN style)
     drawRect(MARGIN, y, 30, 3, COLOR_RED);
-    doc.fontSize(13).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
     doc.text('HARDWARE & ACCESSORIES', MARGIN + 38, y - 5, { width: CONTENT_W - 40 });
     y += 20;
 
@@ -1862,9 +1862,9 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     // Card header (black background)
     const hwCardHeaderH = 25;
     drawRect(MARGIN, y, CONTENT_W, hwCardHeaderH, COLOR_BLACK);
-    doc.fontSize(11).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.fontSize(10).fillColor(COLOR_WHITE).font('Helvetica-Bold');
     doc.text('Hardware Line Items', MARGIN + 10, y + 7, { width: CONTENT_W * 0.6 });
-    doc.fontSize(9).fillColor('#D2D2D2').font('Helvetica');
+    doc.fontSize(8).fillColor('#D2D2D2').font('Helvetica');
     doc.text(`${hardwareItems.length} item(s)`, MARGIN + CONTENT_W * 0.6, y + 8, {
       width: CONTENT_W * 0.35 - 10, align: 'right'
     });
@@ -1874,7 +1874,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     // Table header row
     const hwColW = [CONTENT_W * 0.5, CONTENT_W * 0.15, CONTENT_W * 0.175, CONTENT_W * 0.175];
     drawRect(MARGIN, hwy, CONTENT_W, 22, COLOR_LIGHT_GRAY);
-    doc.fontSize(9).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
+    doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
     doc.text('ITEM', MARGIN + 10, hwy + 7, { width: hwColW[0] - 15 });
     doc.text('QTY', MARGIN + hwColW[0], hwy + 7, { width: hwColW[1] - 10 });
     doc.text('UNIT PRICE', MARGIN + hwColW[0] + hwColW[1], hwy + 7, {
@@ -1889,7 +1889,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     hardwareItems.forEach((hwItem: any, idx: number) => {
       const rowBg = idx % 2 === 0 ? COLOR_WHITE : COLOR_LIGHT_GRAY;
       drawRect(MARGIN, hwy, CONTENT_W, hwRowH, rowBg, COLOR_ROW_BORDER);
-      doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+      doc.fontSize(9).fillColor(COLOR_TEXT_DARK).font('Helvetica');
       const itemName = hwItem.name || '-';
       doc.text(itemName, MARGIN + 10, hwy + 7, { width: hwColW[0] - 15 });
       doc.text(`${hwItem.quantity || 1}`, MARGIN + hwColW[0], hwy + 7, { width: hwColW[1] - 10 });
@@ -1907,7 +1907,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     // Hardware total row (darker gray with red top border)
     drawRect(MARGIN, hwy, CONTENT_W, hwTotalH, '#F0F0F0');
     drawRect(MARGIN, hwy, CONTENT_W, 2, COLOR_RED);
-    doc.fontSize(11).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+    doc.fontSize(10).fillColor(COLOR_BLACK).font('Helvetica-Bold');
     doc.text('Hardware Total', MARGIN + 10, hwy + 7, {
       width: hwColW[0] + hwColW[1] + hwColW[2] - 15
     });
@@ -1924,7 +1924,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   y += 5;
 
   // Summary title (centered with red underline)
-  doc.fontSize(15).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+  doc.fontSize(12).fillColor(COLOR_BLACK).font('Helvetica-Bold');
   doc.text('QUOTE SUMMARY', MARGIN, y, { width: CONTENT_W, align: 'center' });
   const underlineY = y + 22;
   drawRect(MARGIN + CONTENT_W / 2 - 30, underlineY, 60, 3, COLOR_RED);
@@ -1952,7 +1952,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
   summaryRows.forEach((row) => {
     drawRect(sumX, y, sumW, sumRowH, COLOR_WHITE, COLOR_BORDER);
-    doc.fontSize(11).fillColor(COLOR_TEXT_DARK).font('Helvetica');
+    doc.fontSize(10).fillColor(COLOR_TEXT_DARK).font('Helvetica');
     doc.text(row.label, sumX + 10, y + 9, { width: sumColW[0] - 15 });
     doc.font('Helvetica-Bold');
     doc.text(row.value, sumX + sumColW[0], y + 9, { width: sumColW[1] - 10, align: 'right' });
@@ -1961,7 +1961,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
   // Grand total row (black background, red amount)
   drawRect(sumX, y, sumW, sumRowH + 5, COLOR_BLACK);
-  doc.fontSize(14).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+  doc.fontSize(12).fillColor(COLOR_WHITE).font('Helvetica-Bold');
   doc.text('GRAND TOTAL', sumX + 10, y + 11, { width: sumColW[0] - 15 });
   doc.fillColor(COLOR_RED);
   doc.text(`R ${finalTotal.toFixed(2)}`, sumX + sumColW[0], y + 11, {
@@ -1973,7 +1973,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   y = ensureSpace(200, y);
 
   // Section title
-  doc.fontSize(15).fillColor(COLOR_BLACK).font('Helvetica-Bold');
+  doc.fontSize(12).fillColor(COLOR_BLACK).font('Helvetica-Bold');
   doc.text('CONTACT & PAYMENT INFORMATION', MARGIN, y, { width: CONTENT_W, align: 'center' });
   drawRect(MARGIN + CONTENT_W / 2 - 30, y + 22, 60, 3, COLOR_RED);
   y += 35;
@@ -1994,7 +1994,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   // --- Branch Details Card ---
   drawRect(MARGIN, y, cardW, cardHeaderH, COLOR_BLACK);
   drawRect(MARGIN, y + cardHeaderH - 3, cardW, 3, COLOR_RED);
-  doc.fontSize(10).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+  doc.fontSize(9).fillColor(COLOR_WHITE).font('Helvetica-Bold');
   doc.text('BRANCH DETAILS', MARGIN + 10, y + 6, { width: cardW - 20 });
 
   // Branch card body
@@ -2002,7 +2002,7 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   const branchBodyH = 100;
   drawRect(MARGIN, branchBodyY, cardW, branchBodyH, COLOR_WHITE, COLOR_BORDER);
 
-  doc.fontSize(9).fillColor(COLOR_TEXT_MED).font('Helvetica');
+  doc.fontSize(8).fillColor(COLOR_TEXT_MED).font('Helvetica');
   let by = branchBodyY + 10;
   doc.font('Helvetica-Bold').fillColor(COLOR_TEXT_DARK);
   doc.text(quoteBranchData.trading_as || quoteBranchData.name || 'Branch', MARGIN + 10, by, { width: cardW - 20 });
@@ -2031,14 +2031,14 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   // --- Banking Details Card ---
   drawRect(cardX2, y, cardW, cardHeaderH, COLOR_BLACK);
   drawRect(cardX2, y + cardHeaderH - 3, cardW, 3, COLOR_RED);
-  doc.fontSize(10).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+  doc.fontSize(9).fillColor(COLOR_WHITE).font('Helvetica-Bold');
   doc.text('BANKING DETAILS', cardX2 + 10, y + 6, { width: cardW - 20 });
 
   const bankBodyY = y + cardHeaderH;
   const bankBodyH = 100;
   drawRect(cardX2, bankBodyY, cardW, bankBodyH, COLOR_WHITE, COLOR_BORDER);
 
-  doc.fontSize(9).fillColor(COLOR_TEXT_MED).font('Helvetica');
+  doc.fontSize(8).fillColor(COLOR_TEXT_MED).font('Helvetica');
   let bby = bankBodyY + 10;
 
   if (bankingDetails && Object.keys(bankingDetails).length > 0) {
@@ -2072,38 +2072,52 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
   if (isPaid) {
     drawRect(MARGIN + CONTENT_W / 2 - 150, y, 300, 40, '#e8f5e8', '#28a745');
-    doc.fontSize(14).fillColor('#28a745').font('Helvetica-Bold');
-    doc.text('PAYMENT RECEIVED', MARGIN + CONTENT_W / 2 - 150, y + 12, {
+    doc.fontSize(12).fillColor('#28a745').font('Helvetica-Bold');
+    doc.text('PAYMENT RECEIVED', MARGIN + CONTENT_W / 2 - 150, y + 13, {
       width: 300, align: 'center'
     });
     y += 50;
   } else {
-    const btnW = 250;
-    const btnH = 40;
+    // --- "How to pay" helper line above the button ---
+    doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica-Bold');
+    doc.text('CLICK THE BUTTON BELOW TO PAY ONLINE NOW',
+      MARGIN, y, { width: CONTENT_W, align: 'center' });
+    y += 14;
+
+    // --- Pay Now button (taller, with arrow cues on both sides) ---
+    const btnW = 280;
+    const btnH = 48;
     const btnX = MARGIN + (CONTENT_W - btnW) / 2;
+
+    // Drop shadow (offset black rectangle behind the button)
+    drawRect(btnX + 2, y + 2, btnW, btnH, 'rgba(0,0,0,0.25)');
+    // Button body (black)
     drawRect(btnX, y, btnW, btnH, COLOR_BLACK);
+    // Red bottom border accent
     drawRect(btnX, y + btnH - 4, btnW, 4, COLOR_RED);
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
     const paymentUrl = `${baseUrl}/api/payfast/pay?quoteId=${pdfId}&amount=${finalTotal.toFixed(2)}&customerName=${encodeURIComponent(customerName || 'Customer')}&projectName=${encodeURIComponent(projectName || 'Project')}`;
 
-    doc.fontSize(13).fillColor(COLOR_WHITE).font('Helvetica-Bold');
-    doc.text(`PAY NOW — R ${finalTotal.toFixed(2)}`, btnX, y + 12, {
+    // Button label (white, centered, clickable)
+    doc.fontSize(12).fillColor(COLOR_WHITE).font('Helvetica-Bold');
+    doc.text(`PAY NOW  \u2014  R ${finalTotal.toFixed(2)}`, btnX, y + 16, {
       width: btnW, align: 'center', link: paymentUrl
     });
     y += btnH + 8;
 
-    doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
-    doc.text('Secure online payment via PayFast — All major payment methods accepted',
+    // Helper text under the button
+    doc.fontSize(7.5).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
+    doc.text('Secure online payment via PayFast  \u2022  Card, EFT & Instant EFT accepted  \u2022  Click to pay immediately',
       MARGIN, y, { width: CONTENT_W, align: 'center' });
-    y += 18;
+    y += 16;
   }
 
   // ====== 7. DISCLAIMER ======
   y = ensureSpace(30, y);
   y += 5;
   drawRect(MARGIN, y, CONTENT_W, 30, COLOR_LIGHT_GRAY, COLOR_BORDER);
-  doc.fontSize(7.5).fillColor('#999999').font('Helvetica');
+  doc.fontSize(7).fillColor('#999999').font('Helvetica');
   doc.text('Prices may vary slightly when purchasing in-store at our branches, as different regions have different pricing structures. This quotation serves as an estimate and is valid for 30 days from the date of issue.',
     MARGIN + 10, y + 5, { width: CONTENT_W - 20, align: 'center' });
   y += 35;
@@ -2129,10 +2143,10 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
       doc.image(logoPath, MARGIN + 15, y + 10, { height: 20 });
     } catch (e) { /* skip */ }
   }
-  doc.fontSize(8).fillColor('rgba(255,255,255,0.7)').font('Helvetica');
+  doc.fontSize(7).fillColor('rgba(255,255,255,0.7)').font('Helvetica');
   doc.text('www.hdsgroup.co.za', MARGIN + 80, y + 16, { width: 150 });
 
-  doc.fontSize(8).fillColor(COLOR_GOLD).font('Helvetica');
+  doc.fontSize(7).fillColor(COLOR_GOLD).font('Helvetica');
   doc.text('hdsgroup.co.za  |  Est. 2001  |  Largest Cut & Edge Distributor',
     MARGIN + CONTENT_W - 280, y + 16, { width: 270, align: 'right' });
 
