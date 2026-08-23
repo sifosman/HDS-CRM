@@ -55,7 +55,6 @@ export async function getDashboardStats() {
 
   // Split quotes by source for chatbot-first reporting
   const chatbotQuotes = quotes.filter((q) => q.source === "chatbot");
-  const historicalQuotes = quotes.filter((q) => q.source !== "chatbot");
 
   // Chatbot-first metrics (primary)
   const chatbotRevenue = chatbotQuotes.reduce((sum, q) => sum + Number(q.total || 0), 0);
@@ -107,12 +106,6 @@ export async function getDashboardStats() {
     monthlyRevenue.push({ month: monthName, revenue });
   }
 
-  // Historical (pre-chatbot) summary for comparison
-  const historicalRevenue = historicalQuotes.reduce(
-    (sum, q) => sum + Number(q.total || 0), 0
-  );
-  const historicalQuoteCount = historicalQuotes.length;
-
   return {
     // Chatbot-first (primary metrics)
     totalRevenue: chatbotRevenue,
@@ -123,11 +116,6 @@ export async function getDashboardStats() {
     pipeline,
     monthlyRevenue,
     recentActivity,
-    // Historical (pre-chatbot) for comparison
-    historical: {
-      totalRevenue: historicalRevenue,
-      quoteCount: historicalQuoteCount,
-    },
   };
 }
 
@@ -414,6 +402,21 @@ export async function getInvoices(): Promise<Invoice[]> {
   const { data, error } = await supabase
     .from("invoices")
     .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as Invoice[];
+}
+
+/**
+ * Get invoices linked to chatbot/web quotes only (excludes BotSailor legacy
+ * invoices which have null customer_phone).
+ */
+export async function getChatbotInvoices(): Promise<Invoice[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .not("customer_phone", "is", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Invoice[];

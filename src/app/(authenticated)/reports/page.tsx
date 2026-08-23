@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -21,7 +20,6 @@ import { KpiCard } from "@/components/kpi-card";
 import {
   getCustomers,
   getChatbotQuotes,
-  getHistoricalQuotes,
   getBranches,
   getSegmentStats,
   getCustomerTypeStats,
@@ -37,10 +35,9 @@ import type { Quote } from "@/lib/types";
 export default async function ReportsPage() {
   const access = await requireRole(["owner", "manager"]);
   if (access.error) redirect("/dashboard?error=access_denied");
-  const [customers, chatbotQuotes, historicalQuotes, branches, segmentStats, typeStats] = await Promise.all([
+  const [customers, chatbotQuotes, branches, segmentStats, typeStats] = await Promise.all([
     getCustomers(),
     getChatbotQuotes(),
-    getHistoricalQuotes(),
     getBranches(),
     getSegmentStats(),
     getCustomerTypeStats(),
@@ -132,7 +129,6 @@ export default async function ReportsPage() {
   }
 
   const chatbotData = computeReportData(chatbotQuotes);
-  const historicalData = computeReportData(historicalQuotes);
 
   // Render a report section (shared between both tabs)
   function ReportSection({ data, label }: { data: ReturnType<typeof computeReportData>; label: string }) {
@@ -257,24 +253,7 @@ export default async function ReportsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="chatbot">
-        <TabsList>
-          <TabsTrigger value="chatbot">
-            New Chatbot ({chatbotQuotes.length})
-          </TabsTrigger>
-          <TabsTrigger value="historical">
-            Historical / Pre-Chatbot ({historicalQuotes.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="chatbot" className="space-y-6">
-          <ReportSection data={chatbotData} label="Chatbot" />
-        </TabsContent>
-
-        <TabsContent value="historical" className="space-y-6">
-          <ReportSection data={historicalData} label="Historical" />
-        </TabsContent>
-      </Tabs>
+      <ReportSection data={chatbotData} label="Chatbot" />
 
       {/* Customer Type Breakdown with Conversion (shared — based on all customers) */}
       <Card>

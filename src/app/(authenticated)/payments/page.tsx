@@ -14,14 +14,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RevenueBarChart } from "@/components/charts";
-import { getAllQuotes, getInvoices } from "@/lib/queries";
+import { getChatbotQuotes, getChatbotInvoices } from "@/lib/queries";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { AlertCircle } from "lucide-react";
 
 export default async function PaymentsPage() {
   const [quotes, invoices] = await Promise.all([
-    getAllQuotes(),
-    getInvoices(),
+    getChatbotQuotes(),
+    getChatbotInvoices(),
   ]);
 
   // Monthly revenue from paid invoices

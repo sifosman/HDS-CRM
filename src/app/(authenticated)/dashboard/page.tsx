@@ -58,21 +58,6 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Historical comparison banner */}
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <p className="text-sm font-medium">Historical Performance (Pre-Chatbot)</p>
-            <p className="text-xs text-muted-foreground">
-              For comparison: {stats.historical.quoteCount} legacy quotes · {formatCurrency(stats.historical.totalRevenue)} total value
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            See Reports page for detailed historical breakdown
-          </span>
-        </div>
-      </div>
-
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
