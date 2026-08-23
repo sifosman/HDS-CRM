@@ -133,11 +133,12 @@ export async function getCustomerByPhone(
   phone: string
 ): Promise<CustomerProfile | null> {
   const supabase = await createClient();
+  const normalized = phone.replace(/^\+/, "");
   const { data, error } = await supabase
     .from("customer_profiles")
     .select("*")
-    .eq("phone_number", phone)
-    .single();
+    .or(`phone_number.eq.${normalized},phone_number.eq.+${normalized}`)
+    .maybeSingle();
   if (error) return null;
   return data as CustomerProfile;
 }
@@ -280,10 +281,11 @@ export async function getConversationsByPhone(
   limit = 100
 ): Promise<Conversation[]> {
   const supabase = await createClient();
+  const normalized = phone.replace(/^\+/, "");
   const { data, error } = await supabase
     .from("ai_conversations")
     .select("*")
-    .eq("phone_number", phone)
+    .or(`phone_number.eq.${normalized},phone_number.eq.+${normalized}`)
     .order("created_at", { ascending: true })
     .limit(limit);
   if (error) throw error;
@@ -294,10 +296,11 @@ export async function getQuotesByPhone(
   phone: string
 ): Promise<Quote[]> {
   const supabase = await createClient();
+  const normalized = phone.replace(/^\+/, "");
   const { data, error } = await supabase
     .from("quotes")
     .select("*")
-    .eq("customer_phone", phone)
+    .or(`customer_phone.eq.+${normalized},customer_phone.eq.${normalized}`)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Quote[];
