@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, FileText, ExternalLink } from "lucide-react";
-import type { Quote } from "@/lib/types";
+import type { Quote, QuoteAcceptanceMap } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/constants";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,7 +35,13 @@ function quotePdfUrl(q: Quote): string | null {
   return `${SUPABASE_URL}/storage/v1/object/public/hdsquotes/${encodeURIComponent(q.filename)}`;
 }
 
-export function QuotesTable({ quotes }: { quotes: Quote[] }) {
+export function QuotesTable({
+  quotes,
+  acceptance,
+}: {
+  quotes: Quote[];
+  acceptance?: QuoteAcceptanceMap;
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -142,6 +148,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                 <TableHead className="text-right">Total (incl VAT)</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
+                {acceptance && <TableHead>Customer Response</TableHead>}
                 <TableHead>Source</TableHead>
                 <TableHead>PDF</TableHead>
               </TableRow>
@@ -149,7 +156,7 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
             <TableBody>
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={acceptance ? 9 : 8} className="text-center text-muted-foreground py-8">
                     No quotes found
                   </TableCell>
                 </TableRow>
@@ -186,6 +193,32 @@ export function QuotesTable({ quotes }: { quotes: Quote[] }) {
                   <TableCell>
                     <Badge variant="secondary">{q.status || "sent"}</Badge>
                   </TableCell>
+                  {acceptance && (
+                    <TableCell>
+                      {(() => {
+                        const a = acceptance[q.id];
+                        if (!a) return <span className="text-xs text-muted-foreground">—</span>;
+                        if (a.accepted) {
+                          return (
+                            <Badge
+                              title={a.evidence || undefined}
+                              className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+                            >
+                              Customer Accepted
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <Badge
+                            variant="outline"
+                            className="border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300"
+                          >
+                            Awaiting Acceptance
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
+                  )}
                   <TableCell>
                     {q.source === "chatbot" ? (
                       <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Chatbot</Badge>

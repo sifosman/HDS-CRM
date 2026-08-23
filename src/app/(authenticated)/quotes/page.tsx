@@ -1,5 +1,5 @@
 import { QuotesTable } from "@/components/quotes-table";
-import { getChatbotQuotes } from "@/lib/queries";
+import { getChatbotQuotes, getChatbotQuoteAcceptance } from "@/lib/queries";
 import {
   Card,
   CardContent,
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function QuotesPage() {
   const chatbotQuotes = await getChatbotQuotes();
+  const acceptance = await getChatbotQuoteAcceptance(chatbotQuotes);
+  const acceptedCount = Object.values(acceptance).filter((a) => a.accepted).length;
 
   return (
     <div className="space-y-8">
@@ -25,9 +27,14 @@ export default async function QuotesPage() {
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
             {chatbotQuotes.length} quotes
           </Badge>
+          {chatbotQuotes.length > 0 && (
+            <Badge variant="outline" className="border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300">
+              {acceptedCount} customer-accepted
+            </Badge>
+          )}
         </div>
         {chatbotQuotes.length > 0 ? (
-          <QuotesTable quotes={chatbotQuotes} />
+          <QuotesTable quotes={chatbotQuotes} acceptance={acceptance} />
         ) : (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">

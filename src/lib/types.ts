@@ -115,6 +115,25 @@ export type CustomerQuoteBreakdown = {
 /** Map of normalised phone number (no leading "+") → quote breakdown. */
 export type CustomerQuoteBreakdownMap = Record<string, CustomerQuoteBreakdown>;
 
+/**
+ * Derived indicator of whether a chatbot quote was actually accepted by the
+ * customer, based on conversation analysis (not the raw quotes.status column,
+ * which defaults to "approved" at insert time for every chatbot quote).
+ *
+ *  - `accepted`     — best-effort determination that the customer accepted.
+ *  - `signal`       — which signal(s) triggered the acceptance determination.
+ *  - `evidence`     — human-readable snippet supporting the determination
+ *                     (e.g. the matching customer message, or the lead stage).
+ */
+export type QuoteAcceptance = {
+  accepted: boolean;
+  signal: "keyword" | "lead_status" | "both" | null;
+  evidence: string | null;
+};
+
+/** Map of quote id → derived customer-acceptance indicator. */
+export type QuoteAcceptanceMap = Record<string, QuoteAcceptance>;
+
 export type Branch = {
   id: number;
   branch_number: number | null;

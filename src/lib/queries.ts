@@ -24,6 +24,8 @@ import type {
   AiMonitorAlert,
   CustomerQuoteBreakdownMap,
   CustomerQuoteBreakdown,
+  QuoteAcceptance,
+  QuoteAcceptanceMap,
   UserWithRole,
   UserRole,
 } from "@/lib/types";
@@ -326,6 +328,190 @@ export async function getAllQuotes(source?: "chatbot" | "web" | "botsailor"): Pr
  */
 export async function getChatbotQuotes(): Promise<Quote[]> {
   return getAllQuotes("chatbot");
+}
+
+/**
+ * Lead stages that indicate a chatbot quote was actually accepted by the
+ * customer (handed over to sales / deal closed). Other stages ("quoting",
+ * "quoted", "closing", "objection", "follow_up") reflect the AI working the
+ * lead, not customer acceptance.
+ */
+const ACCEPTED_LEAD_STAGES = new Set(["handover", "closed"]);
+
+/**
+ * Phrases a customer is likely to use when accepting a quote. Kept deliberately
+ * strong/positive to avoid flagging questions or objections as acceptance.
+ */
+const ACCEPTANCE_PHRASE_RE =
+  /\b(accept(?:ed)?|approve[ds]?|confirm(?:ed)?|go ahead|let'?s do it|lets do it|let'?s go ahead|lets go ahead|i'?ll take it|ill take it|i will take it|sounds good|sounds great|let'?s proceed|lets proceed|proceed|i'?ll buy|ill buy|i will buy|book it|place the order|i'?ll order|ill order|i will order|i want to order|i'?ll pay|ill pay|i will pay|i can pay|make (?:the |a )?payment|i'?ll collect|ill collect|i will collect|i can collect|let'?s do that|lets do that|i want it|take it|count me in|i'?m in|im in)\b/i;
+
+/**
+ * Short standalone affirmatives (e.g. "yes", "yebo", "perfect"). Matched against
+ * an anchored whitelist of complete messages so that "yes, where are you based?"
+ * or "yes witbank/emalahleni" (answering a location question) are NOT counted as
+ * acceptance — only unambiguous affirmative replies are.
+ */
+const SHORT_AFFIRMATIVE_RE =
+  /^(yes|yebo|yeah|yep|yup|yes please|yes i will|yes ill|yes i can|yes that'?s fine|yes thats fine|yes it'?s fine|yes its fine|sure|sure thing|perfect|great|awesome|will do|let'?s do it|lets do it|go ahead|count me in|i'?m in|im in)\s*[!.?]*$/i;
+
+function isShortAffirmative(text: string): boolean {
+  const t = text.trim();
+  if (t.length === 0 || t.length > 32) return false;
+  return SHORT_AFFIRMATIVE_RE.test(t);
+}
+
+function messageIndicatesAcceptance(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return ACCEPTANCE_PHRASE_RE.test(text) || isShortAffirmative(text);
+}
+
+/**
+ * Derive a per-quote "customer accepted" indicator for chatbot quotes by
+ * analysing the conversation history for each quote's customer.
+ *
+ * A quote is considered accepted if EITHER:
+ *  (a) the customer sent a message after the quote was created whose text
+ *      matches an acceptance phrase / short affirmative, OR
+ *  (b) the customer's lead stage advanced to "handover" or "closed".
+ *
+ * This is a heuristic derived indicator — it does NOT mutate the quotes table.
+ * Phone numbers are normalised by stripping a leading "+" so that
+ * "+27123456789" (quotes.customer_phone) and "27123456789"
+ * (ai_conversations.phone_number / customer_profiles.phone_number) match.
+ */
+export async function getChatbotQuoteAcceptance(
+  quotes: Quote[]
+): Promise<QuoteAcceptanceMap> {
+  const result: QuoteAcceptanceMap = {};
+  if (quotes.length === 0) return result;
+
+  const supabase = await createClient();
+
+  // Normalised phone → quotes (a customer may have several quotes)
+  const phoneToQuotes = new Map<string, Quote[]>();
+  const phones = new Set<string>();
+  for (const q of quotes) {
+    if (!q.customer_phone) continue;
+    const phone = q.customer_phone.replace(/^\+/, "");
+    if (!phone) continue;
+    phones.add(phone);
+    const arr = phoneToQuotes.get(phone) || [];
+    arr.push(q);
+    phoneToQuotes.set(phone, arr);
+  }
+  if (phones.size === 0) return result;
+
+  const phoneList = Array.from(phones);
+
+  // (a) Customer messages for these phones (role = 'user').
+  //     Fetch all of them; we filter by created_at >= quote.created_at in JS.
+  const [messagesRes, profilesRes] = await Promise.all([
+    supabase
+      .from("ai_conversations")
+      .select("phone_number, message_text, created_at")
+      .in("phone_number", phoneList)
+      .eq("role", "user")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("customer_profiles")
+      .select("phone_number, lead_status")
+      .in("phone_number", phoneList),
+  ]);
+
+  const messages = (messagesRes.data || []) as {
+    phone_number: string | null;
+    message_text: string | null;
+    created_at: string;
+  }[];
+  const profiles = (profilesRes.data || []) as {
+    phone_number: string | null;
+    lead_status: string | null;
+  }[];
+
+  // phone → sorted customer messages (timestamps ascending)
+  const messagesByPhone = new Map<string, { message_text: string | null; created_at: string }[]>();
+  for (const m of messages) {
+    if (!m.phone_number) continue;
+    const phone = m.phone_number.replace(/^\+/, "");
+    const arr = messagesByPhone.get(phone) || [];
+    arr.push({ message_text: m.message_text, created_at: m.created_at });
+    messagesByPhone.set(phone, arr);
+  }
+
+  // phone → lead stage accepted?
+  const leadAcceptedByPhone = new Map<string, string | null>();
+  for (const p of profiles) {
+    if (!p.phone_number) continue;
+    const phone = p.phone_number.replace(/^\+/, "");
+    if (p.lead_status && ACCEPTED_LEAD_STAGES.has(p.lead_status)) {
+      leadAcceptedByPhone.set(phone, p.lead_status);
+    }
+  }
+
+  for (const [phone, phoneQuotes] of phoneToQuotes) {
+    const customerMessages = messagesByPhone.get(phone) || [];
+    const leadStage = leadAcceptedByPhone.get(phone) || null;
+    const leadAccepted = leadStage !== null;
+
+    for (const q of phoneQuotes) {
+      const quoteTime = q.created_at;
+
+      // (a) keyword scan of customer messages sent at/after the quote was created
+      let keywordEvidence: string | null = null;
+      for (const m of customerMessages) {
+        if (m.created_at < quoteTime) continue;
+        if (messageIndicatesAcceptance(m.message_text)) {
+          keywordEvidence = (m.message_text || "").trim().slice(0, 120) || null;
+          break;
+        }
+      }
+
+      const keywordAccepted = keywordEvidence !== null;
+
+      let accepted: boolean;
+      let signal: QuoteAcceptance["signal"];
+      let evidence: string | null;
+
+      if (keywordAccepted && leadAccepted) {
+        accepted = true;
+        signal = "both";
+        evidence = `"${keywordEvidence}" (lead: ${leadStage})`;
+      } else if (keywordAccepted) {
+        accepted = true;
+        signal = "keyword";
+        evidence = `"${keywordEvidence}"`;
+      } else if (leadAccepted) {
+        accepted = true;
+        signal = "lead_status";
+        evidence = `Lead stage: ${leadStage}`;
+      } else {
+        accepted = false;
+        signal = null;
+        evidence = null;
+      }
+
+      result[q.id] = { accepted, signal, evidence };
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Derive the customer-acceptance indicator for a single quote. Intended for the
+ * quote detail page. Non-chatbot quotes always return a non-accepted indicator
+ * (the derivation is chatbot-specific).
+ */
+export async function getQuoteAcceptance(
+  quote: Quote
+): Promise<QuoteAcceptance> {
+  if (quote.source !== "chatbot") {
+    return { accepted: false, signal: null, evidence: null };
+  }
+  const map = await getChatbotQuoteAcceptance([quote]);
+  return (
+    map[quote.id] || { accepted: false, signal: null, evidence: null }
+  );
 }
 
 /**

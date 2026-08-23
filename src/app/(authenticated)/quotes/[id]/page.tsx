@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getQuoteById, getQuotePdfUrl } from "@/lib/queries";
+import { getQuoteById, getQuotePdfUrl, getQuoteAcceptance } from "@/lib/queries";
 import {
   formatCurrency,
   formatDate,
@@ -105,6 +105,7 @@ export default async function QuoteDetailPage({
   }
 
   const pdfUrl = getQuotePdfUrl(quote);
+  const acceptance = await getQuoteAcceptance(quote);
   const quoteData = (quote.quote_data ?? {}) as QuoteData;
   const sections = quoteData.sections ?? [];
   const items = quoteData.items ?? [];
@@ -139,9 +140,33 @@ export default async function QuoteDetailPage({
             <p className="text-sm text-muted-foreground mt-1">
               {formatDateTime(quote.created_at)}
             </p>
+            {quote.source === "chatbot" && (
+              <p className="text-xs text-muted-foreground mt-1 max-w-md">
+                {acceptance.accepted
+                  ? `Marked as customer-accepted based on conversation activity${acceptance.evidence ? `: ${acceptance.evidence}` : ""}.`
+                  : "No customer acceptance detected in the conversation yet. The \u201Capproved\u201D status reflects the quote being sent, not customer acceptance."}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{quote.status || "sent"}</Badge>
+            {quote.source === "chatbot" && (
+              acceptance.accepted ? (
+                <Badge
+                  title={acceptance.evidence || undefined}
+                  className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+                >
+                  Customer Accepted
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300"
+                >
+                  Awaiting Acceptance
+                </Badge>
+              )
+            )}
             {pdfUrl ? (
               <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
                 <Button size="sm">
