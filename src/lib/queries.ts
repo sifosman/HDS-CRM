@@ -408,15 +408,28 @@ export async function getInvoices(): Promise<Invoice[]> {
 }
 
 /**
- * Get invoices linked to chatbot/web quotes only (excludes BotSailor legacy
- * invoices which have null customer_phone).
+ * Get invoices linked to chatbot quotes only.
+ *
+ * Invoices don't have a `source` column, so we join via quote_number to
+ * quotes where source = 'chatbot'. This excludes legacy web/botsailor
+ * invoices (which have phone numbers but are old test/production data
+ * from the pre-chatbot era).
  */
 export async function getChatbotInvoices(): Promise<Invoice[]> {
   const supabase = await createClient();
+  // Step 1: fetch chatbot quote numbers
+  const { data: chatbotQuotes, error: quoteError } = await supabase
+    .from("quotes")
+    .select("quote_number")
+    .eq("source", "chatbot");
+  if (quoteError) throw quoteError;
+  const quoteNumbers = (chatbotQuotes || []).map((q) => q.quote_number).filter(Boolean);
+  if (quoteNumbers.length === 0) return [];
+  // Step 2: fetch invoices matching those quote numbers
   const { data, error } = await supabase
     .from("invoices")
     .select("*")
-    .not("customer_phone", "is", null)
+    .in("quote_number", quoteNumbers)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Invoice[];
