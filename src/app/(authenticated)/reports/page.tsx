@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { requireRole } from "@/lib/auth";
 import {
   Card,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { DonutChart, BranchBarChart, CountBarChart } from "@/components/charts";
 import { KpiCard } from "@/components/kpi-card";
+import { ReportsDateToggle } from "@/components/reports-date-toggle";
 import {
   getCustomers,
   getChatbotQuotes,
@@ -32,9 +34,170 @@ import {
 import { FileText, DollarSign, Users, TrendingUp } from "lucide-react";
 import type { Quote } from "@/lib/types";
 
-export default async function ReportsPage() {
+type RangeKey = "weekly" | "monthly" | "yearly" | "custom";
+
+/**
+ * Compute the [start, end] window for the selected range.
+ * All windows are inclusive of the full end day.
+ */
+function computeRange(
+  range: RangeKey,
+  from?: string,
+  to?: string
+): { start: Date; end: Date } {
+  const now = new Date();
+
+  if (range === "monthly") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (range === "yearly") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear(), 11, 31);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (range === "custom") {
+    const start = from ? new Date(from + "T00:00:00") : new Date(now);
+    const end = to ? new Date(to + "T23:59:59.999") : new Date(now);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      // Fall back to current week on bad input
+      const mondayOffset = (now.getDay() + 6) % 7;
+      const ws = new Date(now);
+      ws.setDate(now.getDate() - mondayOffset);
+      ws.setHours(0, 0, 0, 0);
+      const we = new Date(ws);
+      we.setDate(ws.getDate() + 6);
+      we.setHours(23, 59, 59, 999);
+      return { start: ws, end: we };
+    }
+    if (end < start) {
+      // Swap if reversed
+      return { start: end, end: start };
+    }
+    return { start, end };
+  }
+
+  // Default: weekly (Mon–Sun of current week)
+  const mondayOffset = (now.getDay() + 6) % 7;
+  const start = new Date(now);
+  start.setDate(now.getDate() - mondayOffset);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+/**
+ * Build the activity buckets for the chart based on the range span.
+ *  - ≤ 14 days  → daily buckets
+ *  - ≤ 90 days  → weekly buckets
+ *  - otherwise  → monthly buckets
+ */
+function buildActivityBuckets(
+  start: Date,
+  end: Date
+): { label: string; count: number; value: number; bucketStart: Date; bucketEnd: Date }[] {
+  const spanDays = Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1;
+
+  if (spanDays <= 14) {
+    // Daily buckets
+    const buckets: { label: string; count: number; value: number; bucketStart: Date; bucketEnd: Date }[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const dayEnd = new Date(cursor);
+      dayEnd.setHours(23, 59, 59, 999);
+      buckets.push({
+        label: cursor.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric" }),
+        count: 0,
+        value: 0,
+        bucketStart: new Date(cursor),
+        bucketEnd: dayEnd,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return buckets;
+  }
+
+  if (spanDays <= 90) {
+    // Weekly buckets (Mon–Sun), aligned to the start date
+    const buckets: { label: string; count: number; value: number; bucketStart: Date; bucketEnd: Date }[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const weekEnd = new Date(cursor);
+      weekEnd.setDate(cursor.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      const cap = weekEnd > end ? new Date(end) : weekEnd;
+      buckets.push({
+        label: `${cursor.toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}`,
+        count: 0,
+        value: 0,
+        bucketStart: new Date(cursor),
+        bucketEnd: cap,
+      });
+      cursor.setDate(cursor.getDate() + 7);
+    }
+    return buckets;
+  }
+
+  // Monthly buckets
+  const buckets: { label: string; count: number; value: number; bucketStart: Date; bucketEnd: Date }[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (cursor <= end) {
+    const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+    monthEnd.setHours(23, 59, 59, 999);
+    const cap = monthEnd > end ? new Date(end) : monthEnd;
+    const bucketStart = cursor < start ? new Date(start) : new Date(cursor);
+    buckets.push({
+      label: cursor.toLocaleDateString("en-ZA", { month: "short", year: "2-digit" }),
+      count: 0,
+      value: 0,
+      bucketStart,
+      bucketEnd: cap,
+    });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return buckets;
+}
+
+function rangeLabel(range: RangeKey): string {
+  switch (range) {
+    case "weekly":
+      return "This week";
+    case "monthly":
+      return "This month";
+    case "yearly":
+      return "This year";
+    case "custom":
+      return "Custom range";
+  }
+}
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const access = await requireRole(["owner", "manager"]);
   if (access.error) redirect("/dashboard?error=access_denied");
+
+  const sp = await searchParams;
+  const range = (sp.range as RangeKey) || "weekly";
+  const validRange: RangeKey = ["weekly", "monthly", "yearly", "custom"].includes(range)
+    ? range
+    : "weekly";
+
+  const { start: rangeStart, end: rangeEnd } = computeRange(
+    validRange,
+    sp.from,
+    sp.to
+  );
+
   const [customers, chatbotQuotes, branches, segmentStats, typeStats] = await Promise.all([
     getCustomers(),
     getChatbotQuotes(),
@@ -43,30 +206,28 @@ export default async function ReportsPage() {
     getCustomerTypeStats(),
   ]);
 
-  const now = new Date();
-  const weekStart = new Date(now);
-  // getDay() returns 0 for Sunday. Convert to Monday-based index (0=Mon..6=Sun)
-  // so the week start is always the Monday of the current week.
-  const mondayOffset = (now.getDay() + 6) % 7;
-  weekStart.setDate(now.getDate() - mondayOffset);
-  weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
-
-  // Helper: compute report data from a quote set
+  // Helper: compute report data from a quote set, filtered to the selected window
   function computeReportData(quotes: Quote[]) {
-    const weekQuotes = quotes.filter((q) => {
+    const windowQuotes = quotes.filter((q) => {
       const qd = new Date(q.created_at);
-      return qd >= weekStart && qd <= weekEnd;
+      return qd >= rangeStart && qd <= rangeEnd;
     });
 
-    const totalQuoteValue = weekQuotes.reduce(
+    const totalQuoteValue = windowQuotes.reduce(
       (sum, q) => sum + Number(q.total || 0),
       0
     );
     const avgQuoteSize =
-      weekQuotes.length > 0 ? totalQuoteValue / weekQuotes.length : 0;
+      windowQuotes.length > 0 ? totalQuoteValue / windowQuotes.length : 0;
+
+    // Customers whose first interaction falls inside the window
+    const newCustomers = customers.filter(
+      (c) =>
+        c.first_interaction_at &&
+        new Date(c.first_interaction_at) >= rangeStart &&
+        new Date(c.first_interaction_at) <= rangeEnd
+    ).length;
+    const returningCustomers = Math.max(0, customers.length - newCustomers);
 
     const closedLeads = customers.filter(
       (c) => c.lead_status === "closed"
@@ -76,12 +237,7 @@ export default async function ReportsPage() {
         ? Math.round((closedLeads / customers.length) * 100)
         : 0;
 
-    const newCustomers = customers.filter(
-      (c) => c.first_interaction_at && new Date(c.first_interaction_at) >= weekStart
-    ).length;
-    const returningCustomers = customers.length - newCustomers;
-
-    // Customer type distribution
+    // Customer type distribution (all customers — type doesn't change by window)
     const typeDistribution = Object.entries(CUSTOMER_TYPE_LABELS).map(
       ([key, label]) => ({
         name: label,
@@ -89,11 +245,11 @@ export default async function ReportsPage() {
       })
     );
 
-    // Sales by branch
+    // Sales by branch (within the window)
     const branchSales = branches
       .map((b) => ({
         branch: b.trading_as?.split(" ")[0] || `#${b.id}`,
-        value: quotes
+        value: windowQuotes
           .filter(
             (q) =>
               q.branch_trading_as === b.trading_as ||
@@ -105,27 +261,27 @@ export default async function ReportsPage() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 15);
 
-    // Daily quote activity for the current week (Mon–Sun)
-    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const quotesByDay = dayLabels.map((label, i) => {
-      const dayStart = new Date(weekStart);
-      dayStart.setDate(weekStart.getDate() + i);
-      const dayEnd = new Date(dayStart);
-      dayEnd.setHours(23, 59, 59, 999);
-      const dayQuotes = quotes.filter((q) => {
-        const qd = new Date(q.created_at);
-        return qd >= dayStart && qd <= dayEnd;
-      });
-      return {
-        day: label,
-        count: dayQuotes.length,
-        value: dayQuotes.reduce((sum, q) => sum + Number(q.total || 0), 0),
-      };
-    });
+    // Activity buckets (granularity adapts to span)
+    const buckets = buildActivityBuckets(rangeStart, rangeEnd);
+    for (const q of quotes) {
+      const qd = new Date(q.created_at);
+      for (const b of buckets) {
+        if (qd >= b.bucketStart && qd <= b.bucketEnd) {
+          b.count += 1;
+          b.value += Number(q.total || 0);
+          break;
+        }
+      }
+    }
+    const activityData = buckets.map((b) => ({
+      label: b.label,
+      count: b.count,
+      value: b.value,
+    }));
 
-    // Top quoted customers
+    // Top quoted customers (within the window)
     const productMap: Record<string, { count: number; value: number }> = {};
-    quotes.forEach((q) => {
+    windowQuotes.forEach((q) => {
       const name = q.customer_name || "Unknown";
       if (!productMap[name]) productMap[name] = { count: 0, value: 0 };
       productMap[name].count++;
@@ -136,7 +292,7 @@ export default async function ReportsPage() {
       .slice(0, 10);
 
     return {
-      weekQuotes,
+      windowQuotes,
       totalQuoteValue,
       avgQuoteSize,
       conversionRate,
@@ -145,7 +301,7 @@ export default async function ReportsPage() {
       returningCustomers,
       typeDistribution,
       branchSales,
-      quotesByDay,
+      activityData,
       topProducts,
       totalQuotes: quotes.length,
     };
@@ -153,23 +309,28 @@ export default async function ReportsPage() {
 
   const chatbotData = computeReportData(chatbotQuotes);
 
-  // Render a report section (shared between both tabs)
-  function ReportSection({ data, label }: { data: ReturnType<typeof computeReportData>; label: string }) {
+  function ReportSection({
+    data,
+    label,
+  }: {
+    data: ReturnType<typeof computeReportData>;
+    label: string;
+  }) {
     return (
       <div className="space-y-6">
         {/* Summary KPIs */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
             title="Quotes Generated"
-            value={String(data.weekQuotes.length)}
+            value={String(data.windowQuotes.length)}
             icon={FileText}
-            description="This week"
+            description={rangeLabel(validRange)}
           />
           <KpiCard
             title="Total Quote Value"
             value={formatCurrency(data.totalQuoteValue)}
             icon={DollarSign}
-            description="This week"
+            description={rangeLabel(validRange)}
           />
           <KpiCard
             title="Conversion Rate"
@@ -190,6 +351,7 @@ export default async function ReportsPage() {
             title="Average Quote Size"
             value={formatCurrency(data.avgQuoteSize)}
             icon={DollarSign}
+            description={rangeLabel(validRange)}
           />
           <KpiCard
             title={`Total ${label} Quotes`}
@@ -203,23 +365,25 @@ export default async function ReportsPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Daily Quote Activity</CardTitle>
+              <CardTitle>Quote Activity</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Quotes and value per day (this week)
+                Quotes and value per {validRange === "weekly" ? "day" : validRange === "monthly" ? "week" : "month"}
+                {" "}
+                ({rangeLabel(validRange).toLowerCase()})
               </p>
             </CardHeader>
             <CardContent>
-              {data.quotesByDay.some((d) => d.count > 0) ? (
+              {data.activityData.some((d) => d.count > 0) ? (
                 <CountBarChart
-                  data={data.quotesByDay.map((d) => ({
-                    label: d.day,
+                  data={data.activityData.map((d) => ({
+                    label: d.label,
                     value: d.count,
                   }))}
                   label="Quotes"
                 />
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No quotes generated this week
+                  No quotes generated in this period
                 </p>
               )}
             </CardContent>
@@ -256,8 +420,7 @@ export default async function ReportsPage() {
             <CardHeader>
               <CardTitle>Sales by Branch</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Quote value attributed to branches (chatbot quotes may lack
-                branch assignment)
+                Quote value attributed to branches ({rangeLabel(validRange).toLowerCase()})
               </p>
             </CardHeader>
             <CardContent>
@@ -270,6 +433,9 @@ export default async function ReportsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Top Quoted Customers</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {rangeLabel(validRange)}
+            </p>
           </CardHeader>
           <CardContent>
             <Table>
@@ -284,7 +450,7 @@ export default async function ReportsPage() {
                 {data.topProducts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                      No data available
+                      No data available for this period
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -308,13 +474,19 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-heading font-bold">Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Week of {weekStart.toLocaleDateString("en-ZA")} —{" "}
-          {weekEnd.toLocaleDateString("en-ZA")}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold">Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {rangeStart.toLocaleDateString("en-ZA")} —{" "}
+            {rangeEnd.toLocaleDateString("en-ZA")}
+          </p>
+        </div>
       </div>
+
+      <Suspense fallback={<div className="h-10 rounded-lg bg-muted animate-pulse" />}>
+        <ReportsDateToggle />
+      </Suspense>
 
       <ReportSection data={chatbotData} label="Chatbot" />
 
@@ -322,6 +494,9 @@ export default async function ReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Customer Type Segmentation</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            All-time customer classification (not filtered by date range)
+          </p>
         </CardHeader>
         <CardContent>
           <Table>
@@ -361,6 +536,9 @@ export default async function ReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Saved Segment Performance</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            All-time segment performance (not filtered by date range)
+          </p>
         </CardHeader>
         <CardContent>
           <Table>
