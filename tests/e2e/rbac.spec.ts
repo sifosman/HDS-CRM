@@ -39,6 +39,7 @@ const ACCESS_MATRIX: Record<Role, { allowed: string[]; denied: string[] }> = {
       "/reports",
       "/reports/ai-performance",
       "/health",
+      "/ai-training",
       "/templates",
       "/broadcasts",
       "/settings",
@@ -61,7 +62,7 @@ const ACCESS_MATRIX: Record<Role, { allowed: string[]; denied: string[] }> = {
       "/settings",
       "/settings/users",
     ],
-    denied: ["/health"],
+    denied: ["/health", "/ai-training"],
   },
   sales: {
     allowed: [
@@ -77,6 +78,7 @@ const ACCESS_MATRIX: Record<Role, { allowed: string[]; denied: string[] }> = {
       "/reports",
       "/reports/ai-performance",
       "/health",
+      "/ai-training",
       "/templates",
       "/broadcasts",
       "/settings/users",
@@ -127,6 +129,7 @@ test.describe("RBAC access control", () => {
       expect(sidebarText).not.toContain("Segments");
       expect(sidebarText).not.toContain("Intelligence");
       expect(sidebarText).not.toContain("System Health");
+      expect(sidebarText).not.toContain("AI Training Advisor");
       expect(sidebarText).not.toContain("Templates");
       expect(sidebarText).not.toContain("Broadcasts");
       expect(sidebarText).not.toContain("User Management");
@@ -136,6 +139,7 @@ test.describe("RBAC access control", () => {
       const sidebar = page.locator("[data-slot='sidebar']");
       const sidebarText = await sidebar.textContent();
       expect(sidebarText).not.toContain("System Health");
+      expect(sidebarText).not.toContain("AI Training Advisor");
       expect(sidebarText).toContain("User Management");
     }
 
@@ -143,6 +147,7 @@ test.describe("RBAC access control", () => {
       const sidebar = page.locator("[data-slot='sidebar']");
       const sidebarText = await sidebar.textContent();
       expect(sidebarText).toContain("System Health");
+      expect(sidebarText).toContain("AI Training Advisor");
       expect(sidebarText).toContain("User Management");
     }
   });

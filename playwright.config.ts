@@ -66,7 +66,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: "tests/e2e/.auth/owner.json",
       },
-      testMatch: /rbac\.spec\.ts|user-management\.spec\.ts|interactions\.spec\.ts|dashboard\.spec\.ts|customers\.spec\.ts|customer-detail\.spec\.ts|quotes\.spec\.ts|quote-detail\.spec\.ts|payments\.spec\.ts|segments\.spec\.ts|intelligence\.spec\.ts|reports\.spec\.ts|conversation-detail\.spec\.ts|health\.spec\.ts|templates\.spec\.ts|broadcasts\.spec\.ts|broadcast-detail\.spec\.ts|settings\.spec\.ts/,
+      testMatch: /rbac\.spec\.ts|user-management\.spec\.ts|interactions\.spec\.ts|dashboard\.spec\.ts|customers\.spec\.ts|customer-detail\.spec\.ts|quotes\.spec\.ts|quote-detail\.spec\.ts|payments\.spec\.ts|segments\.spec\.ts|intelligence\.spec\.ts|reports\.spec\.ts|conversation-detail\.spec\.ts|health\.spec\.ts|templates\.spec\.ts|broadcasts\.spec\.ts|broadcast-detail\.spec\.ts|settings\.spec\.ts|ai-training\.spec\.ts/,
     },
 
     // --- Manager project: rbac tests only ---

@@ -498,3 +498,125 @@ export type UserWithRole = {
   is_active: boolean;
 };
 
+// ---------------------------------------------------------------------------
+// AI Training Advisor (owner-only)
+// ---------------------------------------------------------------------------
+
+export type AdvisorModelId =
+  | "openai/gpt-5.6-sol"
+  | "anthropic/claude-sonnet-5"
+  | "moonshotai/kimi-k3"
+  | "deepseek/deepseek-v4-pro-0813"
+  | "qwen/qwen3.8-max";
+
+export type AdvisorSession = {
+  id: string;
+  owner_id: string;
+  title: string;
+  selected_model: AdvisorModelId;
+  summary: string | null;
+  last_message_at: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdvisorMessageRole = "user" | "assistant" | "system";
+
+export type AdvisorMessage = {
+  id: string;
+  session_id: string;
+  owner_id: string;
+  role: AdvisorMessageRole;
+  content: string;
+  model_id: string | null;
+  context_snapshot_id: string | null;
+  tokens_input: number | null;
+  tokens_output: number | null;
+  cost_usd: number | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type AdvisorContextSnapshot = {
+  id: string;
+  content_hash: string;
+  workflow_version: string | null;
+  workflow_model: string | null;
+  system_prompt: string | null;
+  tool_contracts: AdvisorToolContract[];
+  topology: Record<string, unknown>;
+  dashboard_manifest: Record<string, unknown>;
+  supabase_aggregates: Record<string, unknown>;
+  source_timestamps: Record<string, string>;
+  is_stale: boolean;
+  created_at: string;
+};
+
+export type AdvisorToolContract = {
+  name: string;
+  description: string;
+  inputSchema?: Record<string, unknown>;
+};
+
+export type AdvisorChangeRequestStatus =
+  | "pending"
+  | "in_review"
+  | "approved"
+  | "implemented"
+  | "rejected";
+
+export type AdvisorChangeRequestPriority =
+  | "low"
+  | "medium"
+  | "high"
+  | "critical";
+
+export type AdvisorNotificationStatus = "pending" | "sent" | "failed";
+
+export type AdvisorChangeRequest = {
+  id: string;
+  session_id: string | null;
+  source_message_id: string | null;
+  owner_id: string;
+  title: string;
+  current_behavior: string | null;
+  requested_behavior: string;
+  rationale: string | null;
+  examples: Array<{
+    customerMessage?: string;
+    desiredReply?: string;
+    [key: string]: unknown;
+  }>;
+  affected_areas: string[];
+  priority: AdvisorChangeRequestPriority;
+  risks: string | null;
+  acceptance_criteria: string | null;
+  status: AdvisorChangeRequestStatus;
+  implementation_notes: string | null;
+  model_id: string | null;
+  context_snapshot_id: string | null;
+  notification_status: AdvisorNotificationStatus;
+  notification_error: string | null;
+  notification_provider_response: Record<string, unknown> | null;
+  notified_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdvisorChangeRequestDraft = {
+  title: string;
+  current_behavior?: string;
+  requested_behavior: string;
+  rationale?: string;
+  examples?: Array<{
+    customerMessage?: string;
+    desiredReply?: string;
+    [key: string]: unknown;
+  }>;
+  affected_areas?: string[];
+  priority?: AdvisorChangeRequestPriority;
+  risks?: string;
+  acceptance_criteria?: string;
+};
+
