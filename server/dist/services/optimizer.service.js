@@ -1333,17 +1333,18 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
         console.warn('Logo file not found, proceeding without logo');
     }
     // ====== COST CALCULATIONS (same logic as before) ======
-    const EDGING_PRICE_PER_METER = 14;
+    const DEFAULT_EDGING_PRICE_PER_METER = 14;
     let totalEdgingMeters = 0;
     let totalEdgingCost = 0;
     let boardTotal = sections.reduce((sum, section) => sum + (section.sectionTotal || 0), 0);
     boardTotal = parseFloat(boardTotal.toFixed(2));
     sections.forEach((section) => {
         if (section.edging && section.edging.totalEdging > 0) {
+            const sectionEdgingPrice = section.edging.pricePerMeter || DEFAULT_EDGING_PRICE_PER_METER;
             const totalEdgingWithAllowanceMm = Math.round(section.edging.totalEdging * 1.10);
             const edgingMeters = totalEdgingWithAllowanceMm / 1000;
             totalEdgingMeters += edgingMeters;
-            const computedEdgingCost = parseFloat((edgingMeters * EDGING_PRICE_PER_METER).toFixed(2));
+            const computedEdgingCost = parseFloat((edgingMeters * sectionEdgingPrice).toFixed(2));
             section.edgingCost = computedEdgingCost;
             totalEdgingCost += computedEdgingCost;
         }
@@ -1506,12 +1507,14 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
         // Edging row (if applicable)
         if (hasEdging) {
             const edgingMeters = (Math.round(edging.totalEdging * 1.10) / 1000).toFixed(2);
+            const sectionEdgingPrice = edging.pricePerMeter || DEFAULT_EDGING_PRICE_PER_METER;
             const edgingCostVal = section.edgingCost !== undefined
                 ? section.edgingCost.toFixed(2)
-                : (parseFloat(edgingMeters) * EDGING_PRICE_PER_METER).toFixed(2);
+                : (parseFloat(edgingMeters) * sectionEdgingPrice).toFixed(2);
+            const edgingTypeLabel = edging.edgingType ? `${edging.edgingType} — ` : '';
             drawRect(MARGIN, ty, CONTENT_W, 22, COLOR_WHITE, COLOR_ROW_BORDER);
             doc.fontSize(9).fillColor(COLOR_TEXT_DARK).font('Helvetica');
-            doc.text(`Edging (${edgingMeters}m @ R${EDGING_PRICE_PER_METER}/m)`, MARGIN + 10, ty + 7, {
+            doc.text(`Edging — ${edgingTypeLabel}(${edgingMeters}m @ R${sectionEdgingPrice}/m)`, MARGIN + 10, ty + 7, {
                 width: tColW[0] + tColW[1] - 15
             });
             doc.font('Helvetica-Bold');
@@ -1630,7 +1633,7 @@ const generateQuotePdf = (quoteData, isPaid = false) => {
     const sumColW = [sumW * 0.65, sumW * 0.35];
     const summaryRows = [
         { label: 'Total Board Cost', value: `R ${boardTotal.toFixed(2)}` },
-        { label: `Total Edging Cost (${totalEdgingMeters.toFixed(2)}m @ R${EDGING_PRICE_PER_METER}/m)`, value: `R ${totalEdgingCost.toFixed(2)}` },
+        { label: `Total Edging Cost (${totalEdgingMeters.toFixed(2)}m)`, value: `R ${totalEdgingCost.toFixed(2)}` },
         { label: `Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, value: `R ${totalCuttingFee.toFixed(2)}` },
     ];
     // Add hardware row if hardware items present

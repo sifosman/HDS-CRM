@@ -159,6 +159,25 @@ const generateQuote = async (req, res) => {
         if (!customerName) {
             return res.status(400).json({ message: 'Customer name is required' });
         }
+        // ====== EDGING TYPE PRICING ======
+        // Chatbot quotes can specify an edgingType per section. Each type has a different per-meter price.
+        // BotSailor and web quotes don't pass edgingType, so they fall back to the default R14/m.
+        const EDGING_PRICES = {
+            '0.4mm PVC': 7.75,
+            '1.0mm PVC': 15.80,
+            '0.4mm Gloss': 13.75,
+            '1.0mm Gloss': 20.30,
+            '1.0mm SuperMatt': 21.80,
+        };
+        const DEFAULT_EDGING_PRICE_PER_METER = 14; // BotSailor / web fallback
+        const isChatbotQuote = source === 'chatbot';
+        // Helper: resolve edging price for a section based on source + edgingType
+        const resolveEdgingPrice = (edgingType) => {
+            if (!isChatbotQuote || !edgingType)
+                return DEFAULT_EDGING_PRICE_PER_METER;
+            const key = Object.keys(EDGING_PRICES).find(k => k.toLowerCase() === (edgingType || '').toLowerCase().trim());
+            return key ? EDGING_PRICES[key] : DEFAULT_EDGING_PRICE_PER_METER;
+        };
         // Process each material section
         const processedSections = [];
         const pdfSections = [];
@@ -207,7 +226,7 @@ const generateQuote = async (req, res) => {
         const dynamicCutlistId = `cutlist-${quoteId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
         console.log('Generated cutlist ID:', dynamicCutlistId);
         for (const section of (sections || [])) {
-            const { material, cutPieces } = section;
+            const { material, cutPieces, edgingType } = section;
             if (!material || !cutPieces || !Array.isArray(cutPieces) || cutPieces.length === 0) {
                 continue; // Skip invalid sections
             }
@@ -492,7 +511,9 @@ const generateQuote = async (req, res) => {
             }
             console.log(`\n=== FINAL EDGING TOTALS for ${material} ===`);
             console.log(`Total edging length: ${totalEdging}mm`);
-            console.log(`Total edging cost: R${((totalEdging / 1000) * 14).toFixed(2)}`);
+            const sectionEdgingPricePerMeter = resolveEdgingPrice(edgingType);
+            console.log(`Edging type: ${edgingType || 'default'} -> R${sectionEdgingPricePerMeter}/m (chatbot: ${isChatbotQuote})`);
+            console.log(`Total edging cost: R${((totalEdging / 1000) * sectionEdgingPricePerMeter).toFixed(2)}`);
             console.log(`=== END EDGING DEBUG ===\n`);
             // 11. Add to processed sections with wastage and edging info
             const processedSection = {
@@ -511,7 +532,9 @@ const generateQuote = async (req, res) => {
                 edging: {
                     length: totalEdging,
                     totalEdging: totalEdging, // Add this for PDF compatibility
-                    cost: parseFloat(((totalEdging / 1000) * 14).toFixed(2)) // Store as number, not string
+                    cost: parseFloat(((totalEdging / 1000) * sectionEdgingPricePerMeter).toFixed(2)), // Store as number, not string
+                    edgingType: edgingType || null,
+                    pricePerMeter: sectionEdgingPricePerMeter
                 }
             };
             processedSections.push(processedSection);
