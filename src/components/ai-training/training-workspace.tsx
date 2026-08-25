@@ -93,6 +93,7 @@ export function TrainingWorkspace({
   const [titleValue, setTitleValue] = useState(currentSession?.title ?? "");
   const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -113,11 +114,19 @@ export function TrainingWorkspace({
   }, [messages, streamingText]);
 
   const handleNewChat = async () => {
-    const result = await createSessionAction({});
-    if (result.ok) {
-      router.push(`/ai-training/${result.data.id}`);
-    } else {
-      setError(result.error);
+    setIsCreatingChat(true);
+    setError(null);
+    try {
+      const result = await createSessionAction({});
+      if (result.ok) {
+        router.push(`/ai-training/${result.data.id}`);
+      } else {
+        setError(result.error);
+        setIsCreatingChat(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create chat");
+      setIsCreatingChat(false);
     }
   };
 
@@ -325,8 +334,12 @@ export function TrainingWorkspace({
       {/* Session rail */}
       <div className="w-64 border-r flex flex-col bg-muted/30">
         <div className="p-3 border-b">
-          <Button onClick={handleNewChat} className="w-full" variant="default">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleNewChat} className="w-full" variant="default" disabled={isCreatingChat}>
+            {isCreatingChat ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
             New Chat
           </Button>
         </div>
@@ -355,7 +368,15 @@ export function TrainingWorkspace({
       </div>
 
       {/* Chat panel */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative">
+        {isCreatingChat && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Creating new chat...</p>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="border-b px-4 py-3 flex items-center gap-3 flex-wrap">
           {currentSession ? (
