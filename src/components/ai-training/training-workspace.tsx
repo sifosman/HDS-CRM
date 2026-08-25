@@ -96,9 +96,11 @@ export function TrainingWorkspace({
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const streamingTextRef = useRef("");
 
   // Sync state when session changes (navigation).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages(initialMessages);
     setTitleValue(currentSession?.title ?? "");
     setError(null);
@@ -189,6 +191,7 @@ export function TrainingWorkspace({
     setError(null);
     setIsStreaming(true);
     setStreamingText("");
+    streamingTextRef.current = "";
 
     // Optimistically add user message
     const tempUserMsg: AdvisorMessage = {
@@ -250,7 +253,9 @@ export function TrainingWorkspace({
             try {
               const parsed = JSON.parse(data);
               if (currentEvent === "token") {
-                setStreamingText((prev) => prev + parsed.token);
+                const nextChunk = (streamingTextRef.current + parsed.token) as string;
+                streamingTextRef.current = nextChunk;
+                setStreamingText(nextChunk);
               } else if (currentEvent === "done") {
                 assistantMessageId = parsed.assistantMessageId;
               } else if (currentEvent === "error") {
@@ -258,7 +263,6 @@ export function TrainingWorkspace({
               }
             } catch (e) {
               if (e instanceof Error && e.message !== "Unexpected token") {
-                // Re-throw if it's our error
                 if (currentEvent === "error") throw e;
               }
             }
@@ -266,8 +270,8 @@ export function TrainingWorkspace({
         }
       }
 
-      // Add the assistant message to state
-      const finalText = streamingText;
+      // Add the assistant message using the ref (not stale state)
+      const finalText = streamingTextRef.current;
       if (finalText || assistantMessageId) {
         const tempAssistantMsg: AdvisorMessage = {
           id: assistantMessageId ?? `temp-assistant-${Date.now()}`,
@@ -286,18 +290,18 @@ export function TrainingWorkspace({
         setMessages((prev) => [...prev, tempAssistantMsg]);
       }
 
-      // Refresh to get persisted data
+      // Refresh to get persisted data from the server
       router.refresh();
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        // User stopped — keep partial text as a message
-        if (streamingText) {
+        const partialText = streamingTextRef.current;
+        if (partialText) {
           const tempAssistantMsg: AdvisorMessage = {
             id: `temp-assistant-${Date.now()}`,
             session_id: currentSession.id,
             owner_id: currentSession.owner_id,
             role: "assistant",
-            content: streamingText + " [stopped]",
+            content: partialText + " [stopped]",
             model_id: currentSession.selected_model,
             context_snapshot_id: null,
             tokens_input: null,
@@ -314,6 +318,7 @@ export function TrainingWorkspace({
     } finally {
       setIsStreaming(false);
       setStreamingText("");
+      streamingTextRef.current = "";
       abortRef.current = null;
     }
   };
@@ -455,7 +460,10 @@ export function TrainingWorkspace({
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
-              {isStreaming && (
+              {isStreaming && streamingText === "" && (
+                <ThinkingBubble modelId={currentSession.selected_model} />
+              )}
+              {isStreaming && streamingText !== "" && (
                 <MessageBubble
                   message={{
                     id: "streaming",
@@ -681,16 +689,40 @@ function MessageBubble({
             : "bg-muted border"
         }`}
       >
-        <div className="whitespace-pre-wrap text-sm leading-relaxed">
+        <div className="whitespace-pre-wrap text-sm leading-relaxed break-words">
           {message.content}
           {isStreaming && (
-            <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+            <span
+              className="inline-block w-2 h-4 ml-1 align-text-bottom bg-current animate-pulse"
+              aria-hidden
+            />
           )}
         </div>
         {!isUser && message.model_id && (
           <div className="mt-2 text-xs text-muted-foreground">
             {message.model_id}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ThinkingBubble({ modelId }: { modelId: AdvisorModelId | null }) {
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted border">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>AI is thinking</span>
+          <span className="inline-flex gap-1" aria-hidden>
+            <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1 h-1 rounded-full bg-current animate-bounce" />
+          </span>
+        </div>
+        {modelId && (
+          <div className="mt-2 text-xs text-muted-foreground">{modelId}</div>
         )}
       </div>
     </div>
