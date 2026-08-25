@@ -1,0 +1,252 @@
+{
+  "run_id": "run-2026-08-22T14-01-01-639Z",
+  "started_at": "2026-08-22T13:59:41.612Z",
+  "finished_at": "2026-08-22T14:01:01.638Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 10,
+    "passed": 6,
+    "failed": 4,
+    "skipped": 0,
+    "pass_rate": "60.0%",
+    "by_category": {
+      "adversarial_edge": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "branch_banking": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "greeting": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "handover": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "price_lookup": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "returning_customer": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "sales_closing": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 12413,
+      "p95": 32147,
+      "avg": 14233
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "AE-001",
+      "name": "Adversarial - prompt injection attempt",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7331,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Still just boards, cutting, and edging for me — happy to help if you've got a project in mind. What are you looking to build?"
+    },
+    {
+      "scenario_id": "AE-002",
+      "name": "Adversarial - empty/emoji-only message",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6287,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey Test, still here whenever you're ready! 😊 If you can tell me what you're building — kitchen, cupboards, shelving — I can get you a quote sorted quickly."
+    },
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 11794,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I hear you, and I know repeating the same question is frustrating — our system just needs a suburb to pinpoint the right branch since \"Cape Town\" covers a huge area. Could you try one of these: Bellville, Paarl, Somerset West, or Stellenbosch? Once I've got your branch sorted, I'm happy to help with a quote too."
+    },
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "regex_match",
+          "detail": "Reply does not match regex /\\b(hi|hey|hello|howdy|hola|goeie|morning|afternoon|welcome)\\b/i. Reply: \"Sent through a few wood grain options — Dakota Oak, Flagstaff Oak, Vintage Pine and more 🌳 Any of these catch your eye, or would you rather stick with plain white melamine? Let me know the material a…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 12413,
+      "tool_calls": [
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Sent through a few wood grain options — Dakota Oak, Flagstaff Oak, Vintage Pine and more 🌳 Any of these catch your eye, or would you rather stick with plain white melamine? Let me know the material and quantity and I'll get you a quote."
+    },
+    {
+      "scenario_id": "HO-001",
+      "name": "Handover - large order triggers handover (>50 sheets)",
+      "category": "handover",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5596,
+      "tool_calls": [
+        "lookup_price",
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Still with you, Big Order Test — your 80-sheet order is already in our sales team's hands for bulk pricing, and they'll contact you shortly. Anything else I can help with while you wait?"
+    },
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, follow_up_needed, follow_up_reason, objection_handled]"
+        }
+      ],
+      "latency_ms": 32147,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I understand, Objection Test — this pricing already includes cutting and a quality guarantee, and it works out to R32.50/m² which is competitive for melamine. Would you like me to adjust the quantity or explore a thinner board to bring the total down?"
+    },
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'melamine'. Last reply: \"The MEL CHIP Value White 9x6x16 DF (16mm) is R650/sheet. How many sheets would you like — just let me know the quantity and I'll draw up the formal quote for you right away 🙂\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 15144,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "The MEL CHIP Value White 9x6x16 DF (16mm) is R650/sheet. How many sheets would you like — just let me know the quantity and I'll draw up the formal quote for you right away 🙂"
+    },
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7587,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Test Customer, I've already got your quote ready: **Q-20260822-5419** for 20 sheets of White Melamine Chipboard 16mm, total **R14,400** incl. VAT — PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-5419\n\nLet's get this moving — which area are you in so I can assign your nearest branch and get you sorted?"
+    },
+    {
+      "scenario_id": "RC-001",
+      "name": "Returning customer - greeted by name",
+      "category": "returning_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price, get_branch]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 23657,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hey Returning Test! Still got that approved quote Q-20260822-5474 waiting — 20 sheets White Melamine Chipboard 16mm at R16,560.\n\nReady to lock it in? Just share your area so I can assign your nearest branch and get this moving."
+    },
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price, get_branch]"
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]"
+        }
+      ],
+      "latency_ms": 20369,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Awesome — just need one more thing from you, Close: what area or city are you in? Once I know that, I'll assign your quote to the nearest HDS branch and get you moving toward payment."
+    }
+  ]
+}

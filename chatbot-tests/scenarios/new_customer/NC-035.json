@@ -1,0 +1,64 @@
+{
+  "id": "NC-035",
+  "name": "Blurry photo first message",
+  "category": "new_customer",
+  "description": "New customer sends a blurry photo as first message.",
+  "phone_number": "27900000835",
+  "sender_name": "New Customer 35",
+  "messages": [
+    {
+      "type": "image",
+      "media_id": "test-blurry-photo-001",
+      "caption": "Check this",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "clearer",
+        "better light",
+        "another",
+        "can't see",
+        "hard to see",
+        "not clear",
+        "blurry",
+        "dark",
+        "send a photo",
+        "send another",
+        "could you send",
+        "share a photo",
+        "better photo",
+        "new photo"
+      ],
+      "description": "AI should ask for clearer or additional photo"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 40000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Blurry photo as first message. AI should ask for clearer image, not guess."
+}

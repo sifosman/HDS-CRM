@@ -1,0 +1,55 @@
+{
+  "run_id": "run-2026-08-13T17-23-01-790Z",
+  "started_at": "2026-08-13T17:22:48.785Z",
+  "finished_at": "2026-08-13T17:23:01.790Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 10978,
+      "p95": 10978,
+      "avg": 10978
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "regex_match",
+          "detail": "Reply does not match regex /R[0-9]/. Reply: \"I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I try again to get this quote sorted for you? I'll hold this pricing for 48 hours — feel free to reac…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 10978,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I try again to get this quote sorted for you? I'll hold this pricing for 48 hours — feel free to reach out anytime. 👍"
+    }
+  ]
+}

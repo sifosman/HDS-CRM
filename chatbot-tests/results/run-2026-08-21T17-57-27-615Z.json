@@ -1,0 +1,44 @@
+{
+  "run_id": "run-2026-08-21T17-57-27-615Z",
+  "started_at": "2026-08-21T17:57:19.686Z",
+  "finished_at": "2026-08-21T17:57:27.615Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "greeting": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 6405,
+      "p95": 6405,
+      "avg": 6405
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "GR-001-TEST",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6405,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey! Welcome to HDS Group 😊 Happy to help with boards - what are you working on (kitchen, wardrobe, shelving etc.), and do you have an idea of what material or thickness you're after?"
+    }
+  ]
+}

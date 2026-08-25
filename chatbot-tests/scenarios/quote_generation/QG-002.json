@@ -1,0 +1,50 @@
+{
+  "id": "QG-002",
+  "name": "Quote generation - PDF clamping regression test",
+  "category": "quote_generation",
+  "description": "Quote for sheets at nominal size (2750x1830) which differs from actual board size (2730x1810). Verifies clamping fix prevents boardsNeeded=0 and grandTotal=0.",
+  "phone_number": "27900000027",
+  "sender_name": "Test Clamping Customer",
+  "messages": [
+    {
+      "text": "Hi, I need a quote for 10 sheets of MEL CHIP Value White 16mm please. My name is Clamping Test",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["generate_quote"],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a non-zero quote total"
+    },
+    {
+      "type": "regex_match",
+      "pattern": "R[0-9]",
+      "description": "Reply should contain a price starting with R followed by a digit"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000,
+      "description": "Quote generation may take up to 30 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "R0[^0-9]|R0$|total of R0",
+      "flags": "i",
+      "description": "Quote total must not be R0 (clamping bug indicator)"
+    },
+    {
+      "pattern": "boardsNeeded.*0|grandTotal.*0",
+      "description": "No zero board count or zero total (clamping regression)"
+    },
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Regression test for the PDF clamping fix. If this fails, the optimizer is receiving nominal sizes larger than actual board sizes."
+}

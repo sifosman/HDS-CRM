@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-14T21-10-03-018Z",
+  "started_at": "2026-08-14T21:09:52.579Z",
+  "finished_at": "2026-08-14T21:10:03.017Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "consultant": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 9653,
+      "p95": 9653,
+      "avg": 9653
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HC-004",
+      "name": "Confused customer - decision simplification",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9653,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "No need to stress at all, Lisa! \n\nFor kitchen cabinets, 90% of our customers use **16mm White Melamine Chipboard** (our MEL CHIP Value White at R650 per sheet). It is durable, easy to clean, and gives you that crisp, modern finish inside your cupboards.\n\nHow many sheets are you thinking of needing for your project? Once you let me know, I can generate an official quote for you right away!"
+    }
+  ]
+}

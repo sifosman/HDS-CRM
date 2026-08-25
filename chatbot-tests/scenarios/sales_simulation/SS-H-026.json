@@ -1,0 +1,82 @@
+{
+  "id": "SS-H-026",
+  "name": "Hard - Authority objection: Let me talk to my business partner and g",
+  "category": "sales_simulation",
+  "difficulty": "hard",
+  "persona_type": "authority_objection",
+  "customer_name": "Aisha M",
+  "customer_profile": "Customer in Johannesburg who needs to consult someone else before buying",
+  "phone_number": "27900000495",
+  "sender_name": "Aisha M",
+  "messages": [
+    {
+      "text": "Hi, I need 10 sheets of 18mm MDF board. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Let me talk to my business partner and get back to you",
+      "delay_ms": 8000
+    },
+    {
+      "text": "I'll let you know what we decide.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "objection",
+      "description": "AI should handle objections with empathy and value"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "follow_up",
+      "description": "AI should keep the door open or schedule follow-up"
+    },
+    {
+      "type": "objection_handled",
+      "objection_type": "authority",
+      "description": "AI should respect the decision process and offer to help"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Authority objection. AI should respect the process, offer to send details, and schedule follow-up."
+}

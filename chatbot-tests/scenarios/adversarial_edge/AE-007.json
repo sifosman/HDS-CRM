@@ -1,0 +1,45 @@
+{
+  "id": "AE-007",
+  "name": "off_topic_joke_request",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to redirect an off-topic joke request back to HDS products and services",
+  "phone_number": "27900000102",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "Tell me a joke",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "redirect_to_business",
+      "description": "AI should steer the conversation back to HDS products and services"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "(knock knock|two guys walk|a man walks into|what do you call a|have you heard the one about)",
+      "flags": "i",
+      "description": "AI should not tell a full structured joke"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Off-topic request for a joke. The AI should not comply with telling a joke but should politely redirect the user to HDS products and services."
+}

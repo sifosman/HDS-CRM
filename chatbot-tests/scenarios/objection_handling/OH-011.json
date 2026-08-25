@@ -1,0 +1,61 @@
+{
+  "id": "OH-011",
+  "name": "Repeated price objection - three messages",
+  "category": "objection_handling",
+  "description": "Customer receives a quote, objects that it is too expensive, and then objects again that it is still too expensive, testing the AI's ability to handle a repeated price objection without giving up",
+  "phone_number": "27900000071",
+  "sender_name": "Test Objection Customer",
+  "messages": [
+    {
+      "text": "Hi, I'm Sipho. Please give me a quote for 20 sheets of white melamine chipboard 16mm.",
+      "delay_ms": 0
+    },
+    {
+      "text": "That's too expensive",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Still too expensive",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "objection_handled",
+      "objection_type": "price",
+      "description": "AI should handle the repeated objection with empathy and escalate the value argument or offer alternatives"
+    },
+    {
+      "type": "close_attempt",
+      "description": "AI should re-attempt a close after handling the repeated objection"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 50000,
+      "description": "Objection handling reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "\\[OBJECTION_HANDLED|\\[CLOSE_ATTEMPT",
+      "description": "Tags should be stripped from customer-facing message"
+    },
+    {
+      "pattern": "sorry.*can't help|apologize.*unable",
+      "flags": "i",
+      "description": "AI should not give up after a repeated objection"
+    }
+  ],
+  "expected_tags": [
+    "OBJECTION_HANDLED: price"
+  ],
+  "notes": "Repeated price objection across three messages. The AI must persist, not capitulate or give up, and should escalate the value argument or offer a smaller quantity / alternative product while re-attempting a close."
+}

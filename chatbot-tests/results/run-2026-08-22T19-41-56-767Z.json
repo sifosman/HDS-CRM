@@ -1,0 +1,49 @@
+{
+  "run_id": "run-2026-08-22T19-41-56-767Z",
+  "started_at": "2026-08-22T19:41:42.773Z",
+  "finished_at": "2026-08-22T19:41:56.766Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "consultant": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 12535,
+      "p95": 12535,
+      "avg": 12535
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HC-006",
+      "name": "Homeowner sends partial kitchen photo - AI asks for another photo",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [another photo, other side, left side, right side, wider, more of, full kitchen, different angle, second photo, more light, clearer]. Last reply: \"Thanks, Lerato! This one is still mostly showing the floor 😅 Could you stand a bit further back, hold your phone sideways, and capture your cabinets and counters in one wide shot? Then I can help wit…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 12535,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks, Lerato! This one is still mostly showing the floor 😅 Could you stand a bit further back, hold your phone sideways, and capture your cabinets and counters in one wide shot? Then I can help with your measurements."
+    }
+  ]
+}

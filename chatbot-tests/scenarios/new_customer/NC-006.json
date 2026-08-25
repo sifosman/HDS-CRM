@@ -1,0 +1,48 @@
+{
+  "id": "NC-006",
+  "name": "Emoji greeting",
+  "category": "new_customer",
+  "description": "New customer sends only a wave emoji. AI should greet back warmly.",
+  "phone_number": "27900000806",
+  "sender_name": "New Customer 6",
+  "messages": [
+    {
+      "text": "👋",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "regex_match",
+      "pattern": "\\b(hi|hey|hello|howdy|hola|morning|afternoon|welcome|goeie)\\b",
+      "flags": "i",
+      "description": "AI should greet the customer"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Emoji-only first message. AI should not treat this as gibberish."
+}

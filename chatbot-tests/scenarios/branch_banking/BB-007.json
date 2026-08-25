@@ -1,0 +1,52 @@
+{
+  "id": "BB-007",
+  "name": "Banking details then branch follow-up",
+  "category": "branch_banking",
+  "description": "Customer first asks for banking details, then follows up asking which branch to use. AI should use get_banking then get_branch.",
+  "phone_number": "27900000047",
+  "sender_name": "Test Banking Customer",
+  "messages": [
+    {
+      "text": "Please send me your banking details for a deposit.",
+      "delay_ms": 0
+    },
+    {
+      "text": "Which branch should I go to?",
+      "delay_ms": 6000
+    }
+  ],
+  "expected_tools": [
+    "get_banking",
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "account",
+      "description": "First reply should contain account details"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "branch",
+      "description": "Second reply should mention a branch"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Each reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Two-message scenario testing sequential get_banking then get_branch tool use with a 6s gap."
+}

@@ -1,0 +1,390 @@
+{
+  "run_id": "run-2026-08-11T12-20-09-286Z",
+  "started_at": "2026-08-11T12:15:04.439Z",
+  "finished_at": "2026-08-11T12:20:09.285Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 15,
+    "passed": 11,
+    "failed": 4,
+    "skipped": 0,
+    "pass_rate": "73.3%",
+    "by_category": {
+      "objection_handling": {
+        "total": 15,
+        "passed": 11,
+        "failed": 4
+      }
+    },
+    "latency_ms": {
+      "p50": 38585,
+      "p95": 47094,
+      "avg": 37162
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 31759,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand budget is important! Our prices include top-quality boards and precision cutting. Would you like me to adjust the quantity to fit your budget, or shall we proceed with this order?"
+    },
+    {
+      "scenario_id": "OH-002",
+      "name": "Price objection - too expensive",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called (likely didn't complete before objection arrived), but objection was handled and close was attempted. Tools called: [handover]"
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 34379,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand budget is important, John. Our pricing includes high-quality precision cutting and board guarantee, but we can also adjust the quantity to better suit your budget. \n\nWould you like me to adjust the quantity for you, or shall we lock this quote in?"
+    },
+    {
+      "scenario_id": "OH-003",
+      "name": "Cheaper competitor objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: competitor' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 44331,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand budget is key, Sarah! Our price for 20 sheets of 16mm Value White comes to R13,000 (R650/sheet incl VAT), which includes precision cutting and our quality guarantee: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2466\n\nIf you'd like a bulk discount to match or beat that price, shall I connect you with our main sales team?"
+    },
+    {
+      "scenario_id": "OH-004",
+      "name": "Need to think about it objection",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price, handover]"
+        },
+        {
+          "type": "close_attempt",
+          "detail": "No close attempt detected (no close_attempt flag in tool_results and no closing language in reply). Reply: \"I completely understand, Mike – take all the time you need! I can hold this pricing for 48 hours while you decide. Would it be okay if I follow up with you in a day or two? 👍\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "objection_handled",
+          "detail": "Partial objection handling: has empathy  but not both. Reply: \"I completely understand, Mike – take all the time you need! I can hold this pricing for 48 hours while you decide. Would it be okay if I follow up wit…\""
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: think_about_it' not found in tool_results. Available keys: [objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 38602,
+      "tool_calls": [
+        "lookup_price",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand, Mike – take all the time you need! I can hold this pricing for 48 hours while you decide. Would it be okay if I follow up with you in a day or two? 👍"
+    },
+    {
+      "scenario_id": "OH-005",
+      "name": "Need to check with partner objection",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "close_attempt",
+          "detail": "No close attempt detected (no close_attempt flag in tool_results and no closing language in reply). Reply: \"I completely understand David—family decisions matter! \n\nHere is your quote for 20 sheets of Value White melamine chipboard (R13,000 total incl. VAT): https://xzsibbbghotreolzwnyk.supabase.co/storage/…\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: authority' not found in tool_results. Available keys: [objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 39412,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand David—family decisions matter! \n\nHere is your quote for 20 sheets of Value White melamine chipboard (R13,000 total incl. VAT): https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-0494\n\nI'll hold this pricing for 48 hours so you can share it with her. When would be a good time for me to follow up with you? 😊"
+    },
+    {
+      "scenario_id": "OH-006",
+      "name": "Delivery and transport concern objection",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [get_branch, handover]"
+        },
+        {
+          "type": "close_attempt",
+          "detail": "No close attempt detected (no close_attempt flag in tool_results and no closing language in reply). Reply: \"Hi Lerato! I understand delivery is a concern. We deliver straight to your site! 🚚\n\nWhat area are you located in? I can check the delivery options for you right away.\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: logistics' not found in tool_results. Available keys: [objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 37548,
+      "tool_calls": [
+        "get_branch",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hi Lerato! I understand delivery is a concern. We deliver straight to your site! 🚚\n\nWhat area are you located in? I can check the delivery options for you right away."
+    },
+    {
+      "scenario_id": "OH-007",
+      "name": "Quality doubt objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: quality' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 38585,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand, Thabo — quality is everything! Our boards come with a quality guarantee and precision cutting, so you get top-grade finish every time. 👍\n\nYour quote for 20 sheets comes to R13,000 incl VAT (PDF link: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-5764). Shall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "OH-008",
+      "name": "Too much quantity objection",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [handover]"
+        },
+        {
+          "type": "close_attempt",
+          "detail": "No close attempt detected (no close_attempt flag in tool_results and no closing language in reply). Reply: \"Hi Anisha! No problem at all 😊 How many sheets do you actually need? I'll generate a quote for the exact amount right away!\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: quantity' not found in tool_results. Available keys: [objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 34721,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hi Anisha! No problem at all 😊 How many sheets do you actually need? I'll generate a quote for the exact amount right away!"
+    },
+    {
+      "scenario_id": "OH-009",
+      "name": "Payment terms objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: payment' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 41173,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Here is your quote for 20 sheets of Value White 16mm coming to R13,000 total (PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-1917) 👍\n\nI understand cash flow matters - we operate on upfront EFT or card payment, but I can hold this pricing for 48 hours while you sort out payment. Shall I reserve these sheets for you so long?"
+    },
+    {
+      "scenario_id": "OH-010",
+      "name": "Not ready to buy timing objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "objection_handled",
+          "detail": "Partial objection handling: has  value argument but not both. Reply: \"Hi Naledi! Here is your quote for 20 sheets of Value White Melamine (16mm): total is R13,000 incl VAT. You can view your quote PDF here: https://xzsib…\""
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: timing' not found in tool_results. Available keys: [close_type, close_attempt]"
+        }
+      ],
+      "latency_ms": 28200,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hi Naledi! Here is your quote for 20 sheets of Value White Melamine (16mm): total is R13,000 incl VAT. You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2015\n\nShall I go ahead and process this order for you? 😊"
+    },
+    {
+      "scenario_id": "OH-011",
+      "name": "Repeated price objection - three messages",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 47094,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 3,
+      "last_reply": "I completely hear you, Sipho. What target price or budget did you have in mind for these boards? If you're looking for a special bulk discount, I can also get our sales team to review it for you."
+    },
+    {
+      "scenario_id": "OH-012",
+      "name": "Competitor price comparison objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "objection_handled",
+          "detail": "Partial objection handling: has  value argument but not both. Reply: \"Hi Fatima! Here is your quote for 20 sheets of Value White 16mm at R13,000 total (incl VAT): https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/objec…\""
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: competitor' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 42134,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hi Fatima! Here is your quote for 20 sheets of Value White 16mm at R13,000 total (incl VAT): https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-5691\n\nOur pricing includes precision cutting and top-tier quality guarantee. Shall I go ahead and process this order for you, or would you like me to ask our team about a bulk discount for a larger order? 😊"
+    },
+    {
+      "scenario_id": "OH-013",
+      "name": "Discount request haggling objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 25348,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Our prices are already set at wholesale rates, but for larger orders (50+ sheets) I can check with our sales team for bulk pricing. \n\nWould you like to increase the order quantity to get a bulk discount, or shall we lock in this price for 20 sheets?"
+    },
+    {
+      "scenario_id": "OH-014",
+      "name": "Skepticism about product durability objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: quality' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 35034,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand your concern — quality is everything when it comes to board products. I've connected you with one of our senior sales specialists who will be right with you to discuss our quality guarantees and board specifications!"
+    },
+    {
+      "scenario_id": "OH-015",
+      "name": "Budget constraint objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: budget' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 39112,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hi Karim, 20 sheets of 16mm Value White chipboard comes to R13,000 total (PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-9034). \n\nTo fit your R5,000 budget, we can adjust the order to 7 sheets for R4,550 inclusive of VAT. Would you like me to update the quote to 7 sheets for you?"
+    }
+  ]
+}

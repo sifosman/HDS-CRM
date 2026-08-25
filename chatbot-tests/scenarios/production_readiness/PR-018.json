@@ -1,0 +1,62 @@
+{
+  "id": "PR-018",
+  "name": "Competitor mention - PG Bison",
+  "category": "production_readiness",
+  "description": "Customer mentions they usually buy from PG Bison. AI should highlight HDS strengths positively.",
+  "phone_number": "27900000557",
+  "sender_name": "PG Customer",
+  "messages": [
+    {
+      "text": "Hi, I usually buy my melamine from PG Bison but they're out of stock. Do you have 16mm white melamine?",
+      "delay_ms": 0
+    },
+    {
+      "text": "What's your price for 15 sheets?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "melamine",
+        "white",
+        "board",
+        "sheet",
+        "R"
+      ],
+      "description": "AI should confirm stock and provide pricing"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "pg bison is bad",
+      "description": "AI should NOT disparage competitor"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Competitor mention. AI should be positive, highlight HDS strengths."
+}

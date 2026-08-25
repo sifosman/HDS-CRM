@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-16T12-22-38-217Z",
+  "started_at": "2026-08-16T12:22:03.176Z",
+  "finished_at": "2026-08-16T12:22:38.217Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "hardware_upsell": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 34198,
+      "p95": 34198,
+      "avg": 34198
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HU-002",
+      "name": "Hardware upsell - proactively suggest hardware when buying boards",
+      "category": "hardware_upsell",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 34198,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "For kitchen cabinets made with your white melamine boards, you'll typically need a few key hardware items to complete the build:\n\n1. **PVC Edging Tape** to finish off the cut board edges neatly.\n2. **Concealed Hinges** (from R3.00 each) for your cabinet doors.\n3. **Drawer Runners** (from R13.00 per set) if you're installing drawers.\n4. **Handles & Knobs** (from R4.75 each) to give it a stylish touch.\n5. **Adjustable Cabinet Legs** (from R6.50 each) to align the units.\n\nI've sent through some har…"
+    }
+  ]
+}

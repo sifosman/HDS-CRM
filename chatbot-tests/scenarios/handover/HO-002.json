@@ -1,0 +1,42 @@
+{
+  "id": "HO-002",
+  "name": "Handover - direct human request",
+  "category": "handover",
+  "description": "Customer explicitly asks to speak to a real person. AI should immediately handover without resistance.",
+  "phone_number": "27900000077",
+  "sender_name": "Test Direct Handover",
+  "messages": [
+    {
+      "text": "Hi, I need some information about your products",
+      "delay_ms": 0
+    },
+    {
+      "text": "Can I speak to a real person please",
+      "delay_ms": 5000
+    }
+  ],
+  "expected_tools": [
+    "handover"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "team",
+      "description": "AI should mention a human team member"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Handover should be quick"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "I can help you with that|let me assist|I'm able to help",
+      "flags": "i",
+      "description": "AI should not resist the handover request"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "AI must not try to convince the customer to keep talking to the bot. Immediate handover."
+}

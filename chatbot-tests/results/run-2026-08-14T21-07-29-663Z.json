@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-14T21-07-29-663Z",
+  "started_at": "2026-08-14T21:07:21.760Z",
+  "finished_at": "2026-08-14T21:07:29.662Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "greeting": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 5881,
+      "p95": 5881,
+      "avg": 5881
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "regex_match",
+          "detail": "Reply does not match regex /\\b(hi|hey|hello|howdy|hola|goeie|morning|afternoon|welcome)\\b/i. Reply: \"Our most popular option for cabinets and shelving is our White Melamine Chipboard at R650 per sheet. \n\nHow many sheets do you need for your project, or would you like me to prepare a quick quote for y…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 5881,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Our most popular option for cabinets and shelving is our White Melamine Chipboard at R650 per sheet. \n\nHow many sheets do you need for your project, or would you like me to prepare a quick quote for you? 😊"
+    }
+  ]
+}

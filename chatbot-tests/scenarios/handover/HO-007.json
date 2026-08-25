@@ -1,0 +1,35 @@
+{
+  "id": "HO-007",
+  "name": "customer requests sales rep contact",
+  "category": "handover",
+  "description": "Customer asks for a sales representative to contact them, which should trigger handover to a human agent",
+  "phone_number": "27900000082",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "Can a sales rep contact me? I'm looking at a big renovation project and want to discuss pricing for a large order.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Requests for a sales representative indicate a commercial opportunity that should be routed to the sales team via handover."
+}

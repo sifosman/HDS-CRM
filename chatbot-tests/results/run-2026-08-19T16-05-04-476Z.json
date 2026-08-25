@@ -1,0 +1,193 @@
+{
+  "run_id": "run-2026-08-19T16-05-04-476Z",
+  "started_at": "2026-08-19T15:59:53.954Z",
+  "finished_at": "2026-08-19T16:05:04.475Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 5,
+    "passed": 0,
+    "failed": 5,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "new_customer": {
+        "total": 5,
+        "passed": 0,
+        "failed": 5
+      }
+    },
+    "latency_ms": {
+      "p50": 61563,
+      "p95": 61913,
+      "avg": 61420
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "NC-008",
+      "name": "What colors available",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'melamine'. Last reply: \"\""
+        },
+        {
+          "type": "response_time",
+          "detail": "Response latency 60479ms exceeds max 30000ms"
+        },
+        {
+          "type": "min_messages",
+          "detail": "Expected at least 1 assistant replies, got 0"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 60479,
+      "tool_calls": [],
+      "assistant_reply_count": 0,
+      "last_reply": ""
+    },
+    {
+      "scenario_id": "NC-014",
+      "name": "What hardware do you sell",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'r'. Last reply: \"\""
+        },
+        {
+          "type": "response_time",
+          "detail": "Response latency 61610ms exceeds max 30000ms"
+        },
+        {
+          "type": "min_messages",
+          "detail": "Expected at least 1 assistant replies, got 0"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 61610,
+      "tool_calls": [],
+      "assistant_reply_count": 0,
+      "last_reply": ""
+    },
+    {
+      "scenario_id": "NC-016",
+      "name": "Price for 20 sheets MDF",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'r'. Last reply: \"\""
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        },
+        {
+          "type": "response_time",
+          "detail": "Response latency 61563ms exceeds max 35000ms"
+        },
+        {
+          "type": "min_messages",
+          "detail": "Expected at least 1 assistant replies, got 0"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 61563,
+      "tool_calls": [],
+      "assistant_reply_count": 0,
+      "last_reply": ""
+    },
+    {
+      "scenario_id": "NC-019",
+      "name": "Full kitchen quote with hardware",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'r'. Last reply: \"\""
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        },
+        {
+          "type": "response_time",
+          "detail": "Response latency 61913ms exceeds max 40000ms"
+        },
+        {
+          "type": "min_messages",
+          "detail": "Expected at least 1 assistant replies, got 0"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 61913,
+      "tool_calls": [],
+      "assistant_reply_count": 0,
+      "last_reply": ""
+    },
+    {
+      "scenario_id": "NC-020",
+      "name": "15 sheets UV gloss quote",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'r'. Last reply: \"\""
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        },
+        {
+          "type": "response_time",
+          "detail": "Response latency 61535ms exceeds max 35000ms"
+        },
+        {
+          "type": "min_messages",
+          "detail": "Expected at least 1 assistant replies, got 0"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 61535,
+      "tool_calls": [],
+      "assistant_reply_count": 0,
+      "last_reply": ""
+    }
+  ]
+}

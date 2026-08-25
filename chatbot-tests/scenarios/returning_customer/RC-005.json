@@ -1,0 +1,42 @@
+{
+  "id": "RC-005",
+  "name": "returning_customer_recall_previous_quote",
+  "category": "returning_customer",
+  "description": "Returning customer asks 'Can I get another quote?' and the AI should recall the previous quote and offer a new one building on prior context.",
+  "phone_number": "27900000090",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is Michael, can I get a quote for 25 sheets of white melamine chipboard 18mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Can I get another quote?",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "Michael",
+      "description": "AI should address the customer as 'Michael' and reference the previous quote"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "The customer requests a second quote. The AI should acknowledge the previous quote (white melamine chipboard 18mm) and either offer a revised quote or ask what they would like quoted this time, while addressing them by name."
+}

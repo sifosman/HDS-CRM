@@ -1,0 +1,49 @@
+{
+  "run_id": "run-2026-08-21T17-56-12-565Z",
+  "started_at": "2026-08-21T17:56:02.822Z",
+  "finished_at": "2026-08-21T17:56:12.564Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "greeting": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 8096,
+      "p95": 8096,
+      "avg": 8096
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "regex_match",
+          "detail": "Reply does not match regex /\\b(hi|hey|hello|howdy|hola|goeie|morning|afternoon|welcome)\\b/i. Reply: \"Looks like that message keeps coming through the same way — no worries at all! 😊 Just to help me point you in the right direction: what are you building (kitchen, wardrobe, shelving etc.), and did yo…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 8096,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Looks like that message keeps coming through the same way — no worries at all! 😊 Just to help me point you in the right direction: what are you building (kitchen, wardrobe, shelving etc.), and did you want to see the wood grain options I just sent, or something else like plain white melamine or MDF? Let me know and I'll get you sorted."
+    }
+  ]
+}

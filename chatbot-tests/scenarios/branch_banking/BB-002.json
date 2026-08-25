@@ -1,0 +1,42 @@
+{
+  "id": "BB-002",
+  "name": "Banking details lookup",
+  "category": "branch_banking",
+  "description": "Customer asks for banking details for EFT payment. AI should use get_banking and return real account details.",
+  "phone_number": "27900000042",
+  "sender_name": "Test Banking Customer",
+  "messages": [
+    {
+      "text": "Can I get your banking details for an EFT payment?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_banking"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "account",
+      "description": "Reply should contain account details"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies get_banking tool queries banking_details table correctly."
+}

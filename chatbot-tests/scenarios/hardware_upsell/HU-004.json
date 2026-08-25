@@ -1,0 +1,46 @@
+{
+  "id": "HU-004",
+  "name": "Hardware upsell - customer asks about drawer runners",
+  "category": "hardware_upsell",
+  "description": "Customer asks about drawer runners. AI should show products with length-based variation prices.",
+  "phone_number": "27900000704",
+  "sender_name": "Test Runners",
+  "messages": [
+    {
+      "text": "I need drawer runners for my kitchen drawers. What sizes do you have?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "show_products"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 45 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "runner",
+      "description": "Reply should mention runners"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests variation pricing for drawer runners (length-based variants)"
+}

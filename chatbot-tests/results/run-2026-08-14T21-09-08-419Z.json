@@ -1,0 +1,53 @@
+{
+  "run_id": "run-2026-08-14T21-09-08-419Z",
+  "started_at": "2026-08-14T21:09:00.476Z",
+  "finished_at": "2026-08-14T21:09:08.418Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "branch_banking": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 5303,
+      "p95": 5303,
+      "avg": 5303
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'get_branch' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'cape'. Last reply: \"Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 5303,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍"
+    }
+  ]
+}

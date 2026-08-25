@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import { Brain, TrendingUp, AlertTriangle, DollarSign, Package } from "lucide-react";
+import { Brain, TrendingUp, AlertTriangle, DollarSign, Package, Bot } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -31,6 +31,9 @@ export default async function IntelligencePage() {
     getIntelligenceStats(),
   ]);
 
+  const aiQualityCount = stats.byCategory.find(
+    (c) => c.category === "ai_quality"
+  )?.count || 0;
   const competitorCount = stats.byCategory.find(
     (c) => c.category === "competitor"
   )?.count || 0;
@@ -68,12 +71,18 @@ export default async function IntelligencePage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           title="Total Insights"
           value={String(stats.total)}
           icon={Brain}
           description={`${stats.recentCount} in last 7 days`}
+        />
+        <KpiCard
+          title="AI Quality Issues"
+          value={String(aiQualityCount)}
+          icon={Bot}
+          description="Chatbot performance flags"
         />
         <KpiCard
           title="Competitor Mentions"

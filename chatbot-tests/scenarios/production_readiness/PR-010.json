@@ -1,0 +1,65 @@
+{
+  "id": "PR-010",
+  "name": "Product complaint - warped boards",
+  "category": "production_readiness",
+  "description": "Customer complains about warped boards from previous order. Should trigger handover.",
+  "phone_number": "27900000549",
+  "sender_name": "Angry Customer",
+  "messages": [
+    {
+      "text": "Hi, I bought boards from you last week and they're all warped. This is unacceptable. I want a refund.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "handover"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "sorry",
+        "apolog",
+        "understand",
+        "concern"
+      ],
+      "description": "AI should show empathy"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "team",
+        "human",
+        "manager",
+        "someone",
+        "contact"
+      ],
+      "description": "AI should offer handover to human"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Complaint should trigger handover. Tests handover criteria."
+}

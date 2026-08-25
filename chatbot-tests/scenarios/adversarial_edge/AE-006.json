@@ -1,0 +1,45 @@
+{
+  "id": "AE-006",
+  "name": "off_topic_weather",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to redirect an off-topic weather question back to HDS products and services",
+  "phone_number": "27900000101",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "What's the weather like in Cape Town?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "redirect_to_business",
+      "description": "AI should steer the conversation back to HDS products and services"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "(\\d+\\s*\u00b0|temperature is|currently \\d+|expecting (rain|sun|clouds)|humidity is|wind speed)",
+      "flags": "i",
+      "description": "AI should not provide an actual weather report with specific conditions"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Off-topic question about weather. The AI should not attempt to answer the weather question but should politely redirect the user to HDS products and services."
+}

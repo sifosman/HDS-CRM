@@ -1,0 +1,46 @@
+{
+  "id": "PL-013",
+  "name": "Vague product reference (standard white board)",
+  "category": "price_lookup",
+  "description": "Tests price lookup with a vague product reference. The customer says 'the standard white board' without specifying melamine, MDF, or chipboard. The AI should interpret this as white melamine (the most common 'standard white board' in the hardware/wood industry) and return the real price.",
+  "phone_number": "27900000023",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "What's the price of the standard white board?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests the AI's ability to resolve vague product references. 'Standard white board' most likely refers to white melamine chipboard, the most commonly stocked product. The AI should confirm which product it looked up so the customer can correct if needed. If the reference is too ambiguous, the AI may ask for clarification \u2014 both outcomes are acceptable."
+}

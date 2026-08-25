@@ -1,0 +1,40 @@
+{
+  "id": "HO-003",
+  "name": "very large order triggers handover",
+  "category": "handover",
+  "description": "Customer requests a very large order (100 sheets) which should trigger handover to a human agent for handling bulk/commercial orders",
+  "phone_number": "27900000078",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "Hi, I need to order 100 sheets of 18mm melamine white, can you help with that?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "lead_status",
+      "expected_status": "handover",
+      "description": "customer_profiles.lead_status should be 'handover' after this scenario"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Very large orders (100 sheets) exceed standard quote handling and should be routed to a human agent who can arrange commercial pricing and logistics."
+}

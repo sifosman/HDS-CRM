@@ -1,0 +1,60 @@
+{
+  "id": "PR-025",
+  "name": "Product images request - show me what you have",
+  "category": "production_readiness",
+  "description": "Customer asks to see product images. AI should send carousel via show_products.",
+  "phone_number": "27900000564",
+  "sender_name": "Visual Buyer",
+  "messages": [
+    {
+      "text": "Hi, I'm looking for melamine boards for my kitchen. Can you show me what colours and finishes you have?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I like the white one. Can you quote me for 10 sheets?",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "show_products"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "melamine",
+        "white",
+        "colour",
+        "color",
+        "finish",
+        "board"
+      ],
+      "description": "AI should acknowledge product request"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Visual browsing. AI should send carousel then move to quote."
+}

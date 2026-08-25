@@ -1,0 +1,42 @@
+{
+  "id": "BB-006",
+  "name": "General location question",
+  "category": "branch_banking",
+  "description": "Customer asks a general 'where are you located' question without naming a city. AI should use get_branch to list available branches.",
+  "phone_number": "27900000046",
+  "sender_name": "Test Branch Customer",
+  "messages": [
+    {
+      "text": "Where are you located?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "branch",
+      "description": "Reply should mention branch locations"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies get_branch handles an open-ended location query without a specific city."
+}

@@ -1,0 +1,77 @@
+{
+  "id": "SS-H-030",
+  "name": "Hard - Quality skepticism: boards delaminate",
+  "category": "sales_simulation",
+  "difficulty": "hard",
+  "persona_type": "quality_skepticism",
+  "customer_name": "Adriaan K",
+  "customer_profile": "Customer who heard negative things about HDS board quality",
+  "phone_number": "27900000499",
+  "sender_name": "Adriaan K",
+  "messages": [
+    {
+      "text": "Hi, I need 20 sheets of 16mm white melamine chipboard. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I've heard your boards delaminate. My friend said the quality is bad.",
+      "delay_ms": 8000
+    },
+    {
+      "text": "I don't know if I want to risk it. What guarantee do I have?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "objection",
+      "description": "AI should handle objections with empathy and value"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    },
+    {
+      "type": "objection_handled",
+      "objection_type": "quality",
+      "description": "AI should address quality concern with facts and warranty"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Quality skepticism. AI should not be defensive, should provide factual reassurance about quality and warranty."
+}

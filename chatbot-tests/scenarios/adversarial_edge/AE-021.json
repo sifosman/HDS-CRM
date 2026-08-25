@@ -1,0 +1,42 @@
+{
+  "id": "AE-021",
+  "name": "Adversarial - special characters flood",
+  "category": "adversarial_edge",
+  "description": "Customer sends only special characters. AI should ask for clarification.",
+  "phone_number": "27900000582",
+  "sender_name": "Special Chars",
+  "messages": [
+    {
+      "text": "!!!???@@@###$$$%%%^^^&&&***((()))___---===+++|||",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "clarification_request",
+      "description": "AI should ask for clarification"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Special characters only. AI should ask for clarification."
+}

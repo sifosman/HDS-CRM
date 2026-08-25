@@ -1,0 +1,43 @@
+{
+  "id": "HU-005",
+  "name": "Hardware upsell - complete kitchen build bundle",
+  "category": "hardware_upsell",
+  "description": "Customer is building a complete kitchen and needs everything. AI should suggest boards + handles + hinges + runners as a bundle.",
+  "phone_number": "27900000705",
+  "sender_name": "Test Bundle",
+  "messages": [
+    {
+      "text": "I'm building a new kitchen and need everything - boards, handles, hinges, and drawer runners. Can you help?",
+      "delay_ms": 0
+    },
+    {
+      "text": "What do you recommend for a modern look?",
+      "delay_ms": 5000
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 60000,
+      "description": "Reply should arrive within 60 seconds (multi-message scenario)"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests AI ability to recommend a complete kitchen bundle with hardware upsell"
+}

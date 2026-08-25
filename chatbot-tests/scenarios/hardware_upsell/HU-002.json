@@ -1,0 +1,50 @@
+{
+  "id": "HU-002",
+  "name": "Hardware upsell - proactively suggest hardware when buying boards",
+  "category": "hardware_upsell",
+  "description": "Customer asks for quote on boards for kitchen cabinets. AI should generate quote AND proactively suggest hardware (handles, hinges, runners).",
+  "phone_number": "27900000702",
+  "sender_name": "Test Upsell",
+  "messages": [
+    {
+      "text": "I need 10 sheets of white melamine chipboard 16mm for my kitchen cabinets. Can you give me a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Thanks! What else do I need for the cabinets?",
+      "delay_ms": 5000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 60000,
+      "description": "Reply should arrive within 60 seconds (multi-message scenario)"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should mention melamine"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests that AI proactively suggests hardware when customer buys boards for cabinets"
+}

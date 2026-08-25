@@ -1,0 +1,38 @@
+{
+  "id": "HC-001",
+  "name": "Homeowner consultant mode - kitchen renovation",
+  "category": "consultant",
+  "description": "Homeowner mentions kitchen renovation. AI should switch to consultant mode: build excitement, educate about HDS (factory, 32 branches), guide step by step, recommend ONE product.",
+  "phone_number": "27900000501",
+  "sender_name": "Sarah",
+  "messages": [
+    {
+      "text": "Hi, I'm renovating my kitchen and need some boards for the cabinets. What do you suggest?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 30000,
+      "description": "Reply should arrive within 30 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "kitchen",
+      "description": "AI should acknowledge the kitchen project"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "cutting list",
+      "description": "AI should NOT ask for a cutting list from a homeowner (they won't have one)"
+    }
+  ],
+  "forbidden_patterns": []
+}

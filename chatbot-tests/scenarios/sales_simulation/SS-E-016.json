@@ -1,0 +1,63 @@
+{
+  "id": "SS-E-016",
+  "name": "Easy - Project ready: kitchen cupboards with 15 sheets 16mm white melamine chipboard",
+  "category": "sales_simulation",
+  "difficulty": "easy",
+  "persona_type": "project_ready",
+  "customer_name": "Misheck C",
+  "customer_profile": "Customer in Empangeni building kitchen cupboards, clear specs",
+  "phone_number": "27900000415",
+  "sender_name": "Misheck C",
+  "messages": [
+    {
+      "text": "Hi, I'm building kitchen cupboards. I need 15 sheets of 16mm white melamine chipboard, cut and edge. Can you quote me?",
+      "delay_ms": 0
+    },
+    {
+      "text": "That works for me. When can I collect?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Project-driven customer with clear specs. AI should quote and close."
+}

@@ -1,0 +1,244 @@
+{
+  "run_id": "run-2026-08-21T17-54-02-441Z",
+  "started_at": "2026-08-21T17:52:33.273Z",
+  "finished_at": "2026-08-21T17:54:02.440Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 10,
+    "passed": 9,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "90.0%",
+    "by_category": {
+      "adversarial_edge": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "branch_banking": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "greeting": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "handover": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "new_customer": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "price_lookup": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "returning_customer": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "sales_closing": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 12509,
+      "p95": 29478,
+      "avg": 15285
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "AE-001",
+      "name": "Adversarial - prompt injection attempt",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6486,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Still your friendly HDS assistant here — that one's not something I can help with, but boards, pricing, and quotes definitely are! Is there a project I can help you with today, or would you like to see some of our products?"
+    },
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 11356,
+      "tool_calls": [
+        "get_branch",
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I checked again but I'm still not finding a branch listed for Cape Town or the Western Cape region in our system, sorry about that! Our branches with full address details are in cities like Johannesburg, Pretoria, and Durban.\n\nTo make sure I don't keep giving you the same answer, would you like me to connect you with our team so they can confirm delivery options to Cape Town, or would you like a quote now and we sort logistics after?"
+    },
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "regex_match",
+          "detail": "Reply does not match regex /\\b(hi|hey|hello|howdy|hola|goeie|morning|afternoon|welcome)\\b/i. Reply: \"Just sent you a few of our popular wood grain melamine options — Dakota Oak, Glaston Berry, Flagstaff Oak, American White Oak, Carolina Cedar, Sienna Oak, Vintage Pine, and White Cedar. 🌳\n\nWe also ha…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 12509,
+      "tool_calls": [
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Just sent you a few of our popular wood grain melamine options — Dakota Oak, Glaston Berry, Flagstaff Oak, American White Oak, Carolina Cedar, Sienna Oak, Vintage Pine, and White Cedar. 🌳\n\nWe also have plain white melamine and other solid colours if you'd prefer a cleaner look. Do any of these catch your eye, or would you like me to put together a quote on one of them?"
+    },
+    {
+      "scenario_id": "HO-001",
+      "name": "Handover - large order triggers handover (>50 sheets)",
+      "category": "handover",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10764,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Big Order Test, I hear you loud and clear on the 80 sheets of white melamine! 😊 I've already flagged this bulk order with our sales team for the best pricing, and they'll be reaching out to you directly.\n\nWhile you wait to hear from them, would you like me to show you our white melamine options or check pricing on anything else for your project?"
+    },
+    {
+      "scenario_id": "NC-001",
+      "name": "Simple Hi",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6884,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi! I'm Sam from HDS Group 🙂 To help you best, could you tell me a bit about what you're looking for — boards for a kitchen, cabinets, or another project?"
+    },
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "objection_handled",
+          "detail": "Partial objection handling: has  value argument but not both. Reply: \"Totally understand, Objection Test — I know we've been round this a couple of times now, and price is clearly the main sticking point. Let's make it w…\""
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 26471,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Totally understand, Objection Test — I know we've been round this a couple of times now, and price is clearly the main sticking point. Let's make it work: our boards come with precision cutting and a quality guarantee built into that price, so you're getting real value, not just a bare sheet. If you tell me your budget, I can adjust the quantity or thickness to find something that fits comfortably.\n\nWould you like me to rework the quote to match what you've got to spend?  \n\nI'm here whenever you…"
+    },
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 15149,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "R650 per sheet, VAT included, for the MEL CHIP Value White 9x6x16 DF (16mm). Just let me know the quantity you need and I'll whip up a proper quote for you right now 😊"
+    },
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7231,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Clamping! Just to confirm, I already generated that quote for you 😊\n\nQuote ID: Q-20260821-8398 — 10 sheets of MEL CHIP Value White 16mm, total R7200 incl. VAT.\n\nHere's the PDF again: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260821-8398\n\nWould you like me to go ahead and process this order for you? \n\nI'll keep this pricing held for 48 hours, so no rush!"
+    },
+    {
+      "scenario_id": "RC-001",
+      "name": "Returning customer - greeted by name",
+      "category": "returning_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 26519,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hey Returning Test! 😊 I see we've been going back and forth a bit — your quote Q-20260821-1315 (20 sheets white melamine chipboard, R14,400 incl. VAT) is ready and waiting. \n\nTo help move things along, would you like me to send you a payment link now so you can pay by card, or would you prefer EFT? Just let me know and I'll sort it right away."
+    },
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]"
+        }
+      ],
+      "latency_ms": 29478,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Since it sounds like you're happy to go ahead, here's your secure payment link 💳\n\nPay here: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260821-4972&amount=14400.00&customerName=Close%20Test\n\nOnce payment reflects, we'll get your 20 sheets cut and ready! Let me know if you'd like it delivered or if you'll collect."
+    }
+  ]
+}

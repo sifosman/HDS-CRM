@@ -1,0 +1,157 @@
+{
+  "run_id": "sales-sim-2026-08-13T18-18-20-511Z",
+  "started_at": "2026-08-13T18:17:28.841Z",
+  "finished_at": "2026-08-13T18:18:20.511Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 90,
+    "byDifficulty": {
+      "easy": {
+        "count": 1,
+        "scores": [
+          90
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 90
+      },
+      "medium": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "hard": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 1,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 0,
+        "total": 1
+      },
+      "close": {
+        "passed": 1,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 0,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 100,
+      "quote": 100,
+      "objection_handling": 0,
+      "close": 100,
+      "follow_up": 0
+    },
+    "outcomeCounts": {
+      "converted": 1,
+      "follow_up": 0,
+      "lost": 0,
+      "handover": 0
+    },
+    "conversionRate": 100,
+    "byPersonaType": {
+      "ready_to_order": {
+        "count": 1,
+        "scores": [
+          90
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 90
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-E-010",
+      "name": "Easy - Ready to order: 15 sheets 16mm postform board",
+      "category": "sales_simulation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 50452,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Fantastic, Rajesh! I've generated your secure payment link for the 15 sheets of 16mm White Melamine Chipboard (R12,975.00 incl. VAT): https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260813-9682&amount=12975.00&customerName=Rajesh%20P. Would you like to complete payment now so we can get your boards queued for cutting?",
+      "sales_score": 90,
+      "sales_outcome": "converted",
+      "sales_difficulty": "easy",
+      "sales_persona_type": "ready_to_order",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": true,
+        "quote": true,
+        "objection_handling": false,
+        "close": true,
+        "follow_up": false
+      },
+      "sales_summary": "Score 90/100 (easy) — Outcome: converted. Stages passed: greeting, discovery, quote, close. Stages missed: objection_handling, follow_up."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-E-010",
+      "score": 90,
+      "outcome": "converted",
+      "difficulty": "easy",
+      "persona_type": "ready_to_order",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "close": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "follow_up": {
+          "passed": false,
+          "detail": "Stage not reached"
+        }
+      },
+      "summary": "Score 90/100 (easy) — Outcome: converted. Stages passed: greeting, discovery, quote, close. Stages missed: objection_handling, follow_up."
+    }
+  ]
+}

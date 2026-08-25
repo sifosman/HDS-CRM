@@ -1,0 +1,51 @@
+{
+  "id": "PL-012",
+  "name": "Mixed Afrikaans/English price inquiry",
+  "category": "price_lookup",
+  "description": "Tests price lookup with a mixed Afrikaans/English message. The customer asks 'Wat kos die white melamine 16mm?' \u2014 'Wat kos' is Afrikaans for 'What does it cost'. The AI should understand the mixed-language query and return the real price.",
+  "phone_number": "27900000022",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Wat kos die white melamine 16mm?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests multilingual understanding. South African customers frequently mix Afrikaans and English. The AI should interpret 'Wat kos' as a price inquiry and return the correct price for 16mm white melamine from the hds_prices table."
+}

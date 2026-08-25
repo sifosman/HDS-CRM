@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-11T12-54-05-852Z",
+  "started_at": "2026-08-11T12:53:07.848Z",
+  "finished_at": "2026-08-11T12:54:05.852Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 57016,
+      "p95": 57016,
+      "avg": 57016
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-010",
+      "name": "Quote generation - explicit size 2750x1830",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 57016ms exceeds max 30000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 57016,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! 😊 Here is your quote for 10 sheets of White Melamine 16mm (2750x1830):\n\nTotal: R6,500 (incl VAT)\nView PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2549\n\nShall I go ahead and process this order for you?"
+    }
+  ]
+}

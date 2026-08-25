@@ -1,0 +1,67 @@
+{
+  "id": "PR-007",
+  "name": "Returning customer - reorder same product",
+  "category": "production_readiness",
+  "description": "Returning customer wants to reorder. AI should recognize return and reference context.",
+  "phone_number": "27900000546",
+  "sender_name": "Returning Customer 7",
+  "messages": [
+    {
+      "text": "Hi, I need 10 sheets of 16mm white melamine. Can you quote me?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Great, I'll take it. I'm in Pretoria East.",
+      "delay_ms": 10000
+    },
+    {
+      "text": "Hi again, I'm back. I need 5 more sheets of the same white melamine for my next project.",
+      "delay_ms": 15000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "welcome back",
+        "back",
+        "again",
+        "return"
+      ],
+      "description": "AI should acknowledge the return"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "R",
+      "description": "Reply should contain price"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 50000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Customer returns after first order. Tests customer recognition."
+}

@@ -1,0 +1,288 @@
+{
+  "run_id": "run-2026-08-11T12-49-21-756Z",
+  "started_at": "2026-08-11T12:47:36.282Z",
+  "finished_at": "2026-08-11T12:49:21.755Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 15,
+    "passed": 12,
+    "failed": 3,
+    "skipped": 0,
+    "pass_rate": "80.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 15,
+        "passed": 12,
+        "failed": 3
+      }
+    },
+    "latency_ms": {
+      "p50": 6819,
+      "p95": 37667,
+      "avg": 11784
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5790,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I've generated your quote above for R13,000 for the 20 sheets of white melamine chipboard. \n\nHere is the PDF link again just in case: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-8438\n\nWould you prefer to pay by EFT or card to get this order placed?"
+    },
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 15489,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Clamping! I've set up your quote for 10 sheets of MEL CHIP Value White 16mm. The total comes to R6,500 including VAT. 📄\n\nYou can download your PDF quote here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6753\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-003",
+      "name": "Quote generation - 5 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5754,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Your quote for 5 sheets of 16mm Value White Melamine is R3,250 (incl. VAT). \n\nHere is your quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-9143\n\nWe have stock ready to go — shall I secure these 5 sheets for you today?"
+    },
+    {
+      "scenario_id": "QG-004",
+      "name": "Quote generation - 30 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3644,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I've got your quote ready for 30 sheets of 16mm Value White Melamine at R19,500 VAT incl. 👍\n\nHere is your quote PDF link: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2693\n\nWould you like to pay by EFT or card to get this order processed today?"
+    },
+    {
+      "scenario_id": "QG-005",
+      "name": "Quote generation - MDF 18mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'R'. Last reply: \"\""
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 4105,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": ""
+    },
+    {
+      "scenario_id": "QG-006",
+      "name": "Quote generation - single sheet order",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3590,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Here is your quote for 1 sheet of 16mm Value White Melamine at R650 incl VAT: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-9359 📄\n\nShall I secure this sheet and get the order processed for you today?"
+    },
+    {
+      "scenario_id": "QG-007",
+      "name": "Quote generation - name provided in different phrasing",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8477,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi John! Thanks for reaching out. \n\nYour quote for 8 sheets of Value White Melamine 16mm comes to R5,200 incl. VAT. You can download the quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6677\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-008",
+      "name": "Quote generation - missing quantity then provided",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 19793,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Awesome! That's 15 sheets of 16mm White Melamine for R9,750 ready to go. \n\nWould you like me to send you a payment link so we can get this order locked in?"
+    },
+    {
+      "scenario_id": "QG-009",
+      "name": "Quote generation - colored melamine",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4544,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I have your quote ready for 18 sheets of 16mm Black Melamine at R17,910 incl VAT. Here is your quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6921\n\nWould you prefer to pay by card or EFT to get this order processed today?"
+    },
+    {
+      "scenario_id": "QG-010",
+      "name": "Quote generation - explicit size 2750x1830",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 16455,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now. Could you confirm the exact material name and quantity you need? I'll get it sorted for you straight away."
+    },
+    {
+      "scenario_id": "QG-011",
+      "name": "Quote generation - Afrikaans request",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5584,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Dagse Test! Ek het pas die kwotasie vir die 20 velle Value White Melamine 16mm vir jou reggekry. \n\nDie totaal is R13,000 (BTW ingesluit) en jy kan die PDF weer hier kry: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2267\n\nWil jy verkies om per EFT of kaart te betaal sodat ons hierdie bestelling kan afhandel?"
+    },
+    {
+      "scenario_id": "QG-012",
+      "name": "Quote generation - with extra project context",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6819,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! Here is your quote for 15 sheets of 16mm White Melamine: R9,750 (incl. VAT). \n\nYou can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-5922\n\nI can get this secured for you right away — would you like to proceed with card or EFT payment?"
+    },
+    {
+      "scenario_id": "QG-013",
+      "name": "Quote generation - revise quantity after first quote",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 37667,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "No problem, Test Customer! I've updated your quote to 25 sheets of 16mm Value White Melamine.\n\nThe updated total is R16,250 (VAT included). You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-4271\n\nWould you prefer to pay by EFT or card for this order?"
+    },
+    {
+      "scenario_id": "QG-014",
+      "name": "Quote generation - missing thickness then provided",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 18375,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Yes, perfect! That quote is indeed for the 16mm Value White Melamine.\n\nWould you prefer to pay by card or EFT so we can get this order ready for you? 👍"
+    },
+    {
+      "scenario_id": "QG-015",
+      "name": "Quote generation - edge case 50 sheets",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 20677,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now. Could you confirm the exact material name and quantity you need? I'll get it sorted for you straight away."
+    }
+  ]
+}

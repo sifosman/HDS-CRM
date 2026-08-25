@@ -1,0 +1,41 @@
+{
+  "id": "HO-010",
+  "name": "quote then request to speak to someone",
+  "category": "handover",
+  "description": "Customer starts with a normal quote request then changes their mind and asks to speak to someone, which should trigger handover to a human agent",
+  "phone_number": "27900000085",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "Hi, can I get a price on 5 sheets of 18mm melamine white please?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Actually I'd rather speak to someone about this, can a person help me?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "handover"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Even when a conversation starts as a standard quote, a subsequent request to speak to a person should trigger handover. The 8-second delay simulates a realistic pause before the customer changes their mind."
+}

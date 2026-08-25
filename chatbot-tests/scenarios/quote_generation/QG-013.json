@@ -1,0 +1,58 @@
+{
+  "id": "QG-013",
+  "name": "Quote generation - revise quantity after first quote",
+  "category": "quote_generation",
+  "description": "Customer requests a quote for 10 sheets, then asks to revise to 25 sheets. AI should generate a new quote with the updated quantity.",
+  "phone_number": "27900000038",
+  "sender_name": "Test Quote Customer",
+  "messages": [
+    {
+      "text": "Hi, my name is Test Customer. Please quote me for 10 sheets of white melamine 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Actually make it 25 sheets please",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a quote total with R prefix"
+    },
+    {
+      "type": "quote_generated",
+      "description": "Quote should be generated (quote_total populated or PDF URL in reply)"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Quote generation may take up to 30 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "boardsNeeded|grandTotal|finalTotal|cutPieces|stockPieces",
+      "description": "No internal optimizer variable names in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Two-message scenario testing quote revision. AI should generate_quote on first message, then re-generate with updated quantity on the second. 10s delay between messages."
+}

@@ -1,0 +1,292 @@
+{
+  "run_id": "run-2026-08-13T16-18-27-358Z",
+  "started_at": "2026-08-13T16:15:59.007Z",
+  "finished_at": "2026-08-13T16:18:27.358Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 15,
+    "passed": 11,
+    "failed": 4,
+    "skipped": 0,
+    "pass_rate": "73.3%",
+    "by_category": {
+      "quote_generation": {
+        "total": 15,
+        "passed": 11,
+        "failed": 4
+      }
+    },
+    "latency_ms": {
+      "p50": 16880,
+      "p95": 35735,
+      "avg": 19596
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 18790,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Here is your quote for 20 sheets of 16mm White Melamine Chipboard.\n\nThe total is R14,400.00 (incl. VAT and precision cutting). You can view your formal quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-3090\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 19185,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Clamping Test! Here is your quote for 10 sheets of White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF). \n\nYour total is R7,200.00 including VAT and cutting fee. You can download your official quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-3026\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-003",
+      "name": "Quote generation - 5 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 12683,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I try again to get this quote sorted for you? I'll hold this pricing for 48 hours — feel free to reach out anytime. 👍"
+    },
+    {
+      "scenario_id": "QG-004",
+      "name": "Quote generation - 30 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 11356,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I try again to get this quote sorted for you? I'll hold this pricing for 48 hours — feel free to reach out anytime. 👍"
+    },
+    {
+      "scenario_id": "QG-005",
+      "name": "Quote generation - MDF 18mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 18225,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I try again to get this quote sorted for you? I'll hold this pricing for 48 hours — feel free to reach out anytime. 👍"
+    },
+    {
+      "scenario_id": "QG-006",
+      "name": "Quote generation - single sheet order",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 17277,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Your quote for 1 sheet of Value White Melamine Chipboard (16mm) comes to R720.00 incl. VAT and precision cutting. \n\nHere is your official quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-9808\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-007",
+      "name": "Quote generation - name provided in different phrasing",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 16520,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi John! I've prepared your quote for 8 sheets of 16mm Value White Melamine Chipboard. Your total comes to R5,760.00 incl. VAT and cutting. \n\nHere is your quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-7038\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-008",
+      "name": "Quote generation - missing quantity then provided",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 34439,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I've generated your official quote for 15 sheets of 16mm White Melamine Chipboard! 📄\n\n**Total (incl. VAT & cutting):** R10,800.00  \n**Quote PDF:** https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-7227\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-009",
+      "name": "Quote generation - colored melamine",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 16880,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I've prepared your quote for 18 sheets of 16mm Black Melamine Chipboard, coming to a total of R19,170.00 (incl. VAT).\n\nYou can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-4095\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-010",
+      "name": "Quote generation - explicit size 2750x1830",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 16147,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Here is your quote for 10 sheets of White Melamine Chipboard (2750x1830x16mm). The total is R7,200.00 incl. VAT, and you can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-0880\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-011",
+      "name": "Quote generation - Afrikaans request",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 15876,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hallo Test! Hier is jou kwotasie vir 20 velle Value White Melamine Chipboard (16mm):\n\nTotaal: R14 400,00 (Insl. BTW en snyfooi)\nLaai jou amptelike kwotasie PDF hier af: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-5975\n\nSal ek voortgaan en hierdie bestelling vir jou verwerk?"
+    },
+    {
+      "scenario_id": "QG-012",
+      "name": "Quote generation - with extra project context",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 16661,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! I've prepared your quote for 15 sheets of 16mm Value White melamine boards. Your total is R10,800.00 (incl. VAT and cutting), and you can view your official quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-3919\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-013",
+      "name": "Quote generation - revise quantity after first quote",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 35735,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I've updated your quote for 25 sheets of White Melamine Chipboard to R18,000.00 incl VAT. \n\nYou can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-4564\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-014",
+      "name": "Quote generation - missing thickness then provided",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 30975,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hi Test Customer! I've prepared your quote for 10 sheets of 16mm White Melamine (Value White). \n\nTotal: R7,200.00 (incl. VAT and cutting fee)\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-1461\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "QG-015",
+      "name": "Quote generation - edge case 50 sheets",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 13195,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I try again to get this quote sorted for you? I'll hold this pricing for 48 hours — feel free to reach out anytime. 👍"
+    }
+  ]
+}

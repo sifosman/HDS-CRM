@@ -1,0 +1,77 @@
+{
+  "id": "SS-H-005",
+  "name": "Hard - Price objection + competitor mention",
+  "category": "sales_simulation",
+  "difficulty": "hard",
+  "persona_type": "price_competitor",
+  "customer_name": "Rajesh P",
+  "customer_profile": "Customer in Burgersfort comparing with competitors, price-sensitive",
+  "phone_number": "27900000474",
+  "sender_name": "Rajesh P",
+  "messages": [
+    {
+      "text": "Hi, I need 12 sheets of 16mm charcoal grey gloss board. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Why are your prices so high? I can get MDF for less elsewhere.",
+      "delay_ms": 8000
+    },
+    {
+      "text": "I don't know, let me think about it.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "objection",
+      "description": "AI should handle objections with empathy and value"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    },
+    {
+      "type": "objection_handled",
+      "objection_type": "price",
+      "description": "AI should handle the price objection with empathy and value argument"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Price objection with competitor mention. AI should not discount, should articulate HDS value."
+}

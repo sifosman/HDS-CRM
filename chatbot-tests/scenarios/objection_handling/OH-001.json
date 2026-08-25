@@ -1,0 +1,57 @@
+{
+  "id": "OH-001",
+  "name": "Objection handling - price objection",
+  "category": "objection_handling",
+  "description": "Customer raises a price objection after receiving a quote. AI should acknowledge, provide value argument, and re-attempt close.",
+  "phone_number": "27900000061",
+  "sender_name": "Test Objection Customer",
+  "messages": [
+    {
+      "text": "My name is Objection Test, quote me for 20 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "That's a bit expensive for me",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "objection_handled",
+      "objection_type": "price",
+      "description": "AI should handle the price objection with empathy and a value argument"
+    },
+    {
+      "type": "close_attempt",
+      "description": "AI should re-attempt a close after handling the objection"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 75000,
+      "description": "Objection handling reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "\\[OBJECTION_HANDLED|\\[CLOSE_ATTEMPT",
+      "description": "Tags should be stripped from customer-facing message"
+    },
+    {
+      "pattern": "sorry.*can't help|apologize.*unable",
+      "flags": "i",
+      "description": "AI should not give up after a single objection"
+    }
+  ],
+  "expected_tags": [
+    "OBJECTION_HANDLED: price"
+  ],
+  "notes": "Tests price objection pattern. AI should mention bulk pricing, value, or comparison \u2014 not just apologize."
+}

@@ -1,0 +1,42 @@
+{
+  "id": "RC-006",
+  "name": "returning_customer_recall_past_order",
+  "category": "returning_customer",
+  "description": "Returning customer says 'I want to order more of what I got last time' and the AI should recall the past order details and facilitate a repeat order.",
+  "phone_number": "27900000091",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is Linda, can I get a quote for 40 sheets of grey melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "I want to order more of what I got last time",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "Linda",
+      "description": "AI should address the customer as 'Linda' and reference the previous order"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests order recall: the customer wants to repeat a previous order. The AI should retrieve the prior quote/order (grey melamine chipboard 16mm) and either confirm the repeat order or ask for clarification on quantity, while addressing them by name."
+}

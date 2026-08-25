@@ -1,0 +1,72 @@
+{
+  "id": "SS-M-048",
+  "name": "Medium - Payment questions before committing",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "payment_questions",
+  "customer_name": "Lebo K",
+  "customer_profile": "Customer in Wynberg asking about payment before committing to order",
+  "phone_number": "27900000467",
+  "sender_name": "Lebo K",
+  "messages": [
+    {
+      "text": "Hi, I need 10 sheets of 16mm white melamine chipboard. Can I pay on delivery or do I need to pay upfront?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I'm in Wynberg.",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Ok, can you generate a quote for me?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Great, I'll go ahead with this.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "get_banking",
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Payment questions. AI should answer payment questions, quote, and close."
+}

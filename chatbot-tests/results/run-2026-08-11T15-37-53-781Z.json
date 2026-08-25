@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-11T15-37-53-781Z",
+  "started_at": "2026-08-11T15:37:40.013Z",
+  "finished_at": "2026-08-11T15:37:53.780Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "price_lookup": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 11877,
+      "p95": 11877,
+      "avg": 11877
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'melamine'. Last reply: \"It is R650 per sheet incl. VAT for standard 16mm Value White (2750x1830mm). \n\nHow many sheets do you need so I can generate a quick quote for you?\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 11877,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "It is R650 per sheet incl. VAT for standard 16mm Value White (2750x1830mm). \n\nHow many sheets do you need so I can generate a quick quote for you?"
+    }
+  ]
+}

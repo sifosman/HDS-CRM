@@ -1,0 +1,54 @@
+{
+  "id": "QG-001",
+  "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+  "category": "quote_generation",
+  "description": "Customer requests a standard quote. AI should use generate_quote, return total and PDF link. No raw JSON/code in reply.",
+  "phone_number": "27900000026",
+  "sender_name": "Test Quote Customer",
+  "messages": [
+    {
+      "text": "My name is Test Customer, can I get a quote for 20 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a quote total with R prefix"
+    },
+    {
+      "type": "quote_generated",
+      "description": "Quote should be generated (quote_total populated or PDF URL in reply)"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 75000,
+      "description": "Quote generation may take up to 30 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "boardsNeeded|grandTotal|finalTotal|cutPieces|stockPieces",
+      "description": "No internal optimizer variable names in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Core quote generation test. Verifies the PDF clamping fix (2750x1830 vs 2730x1810) doesn't regress."
+}

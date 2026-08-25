@@ -1,0 +1,49 @@
+{
+  "id": "HC-008",
+  "name": "Homeowner has no more photos - AI proceeds with estimates",
+  "category": "consultant",
+  "description": "AI asks for another photo after receiving a partial kitchen photo. Customer says they don't have another one. AI should acknowledge graciously, proceed with estimates based on what's visible, and continue the normal flow (recommend material, offer sketch/quote).",
+  "phone_number": "27900000508",
+  "sender_name": "Nomsa",
+  "messages": [
+    {
+      "type": "image",
+      "media_id": "test-partial-kitchen-002",
+      "caption": "This is what I have",
+      "delay_ms": 0
+    },
+    {
+      "text": "I don't have another photo, that's the only one I took",
+      "delay_ms": 15000
+    }
+  ],
+  "expected_tools": [],
+  "forbidden_patterns": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 60000,
+      "description": "Final reply should arrive within 60 seconds (2-message scenario with image)"
+    },
+    {
+      "type": "min_messages",
+      "count": 2,
+      "description": "At least 2 assistant replies expected (one after photo, one after no-more-photos text)"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": ["no problem", "work with", "that's fine", "no worries", "that's okay", "completely fine", "totally fine"],
+      "description": "AI should acknowledge graciously that the customer has no more photos"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": ["estimate", "rough", "sheets", "melamine", "boards", "cabinet"],
+      "description": "AI should proceed with estimates based on the visible photo"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": ["carpenter", "verify", "on site", "measure"],
+      "description": "AI should note that estimates are rough and carpenter should verify on site"
+    }
+  ]
+}

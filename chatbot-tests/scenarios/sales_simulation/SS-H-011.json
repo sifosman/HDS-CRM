@@ -1,0 +1,90 @@
+{
+  "id": "SS-H-011",
+  "name": "Hard - Multiple objections chain (4 objections)",
+  "category": "sales_simulation",
+  "difficulty": "hard",
+  "persona_type": "multi_objection",
+  "customer_name": "Sara V",
+  "customer_profile": "Customer in Durban who raises objection after objection",
+  "phone_number": "27900000480",
+  "sender_name": "Sara V",
+  "messages": [
+    {
+      "text": "Hi, I need 10 sheets of 16mm white melamine chipboard. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I'm not sure about the quality",
+      "delay_ms": 8000
+    },
+    {
+      "text": "The price is high",
+      "delay_ms": 8000
+    },
+    {
+      "text": "I've had bad experiences with suppliers",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Let me check with my partner",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "objection",
+      "description": "AI should handle objections with empathy and value"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "follow_up",
+      "description": "AI should keep the door open or schedule follow-up"
+    },
+    {
+      "type": "objection_handled",
+      "objection_type": "price",
+      "description": "AI should handle multiple objections in sequence"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Multiple objections chain. AI should handle each objection, not give up, and keep door open."
+}

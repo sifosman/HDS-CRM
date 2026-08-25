@@ -1,0 +1,40 @@
+{
+  "id": "HO-009",
+  "name": "product complaint triggers handover",
+  "category": "handover",
+  "description": "Customer complains about warped boards purchased last week and wants to lodge a complaint, which should trigger handover to a human agent",
+  "phone_number": "27900000084",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "I bought boards last week and they're warped, I want to complain. This is unacceptable quality.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "lead_status",
+      "expected_status": "handover",
+      "description": "customer_profiles.lead_status should be 'handover' after this scenario"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Product complaints require sensitive human handling to investigate, resolve, and protect customer satisfaction. Handover should be triggered immediately."
+}

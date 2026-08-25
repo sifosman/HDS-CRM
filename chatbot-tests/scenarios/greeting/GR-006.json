@@ -1,0 +1,70 @@
+{
+  "id": "GR-006",
+  "name": "time_based_greeting",
+  "category": "greeting",
+  "description": "A new customer asks whether the business is currently open. Tests that the AI handles an availability question as part of a greeting and still invites the customer to share what they need.",
+  "phone_number": "27900000006",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Hi, are you open right now?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "hi",
+        "hello",
+        "welcome",
+        "open",
+        "yes",
+        "hours",
+        "available"
+      ],
+      "description": "Reply should acknowledge the greeting and address the open/availability question"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "help",
+        "looking for",
+        "what can",
+        "material",
+        "size",
+        "quantity",
+        "how can"
+      ],
+      "description": "Reply should pivot to asking what the customer needs"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "R\\$|\\$[0-9]+|[0-9]+\\.[0-9]{2}",
+      "description": "No pricing or quotes in the greeting response"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "The AI should greet the customer, address whether the business is open (or that it is available via WhatsApp), and then ask what the customer is looking for. It should not fabricate specific operating hours if it does not know them, and should not call any tools."
+}

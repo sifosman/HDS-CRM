@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-16T12-23-56-206Z",
+  "started_at": "2026-08-16T12:23:44.411Z",
+  "finished_at": "2026-08-16T12:23:56.206Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "hardware_upsell": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 10007,
+      "p95": 10007,
+      "avg": 10007
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HU-001",
+      "name": "Hardware upsell - customer asks about handles",
+      "category": "hardware_upsell",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 10007,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've shared our popular cabinet handle options above! We have sleek options like the Juliette Aluminium (R165), modern 2-Tone handles (96mm at R35, 192mm at R49), and budget PVC options from R3. \n\nHow many handles do you need, and which design do you like best?"
+    }
+  ]
+}

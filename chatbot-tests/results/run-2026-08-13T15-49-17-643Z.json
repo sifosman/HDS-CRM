@@ -1,0 +1,48 @@
+{
+  "run_id": "run-2026-08-13T15-49-17-643Z",
+  "started_at": "2026-08-13T15:47:15.444Z",
+  "finished_at": "2026-08-13T15:49:17.641Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "sales_simulation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": null,
+      "p95": null,
+      "avg": null
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-M-017",
+      "name": "Medium - Location-bound: customer in Wynberg",
+      "category": "sales_simulation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "supabase_error",
+          "detail": "Failed to fetch conversation log: fetch failed"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": null,
+      "tool_calls": [],
+      "last_reply": ""
+    }
+  ]
+}

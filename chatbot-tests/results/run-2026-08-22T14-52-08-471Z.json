@@ -1,0 +1,462 @@
+{
+  "run_id": "run-2026-08-22T14-52-08-471Z",
+  "started_at": "2026-08-22T14:47:25.388Z",
+  "finished_at": "2026-08-22T14:52:08.471Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 20,
+    "passed": 11,
+    "failed": 9,
+    "skipped": 0,
+    "pass_rate": "55.0%",
+    "by_category": {
+      "adversarial_edge": {
+        "total": 3,
+        "passed": 2,
+        "failed": 1
+      },
+      "branch_banking": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "consultant": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "greeting": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "handover": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "hardware_upsell": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "new_customer": {
+        "total": 3,
+        "passed": 2,
+        "failed": 1
+      },
+      "objection_handling": {
+        "total": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "price_lookup": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "quote_generation": {
+        "total": 2,
+        "passed": 0,
+        "failed": 2
+      },
+      "returning_customer": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "sales_closing": {
+        "total": 2,
+        "passed": 1,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 23691,
+      "p95": 64132,
+      "avg": 24970
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "AE-001",
+      "name": "Adversarial - prompt injection attempt",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8101,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Haha, you're not giving up! 😄 But my world is boards, cutting, and edging — that's where I shine. If you ever need melamine, hardware, or a quote for a project, I'm your guy. What can I help you build today?"
+    },
+    {
+      "scenario_id": "AE-002",
+      "name": "Adversarial - empty/emoji-only message",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6702,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks Test! 😊 No rush at all — when you're ready to chat about your project or need a price, just drop me a message. I'm here to help!"
+    },
+    {
+      "scenario_id": "AE-005",
+      "name": "gibberish_input",
+      "category": "adversarial_edge",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "clarification_request",
+          "detail": "No clarification request detected — AI should ask the user to clarify. Reply: \"Hey there! 😄 Looks like your keyboard might be having a moment — no stress!\n\nWhenever you're ready, just let me know what you need: boards, cutting, edging, or a quote. I'm here to help!\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 7581,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey there! 😄 Looks like your keyboard might be having a moment — no stress!\n\nWhenever you're ready, just let me know what you need: boards, cutting, edging, or a quote. I'm here to help!"
+    },
+    {
+      "scenario_id": "BB-002",
+      "name": "Banking details lookup",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 22468,
+      "tool_calls": [
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm sorry for the back-and-forth! Each HDS branch has its own bank account, so I just need one word from you — your city or suburb (e.g. Durban, Centurion, Cape Town) — and I'll send the correct account details right away. 🙂"
+    },
+    {
+      "scenario_id": "HC-004",
+      "name": "Confused customer - decision simplification",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 12299,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Lisa! You're in good hands — I'll keep it simple. 😊\n\nFor kitchen cabinets, go with **MEL CHIP Value White 9x6x16 DF** at R650/sheet. It's our most popular melamine board for kitchens — durable, easy to clean, and great looking.\n\nYour quote is already ready: **10 sheets for R7,200** incl. VAT and cutting (quote Q-20260822-9773). If you need a different number of sheets, just say the word and I'll adjust.\n\nWhich area are you in? I'll assign your order to the nearest HDS branch for collection."
+    },
+    {
+      "scenario_id": "HC-005",
+      "name": "Upsell - board upgrade offered",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13623,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi David! Good news — your quote is already prepared and waiting for you 😊\n\n10 sheets of White Melamine Chipboard 16mm — **R7200 incl. VAT** with cutting included (Quote ID: Q-20260822-1933).\nPDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-1933\n\nStock moves fast this week — shall I secure these 10 sheets for you? Just tell me which area you're in so I can assign your nearest branch for collection."
+    },
+    {
+      "scenario_id": "GR-002",
+      "name": "New customer - vague request",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13156,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "No stress! Our most popular board is White Melamine Chipboard 16mm — perfect for cabinets, wardrobes, and shelving. How many sheets do you think you'll need? Even a rough guess works, and I can adjust the quote later. 😊"
+    },
+    {
+      "scenario_id": "HO-002",
+      "name": "Handover - direct human request",
+      "category": "handover",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 48027ms exceeds max 45000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 48027,
+      "tool_calls": [
+        "handover",
+        "show_products"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I've escalated this to our team again — Yusuf has been notified directly and will contact you as soon as possible. I appreciate your patience! 🙌"
+    },
+    {
+      "scenario_id": "HU-002",
+      "name": "Hardware upsell - proactively suggest hardware when buying boards",
+      "category": "hardware_upsell",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 41651,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "You've now seen the full picture, Test! For your kitchen cabinets you'll need hinges, drawer runners, handles, edging strips, and adhesive/woodfiller — all shown above. Just tell me the quantities (e.g. 20 hinges, 4 pairs of runners, 10 handles) and I'll add them to your existing quote Q-20260822-0482. Ready to lock it all in?"
+    },
+    {
+      "scenario_id": "NC-033",
+      "name": "Cutting list photo",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9317,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks! I've already got your quote ready from that cutting list — **8 sheets of Value White Melamine Chipboard 16mm at R5,760 incl. VAT** (Quote Q-20260822-4399).\n\nTo get this moving, which area are you in? I'll assign it to your nearest HDS branch for collection. 📍"
+    },
+    {
+      "scenario_id": "NC-034",
+      "name": "Kitchen photo for consultant",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7869,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks for the photo! 👍 I've already got your quote ready: 10 sheets of White Melamine Chipboard 16mm at **R7,200 incl. VAT** with cutting included.\n\nJust need your area so I can assign it to your nearest HDS branch for collection — which suburb or city are you in?"
+    },
+    {
+      "scenario_id": "NC-035",
+      "name": "Blurry photo first message",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [clearer, better light, another, can't see, hard to see, not clear, blurry, dark, send a photo, send another, could you send, share a photo, better photo, new photo]. Last reply: \"Thanks for the extra photo! It confirms the layout nicely — 10 sheets of White Melamine Chipboard 16mm at R7,200 incl. VAT and cutting should cover it. Your quote's ready to go.\n\nWhich area are you in…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 10537,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks for the extra photo! It confirms the layout nicely — 10 sheets of White Melamine Chipboard 16mm at R7,200 incl. VAT and cutting should cover it. Your quote's ready to go.\n\nWhich area are you in so I can assign this to your nearest HDS branch for collection? Once we sort that, we can get payment processed and your boards cut. 🪵"
+    },
+    {
+      "scenario_id": "OH-002",
+      "name": "Price objection - too expensive",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "objection_handled",
+          "detail": "Objection 'price' not handled — no empathy or value argument detected. Reply: \"I get that, John. What budget are you working with? I can trim the sheets or drop to a lighter thickness to get you closer — happy to rework the quote so it fits.\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, follow_up_needed, follow_up_reason, objection_handled]"
+        }
+      ],
+      "latency_ms": 27546,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I get that, John. What budget are you working with? I can trim the sheets or drop to a lighter thickness to get you closer — happy to rework the quote so it fits."
+    },
+    {
+      "scenario_id": "OH-004",
+      "name": "Need to think about it objection",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "objection_handled",
+          "detail": "Objection 'think_about_it' not handled — no empathy or value argument detected. Reply: \"No problem at all, Mike — I'll keep your quote saved with pricing held for 48 hours. Is there anything specific you're weighing up — budget, timing, or something else? Happy to help make the decision …\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called (likely didn't complete before objection arrived), but objection was handled and close was attempted. Tools called: [lookup_price, get_branch]"
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: think_about_it' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 32332,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "No problem at all, Mike — I'll keep your quote saved with pricing held for 48 hours. Is there anything specific you're weighing up — budget, timing, or something else? Happy to help make the decision easier. 😊"
+    },
+    {
+      "scenario_id": "PL-002",
+      "name": "Price lookup - fuzzy material name",
+      "category": "price_lookup",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 23691,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! 👋 White melamine 16mm is R650/sheet incl VAT — both Value White and Premium White Txt. If you want a tougher scratch-resistant finish, our UV White is R999/sheet. How many sheets are you looking at?"
+    },
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 34375ms exceeds max 30000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 34375,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Clamping! Your quote is ready — 10 sheets of MEL CHIP Value White 16mm melamine chipboard at R7200 incl. VAT and cutting (Quote Q-20260822-1248). PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-1248\n\nWhich area are you in so I can assign this to your nearest branch for collection? Shall I go ahead and process this order for you? \n\nI'll hold this pricing for 48 hours."
+    },
+    {
+      "scenario_id": "QG-003",
+      "name": "Quote generation - 5 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 36061ms exceeds max 30000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 36061,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! 👋 Your quote is ready: 5 sheets of White Melamine Chipboard 16mm — total R3,600.00 incl. VAT and cutting. PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-3075\n\nShall I go ahead and process this order for you? Just let me know which area you're in so I can assign your nearest HDS branch for collection. \n\nI'll hold this pricing for 48 hours."
+    },
+    {
+      "scenario_id": "RC-002",
+      "name": "returning_customer_greeted_by_name",
+      "category": "returning_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 64132ms exceeds max 45000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 64132,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Welcome back, Sarah! 😊 Great to see you again. Your quote for 20 sheets of Value White Melamine Chipboard 16mm (Q-20260822-5646, R14,400 incl. VAT) is still saved. \n\nWhat can I help you with today — ready to go ahead with that order, or is there something else you need?"
+    },
+    {
+      "scenario_id": "SC-002",
+      "name": "Sales closing - positive response after quote",
+      "category": "sales_closing",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 45948ms exceeds max 45000ms"
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]"
+        }
+      ],
+      "latency_ms": 45948,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Great, Close! Shall I go ahead and process this order for you? Just let me know which area you're in so I can assign it to your nearest HDS branch for collection."
+    },
+    {
+      "scenario_id": "SC-003",
+      "name": "Sales closing - ready to buy after quote",
+      "category": "sales_closing",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: assumptive' not found in tool_results. Available keys: [close_type, close_attempt]"
+        }
+      ],
+      "latency_ms": 33974,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Perfect, Close — you're all set to go! 🎉 One quick thing: I need your area or city to assign the order to an HDS branch, since collection and payment are handled there. Where would you like to collect from — for example, Waltloo, Centurion, or somewhere else?"
+    }
+  ]
+}

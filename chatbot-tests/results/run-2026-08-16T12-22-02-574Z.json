@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-16T12-22-02-574Z",
+  "started_at": "2026-08-16T12:21:50.551Z",
+  "finished_at": "2026-08-16T12:22:02.573Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "hardware_upsell": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 11346,
+      "p95": 11346,
+      "avg": 11346
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HU-001",
+      "name": "Hardware upsell - customer asks about handles",
+      "category": "hardware_upsell",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 11346,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've sent through some of our top kitchen handle options to your chat, ranging from modern Juliette Aluminium handles (R165) and 2-Tone handles (96mm at R35, 192mm at R49) to budget PVC Dimple handles (R3). \n\nWhich style and size are you leaning towards for your cabinets?"
+    }
+  ]
+}

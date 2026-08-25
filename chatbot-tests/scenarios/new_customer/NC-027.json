@@ -1,0 +1,53 @@
+{
+  "id": "NC-027",
+  "name": "Renovating kitchen where to start",
+  "category": "new_customer",
+  "description": "New customer is renovating their kitchen and needs guidance.",
+  "phone_number": "27900000827",
+  "sender_name": "New Customer 27",
+  "messages": [
+    {
+      "text": "I'm renovating my kitchen, where do I start?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "melamine",
+        "boards",
+        "MDF",
+        "chipboard",
+        "cabinets"
+      ],
+      "description": "Reply should recommend board materials (melamine, MDF, boards, chipboard, or cabinets)"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Homeowner consultant mode should activate. AI should offer sketch service and guide step by step."
+}

@@ -1,0 +1,40 @@
+{
+  "id": "HC-007",
+  "name": "Homeowner sends blurry/dark photo - AI asks for clearer photo",
+  "category": "consultant",
+  "description": "Homeowner sends a photo that is blurry or too dark for the AI to analyze properly. The image analysis indicates image quality issues and ANOTHER PHOTO is needed. AI should ask the customer for a clearer/better-lit photo.",
+  "phone_number": "27900000507",
+  "sender_name": "Pieter",
+  "messages": [
+    {
+      "type": "image",
+      "media_id": "test-blurry-kitchen-001",
+      "caption": "My kitchen cabinets",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "forbidden_patterns": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 45 seconds (image analysis takes longer)"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": ["clearer", "better light", "more light", "another photo", "better photo", "can't see", "hard to see", "not clear", "blurry", "dark", "take another"],
+      "description": "AI should ask for a clearer or better-lit photo"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "quote",
+      "description": "AI should NOT generate a quote yet - wait for a better photo"
+    }
+  ]
+}

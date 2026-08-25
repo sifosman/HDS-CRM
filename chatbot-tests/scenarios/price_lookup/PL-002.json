@@ -1,0 +1,43 @@
+{
+  "id": "PL-002",
+  "name": "Price lookup - fuzzy material name",
+  "category": "price_lookup",
+  "description": "Customer uses a colloquial/fuzzy name for a product. AI should still find the right product via lookup_price.",
+  "phone_number": "27900000012",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "How much for the white mel sheets? 16mm",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "I don't have|not available|cannot find|don't carry",
+      "flags": "i",
+      "description": "AI should not claim product is unavailable if it exists in database"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests fuzzy matching - 'mel sheets' should match 'melamine' products"
+}

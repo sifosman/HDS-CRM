@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-11T15-15-48-427Z",
+  "started_at": "2026-08-11T15:15:38.551Z",
+  "finished_at": "2026-08-11T15:15:48.427Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 9014,
+      "p95": 9014,
+      "avg": 9014
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-015",
+      "name": "Quote generation - edge case 50 sheets",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9014,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Here is your quote for 50 sheets of MEL CHIP Value White 16mm:\n\n**Total (VAT incl):** R32,500\n**Quote PDF:** https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-0913\n\nWe have stock ready to go — shall I go ahead and process this order for you? 😊"
+    }
+  ]
+}

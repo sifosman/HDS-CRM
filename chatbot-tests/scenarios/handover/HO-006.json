@@ -1,0 +1,35 @@
+{
+  "id": "HO-006",
+  "name": "direct request to speak to a human",
+  "category": "handover",
+  "description": "Customer directly states they want to talk to a human, which should trigger handover to a human agent",
+  "phone_number": "27900000081",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "I want to talk to a human, not a bot. Can someone real help me please?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "An explicit request to speak to a human should always be honoured and trigger handover without resistance."
+}

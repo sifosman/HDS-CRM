@@ -1,0 +1,55 @@
+{
+  "id": "PL-001",
+  "name": "Price lookup - white melamine chipboard exact name",
+  "category": "price_lookup",
+  "description": "Customer asks for price of a specific product by exact name. AI should use lookup_price and return real price.",
+  "phone_number": "27900000011",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Do you have white melamine chipboard?",
+      "delay_ms": 0
+    },
+    {
+      "text": "What's the price on 16mm white mel chip?",
+      "delay_ms": 3000
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should mention melamine"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies lookup_price tool returns real product names and prices from hds_prices table"
+}

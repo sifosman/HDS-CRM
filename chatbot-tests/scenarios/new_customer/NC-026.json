@@ -1,0 +1,47 @@
+{
+  "id": "NC-026",
+  "name": "What boards for kitchen cabinets",
+  "category": "new_customer",
+  "description": "New customer asks for kitchen cabinet board recommendations.",
+  "phone_number": "27900000826",
+  "sender_name": "New Customer 26",
+  "messages": [
+    {
+      "text": "What boards should I use for kitchen cabinets?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should recommend melamine"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Kitchen cabinet advice. AI should recommend 16mm white melamine for interiors and decorative for doors."
+}

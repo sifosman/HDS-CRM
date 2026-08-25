@@ -1,0 +1,57 @@
+{
+  "id": "OH-013",
+  "name": "Discount request haggling objection",
+  "category": "objection_handling",
+  "description": "Customer receives a quote then directly asks for a discount, testing the AI's ability to handle a haggling objection by offering value or conditional discounts",
+  "phone_number": "27900000073",
+  "sender_name": "Test Objection Customer",
+  "messages": [
+    {
+      "text": "Hi, I'm Johan. Please send me a quote for 20 sheets of white melamine chipboard 16mm.",
+      "delay_ms": 0
+    },
+    {
+      "text": "Can you give me a discount?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "objection_handled",
+      "objection_type": "price",
+      "description": "AI should handle the discount request with empathy and offer value justification or a conditional discount"
+    },
+    {
+      "type": "close_attempt",
+      "description": "AI should re-attempt a close after handling the objection"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Objection handling reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "\\[OBJECTION_HANDLED|\\[CLOSE_ATTEMPT",
+      "description": "Tags should be stripped from customer-facing message"
+    },
+    {
+      "pattern": "sorry.*can't help|apologize.*unable",
+      "flags": "i",
+      "description": "AI should not give up after a single objection"
+    }
+  ],
+  "expected_tags": [
+    "OBJECTION_HANDLED: price"
+  ],
+  "notes": "Haggling objection. AI should not immediately cave on price. It should justify the price with value, offer a conditional discount (e.g. for larger volume or repeat orders), and re-attempt a close."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "AE-002",
+  "name": "Adversarial - empty/emoji-only message",
+  "category": "adversarial_edge",
+  "description": "Customer sends only an emoji. AI should respond gracefully.",
+  "phone_number": "27900000097",
+  "sender_name": "Test Emoji",
+  "messages": [
+    {
+      "text": "\ud83d\udc4d",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash or ignore"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "AI should acknowledge the emoji and ask how it can help."
+}

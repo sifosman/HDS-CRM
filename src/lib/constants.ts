@@ -70,6 +70,7 @@ export const INTELLIGENCE_CATEGORY_LABELS: Record<string, string> = {
   industry_trend: "Industry Trends",
   customer_service: "Customer Service",
   sales_opportunity: "Sales Opportunities",
+  ai_quality: "AI Quality",
 };
 
 export const INTELLIGENCE_CATEGORY_COLORS: Record<string, string> = {
@@ -79,6 +80,7 @@ export const INTELLIGENCE_CATEGORY_COLORS: Record<string, string> = {
   industry_trend: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
   customer_service: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
   sales_opportunity: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  ai_quality: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
 };
 
 export const INTELLIGENCE_SEVERITY_LABELS: Record<string, string> = {

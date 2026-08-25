@@ -1,0 +1,81 @@
+{
+  "id": "GR-010",
+  "name": "services_question_greeting",
+  "category": "greeting",
+  "description": "A new customer asks what the business does. Tests that the AI gives a concise overview of its products/services and then asks what the customer specifically needs.",
+  "phone_number": "27900000010",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "What do you guys do?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "hi",
+        "hello",
+        "welcome",
+        "hey"
+      ],
+      "description": "Reply should include a greeting even though the customer did not greet first"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "board",
+        "melamine",
+        "sheet",
+        "material",
+        "supply",
+        "cut",
+        "manufacture",
+        "product"
+      ],
+      "description": "Reply should describe what the business offers (boards, sheet materials, cutting services)"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "what",
+        "looking for",
+        "help",
+        "size",
+        "quantity",
+        "material",
+        "how can"
+      ],
+      "description": "Reply should ask what the customer specifically needs"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "R\\$|\\$[0-9]+|[0-9]+\\.[0-9]{2}",
+      "description": "No pricing or quotes in the greeting response"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "The AI should introduce itself and give a brief, friendly description of what HDS offers (e.g. melamine boards, sheet materials, cutting services), then ask the customer what they are looking for. It should not dump an exhaustive product catalogue or call any tools at this stage."
+}

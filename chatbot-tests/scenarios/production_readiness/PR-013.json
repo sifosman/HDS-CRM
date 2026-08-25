@@ -1,0 +1,62 @@
+{
+  "id": "PR-013",
+  "name": "Urgent request - needed today",
+  "category": "production_readiness",
+  "description": "Customer needs boards urgently today. AI should check branch stock and quote quickly.",
+  "phone_number": "27900000552",
+  "sender_name": "Rush Job",
+  "messages": [
+    {
+      "text": "Hi, I need 5 sheets of 16mm white melamine URGENTLY today. I'm in Alberton. Can you help?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Great, I'll come collect. What's the total?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "alberton",
+        "branch",
+        "collect"
+      ],
+      "description": "AI should mention Alberton branch"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "R",
+      "description": "AI should provide pricing"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Urgent request. AI should be responsive and quote quickly."
+}

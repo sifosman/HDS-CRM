@@ -1,0 +1,47 @@
+{
+  "id": "NC-013",
+  "name": "Need plywood",
+  "category": "new_customer",
+  "description": "New customer asks about plywood which HDS distributes but doesn't manufacture.",
+  "phone_number": "27900000813",
+  "sender_name": "New Customer 13",
+  "messages": [
+    {
+      "text": "I need plywood for a project",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "plywood",
+      "description": "Reply should address plywood"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Plywood is distributed. AI should offer it but mention HDS-manufactured alternatives."
+}

@@ -1,0 +1,45 @@
+{
+  "id": "AE-017",
+  "name": "competitor_mention",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to handle a user mentioning a competitor positively and respond in a professional, non-disparaging manner that highlights HDS strengths",
+  "phone_number": "27900000112",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "I usually buy from [competitor], why should I switch?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "positive_handling",
+      "description": "AI should highlight HDS strengths without disparaging the competitor"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "(terrible|awful|scam|rip off|garbage|trash|don't buy from|avoid|stay away|worst)",
+      "flags": "i",
+      "description": "AI should not disparage or badmouth the competitor"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "User mentions a competitor (represented as [competitor] placeholder). The AI should respond positively by highlighting HDS's strengths (quality, service, pricing, range) without badmouthing the competitor. It should be professional and welcoming."
+}

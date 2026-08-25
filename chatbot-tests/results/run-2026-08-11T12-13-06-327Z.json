@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-11T12-13-06-327Z",
+  "started_at": "2026-08-11T12:12:45.429Z",
+  "finished_at": "2026-08-11T12:13:06.326Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "price_lookup": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 19664,
+      "p95": 19664,
+      "avg": 19664
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 19664,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Our 16mm white melamine chipboard starts at R650 incl VAT per sheet for our Value White or Premium White options. \n\nHow many sheets do you need for your project? 😊"
+    }
+  ]
+}

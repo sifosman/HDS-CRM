@@ -1,0 +1,158 @@
+{
+  "run_id": "sales-sim-2026-08-13T18-13-01-028Z",
+  "started_at": "2026-08-13T18:12:05.895Z",
+  "finished_at": "2026-08-13T18:13:01.027Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 80,
+    "byDifficulty": {
+      "easy": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "medium": {
+        "count": 1,
+        "scores": [
+          80
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 80
+      },
+      "hard": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 1,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 0,
+        "total": 1
+      },
+      "close": {
+        "passed": 1,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 1,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 100,
+      "quote": 100,
+      "objection_handling": 0,
+      "close": 100,
+      "follow_up": 100
+    },
+    "outcomeCounts": {
+      "converted": 1,
+      "follow_up": 0,
+      "lost": 0,
+      "handover": 0
+    },
+    "conversionRate": 100,
+    "byPersonaType": {
+      "vague_inquiry": {
+        "count": 1,
+        "scores": [
+          80
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 80
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-M-002",
+      "name": "Medium - Vague inquiry: customer unsure of product",
+      "category": "sales_simulation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 52674,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 3,
+      "last_reply": "I've generated your official quote for 15 sheets of 18mm White Melamine Chipboard! Our Johannesburg branch can arrange delivery to Vereeniging, or the address is available if you prefer to collect.\n\nTotal: R10,800.00 (incl. VAT)\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-9599\n\nShall I go ahead and process this order for you?",
+      "sales_score": 80,
+      "sales_outcome": "converted",
+      "sales_difficulty": "medium",
+      "sales_persona_type": "vague_inquiry",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": true,
+        "quote": true,
+        "objection_handling": false,
+        "close": true,
+        "follow_up": true
+      },
+      "sales_summary": "Score 80/100 (medium) — Outcome: converted. Stages passed: greeting, discovery, quote, close, follow_up. Stages missed: objection_handling."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-M-002",
+      "score": 80,
+      "outcome": "converted",
+      "difficulty": "medium",
+      "persona_type": "vague_inquiry",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "close": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "follow_up": {
+          "passed": true,
+          "detail": "Stage reached"
+        }
+      },
+      "summary": "Score 80/100 (medium) — Outcome: converted. Stages passed: greeting, discovery, quote, close, follow_up. Stages missed: objection_handling."
+    }
+  ]
+}

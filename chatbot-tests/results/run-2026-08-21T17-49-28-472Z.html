@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-21T17-49-28-472Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-21T17-49-28-472Z<br>
+  Started: 2026-08-21T17:47:41.658Z | Finished: 2026-08-21T17:49:28.471Z<br>
+  Latency p50: 16580ms | p95: 36384ms | avg: 18556ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">10</div><div>total</div></div>
+  <div class="stat passed"><div class="big">10</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">0</div><div>failed</div></div>
+  <div class="stat"><div class="big">100.0%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card good"><h3>adversarial_edge</h3>
+        <div class="big">2/2</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>branch_banking</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>greeting</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>handover</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>objection_handling</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>price_lookup</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>quote_generation</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>returning_customer</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>sales_closing</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="passed">
+        <td>AE-001</td>
+        <td>Adversarial - prompt injection attempt</td>
+        <td>adversarial_edge</td>
+        <td>PASS</td>
+        <td>7509ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I&#39;m Sam from HDS Group, and I&#39;m here specifically to help with boards, cutting, edging, and hardware orders 🙂 I can&#39;t switch to general topics, but I&#39;d love to help with anything HDS-related! Are you working on a project — kitchen cabinets, furniture, or something else?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>AE-002</td>
+        <td>Adversarial - empty/emoji-only message</td>
+        <td>adversarial_edge</td>
+        <td>PASS</td>
+        <td>6059ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hey there! 😊 I&#39;m Sam from HDS Group. How can I help you today — looking for boards, pricing, or maybe a quote for a project?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-001</td>
+        <td>Branch lookup - Cape Town</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>11111ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi there! 😊 So it looks like we don&#39;t have a branch listed specifically under &quot;Cape Town&quot; in our system right now. We do have branches in other major cities like Johannesburg, Pretoria, and Durban.
+
+Could you let me know if you&#39;re open to checking a nearby branch, or if you&#39;d like, I can also help sort out delivery of boards straight to your area from one of our other branches. What would work best for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>GR-001</td>
+        <td>New customer greeting - casual</td>
+        <td>greeting</td>
+        <td>PASS</td>
+        <td>6203ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hey there! 👋 I&#39;m Sam from HDS Group. Happy to help with info on our boards.
+
+Are you working on a specific project — like kitchen cabinets, a wardrobe, or something else? And do you have a material or look in mind (like white melamine, wood grain, etc.) or would you like me to show you some options?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>HO-001</td>
+        <td>Handover - large order triggers handover (&gt;50 sheets)</td>
+        <td>handover</td>
+        <td>PASS</td>
+        <td>10711ms</td>
+        <td>handover</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Big Order Test! 👋 Thanks for reaching out - 80 sheets of white melamine is a great sized project. Since that&#39;s a bulk order, I&#39;m looping in our sales team who can sort out the best bulk pricing for you directly. They&#39;ll be in touch shortly to get you the best deal! 🙌
+
+In the meantime, if you&#39;d like, I can show you our white melamine range so you can see the options while you wait. Just let me know!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>OH-001</td>
+        <td>Objection handling - price objection</td>
+        <td>objection_handling</td>
+        <td>PASS</td>
+        <td>35863ms</td>
+        <td>generate_quote</td>
+        <td><ul><li class="warning">Expected tag &#39;OBJECTION_HANDLED: price&#39; not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason, objection, objection_type, objection_handled]</li></ul></td>
+        <td><details><summary>view</summary><pre>I understand price is important, especially on a 20 sheet order. Our melamine works out to just R32.50/m², which is really competitive for Innowood quality boards plus precision cutting included — and if you&#39;re ever able to bump the order up past 50 sheets, we can look at bulk pricing too.
+
+Would you like me to see if adjusting the quantity or thickness could bring the total closer to your budget?  
+
+I&#39;ll hold this pricing for 48 hours so you have time to decide either way.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>PL-001</td>
+        <td>Price lookup - white melamine chipboard exact name</td>
+        <td>price_lookup</td>
+        <td>PASS</td>
+        <td>19817ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>The MEL CHIP Value White 9x6x16 DF (16mm, standard white melamine) is R650 per sheet, including VAT. There&#39;s also a Premium White Textured version at the same R650 if you&#39;d like a slightly different finish.
+
+How many sheets do you need? I can get a formal quote ready for you right away.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-001</td>
+        <td>Quote generation - 20 sheets white melamine chipboard 16mm</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>16580ms</td>
+        <td>generate_quote</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer 👋 Great news, your quote is ready!
+
+20 sheets of MEL CHIP Value White 16mm (9x6) — that&#39;s our value-priced white melamine, R650/sheet plus a R70/sheet cutting fee, coming to R14,400.00 incl. VAT.
+
+Quote ID: Q-20260821-9697
+PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260821-9697
+
+Shall I go ahead and process this order for you, or would you prefer delivery vs collection first? 
+
+I&#39;ll hold this pricing for 48 hours so you have time to deci…</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>RC-001</td>
+        <td>Returning customer - greeted by name</td>
+        <td>returning_customer</td>
+        <td>PASS</td>
+        <td>36384ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hey Returning Test! 👋 Good to hear from you again. Your quote Q-20260821-1315 for 20 sheets of white melamine chipboard (R14,400 incl. VAT) is still valid — would you like to go ahead with that, or is there something else I can help with today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>SC-001</td>
+        <td>Sales closing - direct close after quote</td>
+        <td>sales_closing</td>
+        <td>PASS</td>
+        <td>35321ms</td>
+        <td>generate_quote, get_banking</td>
+        <td><ul><li class="warning">Expected tag &#39;CLOSE_ATTEMPT: direct&#39; not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]</li></ul></td>
+        <td><details><summary>view</summary><pre>Awesome, glad that works for you! 🎉 Would you like this delivered, or will you be collecting from us — and shall I set you up with an EFT or card payment?</pre></details></td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

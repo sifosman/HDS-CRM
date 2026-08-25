@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Sales Simulation Report — sales-sim-2026-08-12T20-04-51-592Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  h2 { color: #333; margin-top: 30px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 120px; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.good .big { color: #16a34a; }
+  .stat.bad .big { color: #dc2626; }
+  .stat.warn .big { color: #f59e0b; }
+  .stat.info .big { color: #2563eb; }
+  .diff-cards { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .diff-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 200px; flex: 1; }
+  .diff-card.easy { border-left: 4px solid #16a34a; }
+  .diff-card.medium { border-left: 4px solid #f59e0b; }
+  .diff-card.hard { border-left: 4px solid #dc2626; }
+  .diff-card h3 { margin: 0 0 8px 0; text-transform: capitalize; }
+  .big-score { font-size: 2em; font-weight: 700; color: #1a1a1a; }
+  .close-rate { color: #666; margin: 4px 0; }
+  .outcomes { display: flex; flex-direction: column; gap: 2px; font-size: 12px; margin-top: 8px; }
+  .outcome { padding: 2px 0; }
+  .outcome.converted { color: #16a34a; }
+  .outcome.followup { color: #f59e0b; }
+  .outcome.lost { color: #dc2626; }
+  .outcome.handover { color: #2563eb; }
+  .funnel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 20px 0; }
+  .funnel-row { display: flex; align-items: center; margin: 8px 0; }
+  .funnel-label { width: 180px; font-weight: 600; text-transform: capitalize; }
+  .funnel-bar-container { flex: 1; position: relative; height: 30px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+  .funnel-bar { height: 100%; transition: width 0.3s; }
+  .funnel-text { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #333; font-size: 13px; font-weight: 600; z-index: 1; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 16px 0; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  td.good { color: #16a34a; font-weight: 600; }
+  td.bad { color: #dc2626; font-weight: 600; }
+  td.warn { color: #f59e0b; font-weight: 600; }
+  .diff-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .diff-badge.easy { background: #dcfce7; color: #16a34a; }
+  .diff-badge.medium { background: #fef3c7; color: #b45309; }
+  .diff-badge.hard { background: #fee2e2; color: #dc2626; }
+  .stage-badge { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 2px; }
+  .stage-badge.pass { background: #dcfce7; color: #16a34a; }
+  .stage-badge.fail { background: #fee2e2; color: #dc2626; }
+  .stages { white-space: nowrap; }
+  .recommendations { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 20px 0; }
+  .recommendations ol { padding-left: 20px; }
+  .recommendations li { margin: 8px 0; }
+  .recommendations .priority { font-weight: 700; }
+  .recommendations .priority.high { color: #dc2626; }
+  .recommendations .priority.medium { color: #f59e0b; }
+  .recommendations .priority.low { color: #2563eb; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+</style>
+</head>
+<body>
+<h1>HDS Sales Simulation Report</h1>
+<div class="meta">
+  Run ID: sales-sim-2026-08-12T20-04-51-592Z<br>
+  Started: 2026-08-12T19:20:50.531Z | Finished: 2026-08-12T20:04:51.591Z<br>
+  Total Customers: 100 | Avg Score: 58/100 | Conversion Rate: 54%
+</div>
+
+<h2>Executive Summary</h2>
+<div class="summary">
+  <div class="stat"><div class="big">100</div><div>customers</div></div>
+  <div class="stat good"><div class="big">54</div><div>converted</div></div>
+  <div class="stat warn"><div class="big">1</div><div>follow-up</div></div>
+  <div class="stat bad"><div class="big">35</div><div>lost</div></div>
+  <div class="stat info"><div class="big">10</div><div>handover</div></div>
+  <div class="stat"><div class="big">58/100</div><div>avg score</div></div>
+  <div class="stat good"><div class="big">54%</div><div>conversion</div></div>
+</div>
+
+<h2>Difficulty Breakdown</h2>
+<div class="diff-cards">
+<div class="diff-card easy">
+        <h3>easy (20)</h3>
+        <div class="big-score">47/100</div>
+        <div class="close-rate">Close rate: 45%</div>
+        <div class="outcomes">
+          <span class="outcome converted">Converted: 9</span>
+          <span class="outcome followup">Follow-up: 0</span>
+          <span class="outcome lost">Lost: 10</span>
+          <span class="outcome handover">Handover: 1</span>
+        </div>
+      </div>
+<div class="diff-card medium">
+        <h3>medium (50)</h3>
+        <div class="big-score">53/100</div>
+        <div class="close-rate">Close rate: 50%</div>
+        <div class="outcomes">
+          <span class="outcome converted">Converted: 25</span>
+          <span class="outcome followup">Follow-up: 0</span>
+          <span class="outcome lost">Lost: 22</span>
+          <span class="outcome handover">Handover: 3</span>
+        </div>
+      </div>
+<div class="diff-card hard">
+        <h3>hard (30)</h3>
+        <div class="big-score">75/100</div>
+        <div class="close-rate">Close rate: 67%</div>
+        <div class="outcomes">
+          <span class="outcome converted">Converted: 20</span>
+          <span class="outcome followup">Follow-up: 1</span>
+          <span class="outcome lost">Lost: 3</span>
+          <span class="outcome handover">Handover: 6</span>
+        </div>
+      </div>
+</div>
+
+<h2>Sales Funnel Analysis</h2>
+<div class="funnel">
+  <div class="funnel-row">
+      <div class="funnel-label">greeting</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 96%; background: #16a34a;"></div>
+        <span class="funnel-text">96/100 (96%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">discovery</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 81%; background: #16a34a;"></div>
+        <span class="funnel-text">81/100 (81%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">quote</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 60%; background: #f59e0b;"></div>
+        <span class="funnel-text">60/100 (60%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">objection_handling</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 35%; background: #dc2626;"></div>
+        <span class="funnel-text">35/100 (35%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">close</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 71%; background: #f59e0b;"></div>
+        <span class="funnel-text">71/100 (71%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">follow_up</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 15%; background: #dc2626;"></div>
+        <span class="funnel-text">15/100 (15%)</span>
+      </div>
+    </div>
+</div>
+
+<h2>Outcome Distribution</h2>
+<div class="summary">
+<div class="stat good"><div class="big">54</div><div>converted (54%)</div></div>
+<div class="stat warn"><div class="big">1</div><div>follow_up (1%)</div></div>
+<div class="stat bad"><div class="big">35</div><div>lost (35%)</div></div>
+<div class="stat info"><div class="big">10</div><div>handover (10%)</div></div>
+</div>
+
+<h2>Performance by Persona Type</h2>
+<table>
+<thead><tr><th>Persona Type</th><th>Count</th><th>Avg Score</th><th>Close Rate</th><th>Converted</th><th>Follow-up</th><th>Lost</th><th>Handover</th></tr></thead>
+<tbody>
+<tr>
+        <td>quality_skepticism</td>
+        <td>1</td>
+        <td class="good">97/100</td>
+        <td>0%</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>1</td>
+      </tr>
+<tr>
+        <td>price_shopper</td>
+        <td>8</td>
+        <td class="good">90/100</td>
+        <td>100%</td>
+        <td>8</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>timing_objection</td>
+        <td>3</td>
+        <td class="good">88/100</td>
+        <td>67%</td>
+        <td>2</td>
+        <td>1</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>multi_objection</td>
+        <td>4</td>
+        <td class="good">83/100</td>
+        <td>50%</td>
+        <td>2</td>
+        <td>0</td>
+        <td>0</td>
+        <td>2</td>
+      </tr>
+<tr>
+        <td>unrealistic_demand</td>
+        <td>3</td>
+        <td class="good">82/100</td>
+        <td>100%</td>
+        <td>3</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>budget_constraint</td>
+        <td>4</td>
+        <td class="good">79/100</td>
+        <td>100%</td>
+        <td>4</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>price_competitor</td>
+        <td>5</td>
+        <td class="good">75/100</td>
+        <td>100%</td>
+        <td>5</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>ghosting</td>
+        <td>3</td>
+        <td class="good">72/100</td>
+        <td>67%</td>
+        <td>2</td>
+        <td>0</td>
+        <td>0</td>
+        <td>1</td>
+      </tr>
+<tr>
+        <td>frustrated</td>
+        <td>4</td>
+        <td class="warn">64/100</td>
+        <td>25%</td>
+        <td>1</td>
+        <td>0</td>
+        <td>1</td>
+        <td>2</td>
+      </tr>
+<tr>
+        <td>direct_quote</td>
+        <td>5</td>
+        <td class="warn">60/100</td>
+        <td>60%</td>
+        <td>3</td>
+        <td>0</td>
+        <td>2</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>cut_edge_inquiry</td>
+        <td>5</td>
+        <td class="warn">60/100</td>
+        <td>80%</td>
+        <td>4</td>
+        <td>0</td>
+        <td>0</td>
+        <td>1</td>
+      </tr>
+<tr>
+        <td>returning_buyer</td>
+        <td>5</td>
+        <td class="warn">56/100</td>
+        <td>60%</td>
+        <td>3</td>
+        <td>0</td>
+        <td>2</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>payment_questions</td>
+        <td>5</td>
+        <td class="warn">55/100</td>
+        <td>80%</td>
+        <td>4</td>
+        <td>0</td>
+        <td>1</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>color_inquiry</td>
+        <td>5</td>
+        <td class="warn">53/100</td>
+        <td>60%</td>
+        <td>3</td>
+        <td>0</td>
+        <td>2</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>quantity_uncertain</td>
+        <td>5</td>
+        <td class="warn">53/100</td>
+        <td>60%</td>
+        <td>3</td>
+        <td>0</td>
+        <td>2</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>project_describer</td>
+        <td>7</td>
+        <td class="warn">50/100</td>
+        <td>29%</td>
+        <td>2</td>
+        <td>0</td>
+        <td>4</td>
+        <td>1</td>
+      </tr>
+<tr>
+        <td>authority_objection</td>
+        <td>3</td>
+        <td class="warn">48/100</td>
+        <td>33%</td>
+        <td>1</td>
+        <td>0</td>
+        <td>2</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>vague_inquiry</td>
+        <td>8</td>
+        <td class="warn">43/100</td>
+        <td>13%</td>
+        <td>1</td>
+        <td>0</td>
+        <td>6</td>
+        <td>1</td>
+      </tr>
+<tr>
+        <td>project_ready</td>
+        <td>5</td>
+        <td class="warn">42/100</td>
+        <td>40%</td>
+        <td>2</td>
+        <td>0</td>
+        <td>3</td>
+        <td>0</td>
+      </tr>
+<tr>
+        <td>ready_to_order</td>
+        <td>5</td>
+        <td class="bad">28/100</td>
+        <td>20%</td>
+        <td>1</td>
+        <td>0</td>
+        <td>3</td>
+        <td>1</td>
+      </tr>
+<tr>
+        <td>location_bound</td>
+        <td>7</td>
+        <td class="bad">19/100</td>
+        <td>0%</td>
+        <td>0</td>
+        <td>0</td>
+        <td>7</td>
+        <td>0</td>
+      </tr>
+</tbody>
+</table>
+
+<h2>Scenario Details</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Difficulty</th><th>Score</th><th>Outcome</th><th>Funnel Stages</th><th>Last Reply</th></tr></thead>
+<tbody>
+<tr>
+        <td>SS-E-001</td>
+        <td>Easy - Direct quote: 20 sheets 16mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>91/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-002</td>
+        <td>Easy - Direct quote: 15 sheets 18mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Hi Sipho! I&#39;ve generated your quote for 15 sheets of White Melamine Chipboard. 
+
+Your total is R9,750 (VAT incl). You can view your formal quote here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-6118
+
+Shall I go ahead and process this order for you? 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-003</td>
+        <td>Easy - Direct quote: 25 sheets 16mm MDF board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-004</td>
+        <td>Easy - Direct quote: 10 sheets 18mm MDF board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>10/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-005</td>
+        <td>Easy - Direct quote: 12 sheets 16mm charcoal grey gloss board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-006</td>
+        <td>Easy - Ready to order: 8 sheets 16mm UV gloss board high gloss plain white</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>10/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-007</td>
+        <td>Easy - Ready to order: 30 sheets 16mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;ve prepared your quote for 30 sheets of White Melamine Chipboard! Total is R19,500 incl VAT, and you can download your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-0884
+
+Would you like to pay by EFT or card to get this order processed for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-008</td>
+        <td>Easy - Ready to order: 20 sheets 18mm plywood</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>27/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Hi Johan, as 18mm plywood is a specialized board not on our standard online list, I have handed this over to our sales team. A member of our team will contact you shortly to get your order sorted! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-009</td>
+        <td>Easy - Ready to order: 10 sheets 16mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>11/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-010</td>
+        <td>Easy - Ready to order: 15 sheets 16mm postform board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>1/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge fail">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-011</td>
+        <td>Easy - Returning buyer: 20 sheets 16mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Welcome back, David! 👋 I&#39;ve prepared your quote for 20 sheets of White Melamine Chipboard totaling R13,000 incl VAT. You can view the quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-2090. Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-012</td>
+        <td>Easy - Returning buyer: 15 sheets 18mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Welcome back Karim! I&#39;ve set up your quote for 15 sheets of White Melamine Chipboard. 
+
+The total comes to R9,750 incl VAT. You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-2152
+
+Would you like me to send you a payment link so we can process this order for you right away? 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-013</td>
+        <td>Easy - Returning buyer: 25 sheets 16mm MDF board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>10/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-014</td>
+        <td>Easy - Returning buyer: 10 sheets 18mm MDF board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>0/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge fail">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-015</td>
+        <td>Easy - Returning buyer: 12 sheets 16mm charcoal grey gloss board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Welcome back, Gina! I&#39;ve set up your quote for 12 sheets of UV Charcoal Grey melamine board at a total of R24,000 (VAT incl). 
+
+You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-5782
+
+Shall I send you the payment link to finalize and process this order for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-016</td>
+        <td>Easy - Project ready: kitchen cupboards with 15 sheets 16mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-017</td>
+        <td>Easy - Project ready: wardrobe with 12 sheets 18mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="good"><strong>90/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Your white melamine order can be ready for collection within 24 to 48 hours after payment at our Johannesburg branch! The address will be provided on your final invoice as soon as payment is confirmed. Would you prefer to pay by EFT or card so we can start cutting?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-018</td>
+        <td>Easy - Project ready: TV stand with 8 sheets 16mm MDF board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>10/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-019</td>
+        <td>Easy - Project ready: bathroom vanity with 10 sheets 16mm white melamine chipboard</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>11/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-E-020</td>
+        <td>Easy - Project ready: bookshelf with 6 sheets 18mm MDF board</td>
+        <td><span class="diff-badge easy">easy</span></td>
+        <td class="bad"><strong>10/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-001</td>
+        <td>Hard - Price objection + competitor mention</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>83/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Nomsa! I&#39;ve generated your quote for the 20 sheets of white melamine chipboard (Total: R13,000 incl VAT): https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-0164. I will hold this pricing for 48 hours for you—shall I go ahead and secure this order for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-002</td>
+        <td>Hard - Price objection + competitor mention</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>80/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Pieter — take your time! I can hold the pricing on your 15 sheets of white melamine chipboard for 48 hours. Shall I secure this quantity for you in the meantime so you don&#39;t lose out on stock?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-003</td>
+        <td>Hard - Price objection + competitor mention</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, take your time, Johan! I can hold this pricing for you for 48 hours. Shall I go ahead and lock this in to secure your stock today?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-004</td>
+        <td>Hard - Price objection + competitor mention</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>64/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>No problem at all, Ahmed! Take your time to think it over. I can hold this pricing for 48 hours for you. Shall I lock this quantity in for you in the meantime?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-005</td>
+        <td>Hard - Price objection + competitor mention</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>80/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand Rajesh – take your time! I can hold this pricing on the UV gloss or melamine option for 48 hours for you. Shall I secure this quote for you while you decide?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-006</td>
+        <td>Hard - Budget constraint: only R3000</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>83/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I understand! You can definitely order fewer sheets — 2 sheets of White Melamine chipboard would come to R1,300 incl VAT, or 1 sheet for R650. 
+
+How many sheets would you like me to update on your quote for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-007</td>
+        <td>Hard - Budget constraint: only R4000</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>77/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Absolutely Karim, you can order as few sheets as you need! For example, 3 sheets of White Melamine chipboard would come to just R1,950 total. 
+
+How many sheets would you like me to quote for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-008</td>
+        <td>Hard - Budget constraint: only R2500</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>80/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-009</td>
+        <td>Hard - Budget constraint: only R5000</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>77/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Absolutely, Naledi! You can order as few sheets of white melamine chipboard as you need — for example, 4 sheets would come to just R2,600 incl VAT. 
+
+How many sheets would work best for you, or shall I go ahead and generate a quote for 4 sheets?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-010</td>
+        <td>Hard - Multiple objections chain (4 objections)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand Misheck - take all the time you need! I can hold this pricing for you for 48 hours. Shall I go ahead and lock this in for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-011</td>
+        <td>Hard - Multiple objections chain (4 objections)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>72/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Sara — family and business decisions matter! I&#39;ll hold this pricing on the 16mm white melamine chipboard for 48 hours so you can discuss it. Shall I send over the quote PDF so you can share it with them?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-012</td>
+        <td>Hard - Multiple objections chain (4 objections)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Themba - no rush at all! I will hold this pricing for 48 hours so you don&#39;t miss out. Shall I go ahead and process this order for you today to secure your items?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-013</td>
+        <td>Hard - Multiple objections chain (4 objections)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>75/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand — business decisions matter! I&#39;ll hold this pricing on the 16mm white melamine chipboard for 48 hours so you can discuss it with your boss. 
+
+Would you like me to resend the quote PDF so you can share it with them?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-014</td>
+        <td>Hard - Frustrated/angry customer</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>100/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand your frustration, Siphiwe, and I deeply apologize for the poor experience. Our team is standing by to prioritize your order of 16mm White Melamine Chipboard right away with guaranteed fast delivery. Should I get this ready for you so we can turn this around?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-015</td>
+        <td>Hard - Frustrated/angry customer</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>66/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand your frustration, Andile, and I sincerely apologize for the lack of response from our Johannesburg branch. I have flagged this directly with our sales team so someone can assist you personally right away. May I get your quote for the boards sorted for you now so we can make this right?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-016</td>
+        <td>Hard - Frustrated/angry customer</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>80/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand your frustration, Hendrik, and I sincerely apologize for the delay. I will personally make sure your order for 20 sheets of 16mm white melamine chipboard is prioritized and processed immediately to make things right. Shall I go ahead and get this order locked in for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-017</td>
+        <td>Hard - Frustrated/angry customer</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="bad"><strong>8/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-018</td>
+        <td>Hard - Ghosting after quote (one-word replies)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>66/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Sounds good, Katlego! No rush at all—our sales team will be ready whenever you are. In the meantime, if you&#39;d like to check out any standard melamine board options or hardware, just let me know! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-019</td>
+        <td>Hard - Ghosting after quote (one-word replies)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>50/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Hi Riaan! Here is your quote for 20 sheets of 16mm White Melamine Chipboard: total is R13,000 (VAT incl). 
+
+You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-2995
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-020</td>
+        <td>Hard - Ghosting after quote (one-word replies)</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>100/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Sounds good, Ntombi! I&#39;ve saved your quote for the white melamine chipboard. 
+
+When would be a good time for me to follow up with you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-021</td>
+        <td>Hard - Unrealistic demand: Can you cut 50 pieces for R500? That&#39;s all I can p</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>80/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Jaco — take your time! I can hold this pricing on our white melamine chipboard for 48 hours for you. Shall I go ahead and reserve this quantity for you now?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-022</td>
+        <td>Hard - Unrealistic demand: I need 100 sheets delivered tomorrow for half the </td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>83/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Prisha! I can hold this pricing on the 18mm White Melamine Chipboard for 48 hours while you decide. Shall I go ahead and lock this pricing in for you today?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-023</td>
+        <td>Hard - Unrealistic demand: Can you give me boards at cost price? I&#39;m a regula</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>83/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Olebogeng — no rush at all! I&#39;ve saved your quote for the 16mm melamine MDF and will hold this wholesale pricing for you for 48 hours. Shall I secure this stock for you now so we&#39;re ready when you are?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-024</td>
+        <td>Hard - Authority objection: I need to discuss with my wife first bef</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>97/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>No problem at all, Sbu! I&#39;ve saved your White Melamine quote and will hold the stock for 48 hours. Should I secure these sheets for you now so they&#39;re ready as soon as you give the green light?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-025</td>
+        <td>Hard - Authority objection: I have to check with my boss, he makes t</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="bad"><strong>8/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-026</td>
+        <td>Hard - Authority objection: Let me talk to my business partner and g</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>40/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge fail">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Aisha — business decisions are important! I can send you the official quote PDF right now so you have all the exact pricing to share with your partner. Shall I go ahead and generate that for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-027</td>
+        <td>Hard - Timing objection: I&#39;m not ready to buy right now, maybe ne</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>97/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Sounds great, Nokuthula! I&#39;ve saved your 16mm MDF and melamine quote details for whenever you need them. Would it be okay if I check in with you early next month to see if you&#39;re ready to process the order?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-028</td>
+        <td>Hard - Timing objection: I&#39;m just looking for now, I&#39;ll buy when </td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="warn"><strong>66/100</strong></td>
+        <td class="warn">follow_up</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Sounds good, Imran! I&#39;ll save everything and hold the pricing for you. Shall I send over the PDF quote so you have it ready for your project?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-029</td>
+        <td>Hard - Timing objection: It&#39;s too soon, I need to finish my curre</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>100/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Sounds good Bafana! I&#39;ve saved your quote for the charcoal grey gloss melamine board. Would you like me to follow up with you next week to see how your project is progressing?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-H-030</td>
+        <td>Hard - Quality skepticism: boards delaminate</td>
+        <td><span class="diff-badge hard">hard</span></td>
+        <td class="good"><strong>97/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand your concern, Adriaan. I&#39;m connecting you with our sales team right now so they can discuss our quality guarantees and board specs with you directly. Someone from our team will reach out to you shortly! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-001</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>72/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-002</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>44/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-003</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-004</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>77/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-005</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-006</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>44/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-007</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-008</td>
+        <td>Medium - Vague inquiry: customer unsure of product</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>44/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-009</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Faizel - take your time! I can hold this pricing on your 25 sheets of White Melamine Chipboard for 48 hours. Shall I go ahead and process this order for you so stock is secured?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-010</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Dumi! I can hold this pricing on your White Melamine Chipboard sheets for 48 hours so you can take your time. Shall I go ahead and process this order for you so it&#39;s locked in?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-011</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand — no rush at all! I&#39;ve saved your quote for the white melamine boards and can hold the pricing at our Pretoria branch for 48 hours. 
+
+Shall I secure this quantity for you now so it&#39;s locked in?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-012</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Prisha — no rush at all! I will hold this pricing for your 16mm melamine sheets for 48 hours. 
+
+Shall I go ahead and process this order for you so we can secure your stock? 😊</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-013</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Olebogeng — no rush at all! I can lock in this pricing on your 16mm white melamine boards for 48 hours so your stock is reserved. Shall I go ahead and secure these 30 sheets for you now?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-014</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>77/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Morne! Take your time. I can hold this pricing for you for 48 hours. Shall I go ahead and process this order for you so stock is secured? 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-015</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>92/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Fatima! Take all the time you need. I can hold this pricing on your White Melamine boards for 48 hours so you don&#39;t lose out on stock. Should I get this order ready for you in the meantime? 😊</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-016</td>
+        <td>Medium - Price shopper: comparing suppliers</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>89/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge pass">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I completely understand, Sbu! Take your time. I can hold this pricing on the White Melamine Chipboard for 48 hours for you. 
+
+Shall I secure the 15 sheets for you now so stock doesn&#39;t run out?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-017</td>
+        <td>Medium - Location-bound: customer in Wynberg</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-018</td>
+        <td>Medium - Location-bound: customer in Secunda</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-019</td>
+        <td>Medium - Location-bound: customer in Brits</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-020</td>
+        <td>Medium - Location-bound: customer in Richardsbay</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-021</td>
+        <td>Medium - Location-bound: customer in Klerksdorp</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-022</td>
+        <td>Medium - Location-bound: customer in Empangeni</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-023</td>
+        <td>Medium - Location-bound: customer in Burgersfort</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>8/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-024</td>
+        <td>Medium - Project: Creating a TV stand and walldrop</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-025</td>
+        <td>Medium - Project: I need a new kitchen install, looking fo</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>16/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-026</td>
+        <td>Medium - Project: Building wardrobe and kitchen cupboards</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>39/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-027</td>
+        <td>Medium - Project: Making bathroom cabinets</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>39/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-028</td>
+        <td>Medium - Project: I&#39;m building shop shelves, need strong b</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>44/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-029</td>
+        <td>Medium - Project: Renovating my kitchen, need melamine for</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-030</td>
+        <td>Medium - Project: Building a bedroom vanity and closet</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>75/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>The next step is to secure your order! You can pay securely online via card or instant EFT using this payment link: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-8846&amp;amount=7800.00&amp;customerName=Janine%20W. 
+
+Once paid, our branch team will get your 12 sheets of white melamine chipboard prepared and scheduled for delivery to Vereeniging! Ready to complete the payment now?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-031</td>
+        <td>Medium - Cut and edge inquiry in Hammanskraal</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;ve generated your quote for 12 sheets of UV Charcoal Grey melamine board for R24,000 incl VAT. You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-3049
+
+To place your order, you can pay securely online here: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-3049&amp;amount=24000.00&amp;customerName=Mxolisi%20D
+
+Would you prefer to pay online now or via bank transfer?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-032</td>
+        <td>Medium - Cut and edge inquiry in Vosloorus</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;ve generated your quote for the 8 sheets of high gloss UV white board at R22,400 (VAT incl). Here is your quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-0073
+
+To place your order, you can pay securely online here: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-0073&amp;amount=22400.00&amp;customerName=Hannelie%20S
+
+Shall I go ahead and lock this order in for you now?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-033</td>
+        <td>Medium - Cut and edge inquiry in Olievehoutbosch</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Awesome! You can pay securely online for your 16mm white melamine chipboard order right here: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-1732&amp;amount=19500.00&amp;customerName=Reza%20M 💳
+
+Once payment is complete, we&#39;ll start production right away. Ready to complete the payment?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-034</td>
+        <td>Medium - Cut and edge inquiry in Soshanguve</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Once our sales team contacts you with your quote, they will guide you step-by-step to finalize the order. You can pay via EFT into our bank account or by card to get it processed right away! 😊</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-035</td>
+        <td>Medium - Cut and edge inquiry in Alexandra</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>You can complete your order right now using this secure card payment link: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-0302&amp;amount=6500.00&amp;customerName=Moses%20T 💳
+
+Once paid, we&#39;ll get your 10 sheets of 16mm White Melamine Chipboard cut and ready for you. Would you like to pay online now or perform an EFT transfer?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-036</td>
+        <td>Medium - Color/image inquiry: I&#39;m looking for charcoal grey gloss boar</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>72/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-037</td>
+        <td>Medium - Color/image inquiry: Do you have high gloss plain white UV bo</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;ve generated your quote for 30 sheets of UV Iceberg White high gloss board at R84,000 (VAT incl). You can download your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-9246. 
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-038</td>
+        <td>Medium - Color/image inquiry: I need white melamine, but a specific sh</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>20/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-039</td>
+        <td>Medium - Color/image inquiry: I&#39;m looking for a wood grain finish boar</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>41/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-040</td>
+        <td>Medium - Color/image inquiry: Do you have gloss boards in dark colors?</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Awesome, Nokwanda! You can pay securely online for your 15 sheets of high gloss melamine boards using this link: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-5459&amp;amount=30000.00&amp;customerName=Nokwanda%20S
+
+Once payment is complete, we&#39;ll process your order immediately. Would you prefer to pay via this card link or by EFT?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-041</td>
+        <td>Medium - Quantity uncertain: 3m kitchen</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-042</td>
+        <td>Medium - Quantity uncertain: 2m wardrobe</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-043</td>
+        <td>Medium - Quantity uncertain: TV stand</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>39/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-044</td>
+        <td>Medium - Quantity uncertain: bathroom vanity</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Awesome, thanks Mandla! 🎉 Here is your secure payment link for the 2 sheets of 16mm white melamine chipboard (R1,300 incl VAT):
+
+https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-3704&amp;amount=1300.00&amp;customerName=Mandla%20D
+
+Would you prefer to collect from our Nelspruit branch once ready, or shall we arrange delivery?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-045</td>
+        <td>Medium - Quantity uncertain: bookshelf wall unit</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>21/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Let me get a sales agent to help you with this right away. 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-046</td>
+        <td>Medium - Payment questions before committing</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Awesome, Thabo! I have created your quote for 30 sheets of 16mm white melamine chipboard total R19,500 (incl. VAT): https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-8787
+
+You can complete your payment securely online right here: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-8787&amp;amount=19500.00&amp;customerName=Thabo%20M
+
+Should I arrange delivery to Soshanguve for you as soon as payment goes through?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-047</td>
+        <td>Medium - Payment questions before committing</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="bad"><strong>0/100</strong></td>
+        <td class="bad">lost</td>
+        <td class="stages"><span class="stage-badge fail">G</span> <span class="stage-badge fail">D</span> <span class="stage-badge fail">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge fail">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-048</td>
+        <td>Medium - Payment questions before committing</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="warn"><strong>67/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Awesome news, Lebo! 🎉 You can pay securely for your 10 sheets of White Melamine Chipboard using this link: https://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260812-8887&amp;amount=6500.00&amp;customerName=Lebo%20K
+
+Once completed, we will get your order ready immediately. Would you prefer us to arrange delivery to Wynberg or will you be collecting from our branch?</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-049</td>
+        <td>Medium - Payment questions before committing</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+<tr>
+        <td>SS-M-050</td>
+        <td>Medium - Payment questions before committing</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>70/100</strong></td>
+        <td class="good">converted</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge fail">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! 👍</pre></details></td>
+      </tr>
+</tbody>
+</table>
+
+<h2>Improvement Recommendations</h2>
+<div class="recommendations">
+  <ol>
+    <li><span class="priority high">[HIGH]</span> <strong>Funnel drop-off at follow_up stage</strong>: 56% of customers drop off between close and follow_up. This is the biggest bottleneck in the sales process. Focus on improving AI behavior at this stage.</li>
+    <li><span class="priority medium">[MEDIUM]</span> <strong>Moderate close rate (71%)</strong>: The AI closes sometimes but misses opportunities. Train the AI to recognize buying signals and attempt closes more aggressively.</li>
+    <li><span class="priority high">[HIGH]</span> <strong>Weak objection handling (35%)</strong>: The AI struggles to handle objections. Add more objection handling patterns to the system prompt — empathy phrases + value arguments for price, quality, timing, authority, and budget objections.</li>
+    <li><span class="priority high">[HIGH]</span> <strong>Quote generation issues (60%)</strong>: The AI is not generating quotes reliably. This may be a tool-calling issue — verify the generate_quote tool is working and the AI is calling it correctly.</li>
+    <li><span class="priority high">[HIGH]</span> <strong>Easy customers not being closed (45%)</strong>: The AI should be closing nearly all easy customers. These are ready-to-buy customers — the AI just needs to quote and ask for the order. Review the close attempt logic.</li>
+    <li><span class="priority medium">[MEDIUM]</span> <strong>Low follow-up rate (15%)</strong>: The AI rarely keeps the door open for future business. Add follow-up language to the system prompt — "feel free to reach out", "when you're ready", "I'll save your quote".</li>
+    <li><span class="priority medium">[MEDIUM]</span> <strong>Worst persona type: location_bound (avg 19/100)</strong>: The AI struggles most with this customer type. Review the conversation patterns and add specific handling instructions to the system prompt.</li>
+    <li><span class="priority low">[LOW]</span> <strong>Best persona type: quality_skepticism (avg 97/100)</strong>: The AI handles this customer type well. Use these successful patterns as a model for improving other persona types.</li>
+  </ol>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "run_id": "run-2026-08-14T12-29-21-057Z",
+  "started_at": "2026-08-14T12:29:00.336Z",
+  "finished_at": "2026-08-14T12:29:21.056Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "branch_banking": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 18620,
+      "p95": 18620,
+      "avg": 18620
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 18620,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "While we don't have a physical branch in Cape Town, we deliver nationwide directly to your site! The address details and delivery arrangements can be confirmed upon order.\n\nI've set up a quote for 1 sheet of African Rosewood Linear melamine board at R1,065.00 incl. VAT (Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-3817).\n\nShall I go ahead and process this order for you?"
+    }
+  ]
+}

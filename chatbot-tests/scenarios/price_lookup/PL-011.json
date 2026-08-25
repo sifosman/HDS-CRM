@@ -1,0 +1,51 @@
+{
+  "id": "PL-011",
+  "name": "Alternative phrasing for price inquiry",
+  "category": "price_lookup",
+  "description": "Tests price lookup with a different phrasing of the price question. The customer asks 'How much would 1 sheet cost me?' without naming the product explicitly, relying on conversational context. Since there is no prior context, the AI should ask for clarification or look up a commonly referenced product.",
+  "phone_number": "27900000021",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "How much would 1 sheet of white melamine 16mm cost me?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests alternative phrasing of a price question. The customer frames it as a hypothetical ('would cost me') with a specific quantity (1 sheet). The AI should return the per-sheet price from the hds_prices table for 16mm white melamine."
+}

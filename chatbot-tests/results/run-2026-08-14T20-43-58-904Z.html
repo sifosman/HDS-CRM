@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-14T20-43-58-904Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-14T20-43-58-904Z<br>
+  Started: 2026-08-14T20:42:23.296Z | Finished: 2026-08-14T20:43:58.903Z<br>
+  Latency p50: 17173ms | p95: 34185ms | avg: 17559ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">10</div><div>total</div></div>
+  <div class="stat passed"><div class="big">8</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">2</div><div>failed</div></div>
+  <div class="stat"><div class="big">80.0%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card warn"><h3>branch_banking</h3>
+        <div class="big">8/10</div>
+        <div>80% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="passed">
+        <td>BB-001</td>
+        <td>Branch lookup - Cape Town</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>21658ms</td>
+        <td>generate_quote, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>While we do not have a physical branch directly in Cape Town, our main branch address details can be provided and we deliver our quality White Melamine boards right to your door across South Africa!
+
+I&#39;ve generated a quote for 1 sheet of White Melamine Chipboard (R720.00 incl. VAT and cutting):
+Quote ID: Q-20260814-7014
+Total: R720.00
+Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-7014
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-002</td>
+        <td>Banking details lookup</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>17652ms</td>
+        <td>get_branch, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test! Here are our banking details for EFT payment for our Bloemfontein branch:
+
+Account Name: Cane Group t/a Hds Bloemfontein  
+Account Number: 62820929711  
+Account Type: Enterprise Business Account  
+
+Please use your quote ID as your payment reference. Let me know which branch or city you are ordering from if you need details for a different branch!</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>BB-003</td>
+        <td>Branch lookup - Durban</td>
+        <td>branch_banking</td>
+        <td>FAIL</td>
+        <td>11103ms</td>
+        <td>lookup_price</td>
+        <td><ul><li>Expected tool &#39;get_branch&#39; was not called. Tools called: [lookup_price]</li><li>Reply does not contain keyword &#39;Durban&#39;. Last reply: &quot;I found some matching products for you:
+ACRYLIC White Matt 9x4x17 (R2250)
+MEL CHIP American White Oak LNR 9x6x16 DF (R795)
+MEL CHIP Iceberg White Linear 9x6x16 DF PG (R1250)
+MEL CHIP Iceberg White Pee…&quot;</li><li>Reply does not contain keyword &#39;address&#39;. Last reply: &quot;I found some matching products for you:
+ACRYLIC White Matt 9x4x17 (R2250)
+MEL CHIP American White Oak LNR 9x6x16 DF (R795)
+MEL CHIP Iceberg White Linear 9x6x16 DF PG (R1250)
+MEL CHIP Iceberg White Pee…&quot;</li></ul></td>
+        <td><details><summary>view</summary><pre>I found some matching products for you:
+ACRYLIC White Matt 9x4x17 (R2250)
+MEL CHIP American White Oak LNR 9x6x16 DF (R795)
+MEL CHIP Iceberg White Linear 9x6x16 DF PG (R1250)
+MEL CHIP Iceberg White Peen 9x6x16 DF PG (R1250)
+MEL CHIP Premium White Txt 9x6x16 DF (R650)
+
+Would you like me to generate a quote for any of these? Feel free to reach out anytime!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-004</td>
+        <td>Branch lookup - Johannesburg</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>17173ms</td>
+        <td>generate_quote, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Our Johannesburg branch address is located at our main hub in Johannesburg, open weekdays from 8:00 AM to 5:00 PM.
+
+I have generated a quote for 1 sheet of White Melamine Chipboard at R720.00 incl VAT (including cutting). You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-0147
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-005</td>
+        <td>Branch lookup - Pretoria</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>22819ms</td>
+        <td>generate_quote, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>We serve the Pretoria area! The address for our nearest branch location can be shared upon order confirmation, or we can arrange direct delivery to your site in Pretoria.
+
+I have generated a quote for 1 sheet of White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF):
+Total (incl VAT): R720.00
+Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-7412
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-006</td>
+        <td>General location question</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>13144ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>We have 32 HDS branch locations across South Africa! 📍 What city or suburb are you based in? If you tell me your city, such as Johannesburg, Pretoria, or Cape Town, I can give you the exact branch address closest to you!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-007</td>
+        <td>Banking details then branch follow-up</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>34185ms</td>
+        <td>generate_quote, get_branch, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>You can visit our Bloemfontein branch! The address is 6 Rhodes Ave, Oranjesig, Bloemfontein.
+
+I&#39;ve generated your quote for 1 sheet of White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF) for R720.00 incl VAT. You can download your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-2555
+
+Shall I go ahead and reserve this order for you to collect at the branch?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>BB-008</td>
+        <td>Branch trading hours - Cape Town</td>
+        <td>branch_banking</td>
+        <td>FAIL</td>
+        <td>14083ms</td>
+        <td>generate_quote</td>
+        <td><ul><li>Expected tool &#39;get_branch&#39; was not called. Tools called: [generate_quote]</li><li>Reply does not contain keyword &#39;Cape Town&#39;. Last reply: &quot;Here is your quote! 
+Quote ID: Q-20260814-6620
+TOTAL (VAT incl): R6500
+Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6620
+
+
+Shall I go ahead and pro…&quot;</li><li>Reply does not contain keyword &#39;branch&#39;. Last reply: &quot;Here is your quote! 
+Quote ID: Q-20260814-6620
+TOTAL (VAT incl): R6500
+Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6620
+
+
+Shall I go ahead and pro…&quot;</li></ul></td>
+        <td><details><summary>view</summary><pre>Here is your quote! 
+Quote ID: Q-20260814-6620
+TOTAL (VAT incl): R6500
+Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6620
+
+
+Shall I go ahead and process this order for you? I can hold this pricing for 48 hours.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-009</td>
+        <td>All branches list</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>7995ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>We have 32 HDS branch locations across South Africa, with our main branch in Johannesburg. If you share your city or area, I can give you the exact address for your nearest branch! 
+
+What project are you working on today, Test Branch Customer?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-010</td>
+        <td>Banking details for Johannesburg branch</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>15782ms</td>
+        <td>get_branch, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test! For our Johannesburg branch, payment is made into our bank account using your quote ID as the payment reference. 
+
+Could you let me know which area in Johannesburg you&#39;re located in so I can give you the exact branch address details?</pre></details></td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

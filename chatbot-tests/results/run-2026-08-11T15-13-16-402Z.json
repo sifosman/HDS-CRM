@@ -1,0 +1,53 @@
+{
+  "run_id": "run-2026-08-11T15-13-16-402Z",
+  "started_at": "2026-08-11T15:13:03.665Z",
+  "finished_at": "2026-08-11T15:13:16.402Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 11652,
+      "p95": 11652,
+      "avg": 11652
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-015",
+      "name": "Quote generation - edge case 50 sheets",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 11652,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now. Could you confirm the exact material name and quantity you need? I'll get it sorted for you straight away."
+    }
+  ]
+}

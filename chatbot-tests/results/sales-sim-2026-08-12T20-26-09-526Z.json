@@ -1,0 +1,163 @@
+{
+  "run_id": "sales-sim-2026-08-12T20-26-09-526Z",
+  "started_at": "2026-08-12T20:25:23.238Z",
+  "finished_at": "2026-08-12T20:26:09.525Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 77,
+    "byDifficulty": {
+      "easy": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "medium": {
+        "count": 1,
+        "scores": [
+          77
+        ],
+        "outcomes": {
+          "handover": 1
+        },
+        "avgScore": 77
+      },
+      "hard": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 1,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 0,
+        "total": 1
+      },
+      "close": {
+        "passed": 1,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 1,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 100,
+      "quote": 100,
+      "objection_handling": 0,
+      "close": 100,
+      "follow_up": 100
+    },
+    "outcomeCounts": {
+      "converted": 0,
+      "follow_up": 0,
+      "lost": 0,
+      "handover": 1
+    },
+    "conversionRate": 0,
+    "byPersonaType": {
+      "vague_inquiry": {
+        "count": 1,
+        "scores": [
+          77
+        ],
+        "outcomes": {
+          "handover": 1
+        },
+        "avgScore": 77
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-M-002",
+      "name": "Medium - Vague inquiry: customer unsure of product",
+      "category": "sales_simulation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price, handover]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 44932,
+      "tool_calls": [
+        "lookup_price",
+        "handover"
+      ],
+      "assistant_reply_count": 3,
+      "last_reply": "Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍",
+      "sales_score": 77,
+      "sales_outcome": "handover",
+      "sales_difficulty": "medium",
+      "sales_persona_type": "vague_inquiry",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": true,
+        "quote": true,
+        "objection_handling": false,
+        "close": true,
+        "follow_up": true
+      },
+      "sales_summary": "Score 77/100 (medium) — Outcome: handover. Stages passed: greeting, discovery, quote, close, follow_up. Stages missed: objection_handling."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-M-002",
+      "score": 77,
+      "outcome": "handover",
+      "difficulty": "medium",
+      "persona_type": "vague_inquiry",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "close": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "follow_up": {
+          "passed": true,
+          "detail": "Stage reached"
+        }
+      },
+      "summary": "Score 77/100 (medium) — Outcome: handover. Stages passed: greeting, discovery, quote, close, follow_up. Stages missed: objection_handling."
+    }
+  ]
+}

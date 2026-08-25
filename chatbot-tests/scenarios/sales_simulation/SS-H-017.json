@@ -1,0 +1,82 @@
+{
+  "id": "SS-H-017",
+  "name": "Hard - Frustrated/angry customer",
+  "category": "sales_simulation",
+  "difficulty": "hard",
+  "persona_type": "frustrated",
+  "customer_name": "Yusuf A",
+  "customer_profile": "Customer in Soshanguve who is already upset and frustrated",
+  "phone_number": "27900000486",
+  "sender_name": "Yusuf A",
+  "messages": [
+    {
+      "text": "Hi, I need 15 sheets of 18mm white melamine chipboard. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I called the numbers you gave me, they're all unavailable. How am I supposed to place an order?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "I don't know if I even want to buy from you guys anymore.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "objection",
+      "description": "AI should handle objections with empathy and value"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "follow_up",
+      "description": "AI should keep the door open or schedule follow-up"
+    },
+    {
+      "type": "objection_handled",
+      "objection_type": "service",
+      "description": "AI should de-escalate the frustration with empathy and apology"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Frustrated customer. AI should de-escalate, apologize, address the concern, and attempt to save the sale."
+}

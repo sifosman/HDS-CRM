@@ -1,0 +1,48 @@
+{
+  "id": "BB-010",
+  "name": "Banking details for Johannesburg branch",
+  "category": "branch_banking",
+  "description": "Customer asks for banking details tied to the Johannesburg branch. AI should use get_branch and get_banking to return branch-specific banking details.",
+  "phone_number": "27900000050",
+  "sender_name": "Test Banking Customer",
+  "messages": [
+    {
+      "text": "What are the banking details for your Johannesburg branch?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch",
+    "get_banking"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "Johannesburg",
+      "description": "Reply should mention Johannesburg"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "account",
+      "description": "Reply should contain account details"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies combined get_branch and get_banking tool use for branch-specific banking details."
+}

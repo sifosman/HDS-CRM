@@ -1,0 +1,450 @@
+{
+  "run_id": "run-2026-08-22T14-47-08-070Z",
+  "started_at": "2026-08-22T14:41:54.574Z",
+  "finished_at": "2026-08-22T14:47:08.069Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 20,
+    "passed": 11,
+    "failed": 9,
+    "skipped": 0,
+    "pass_rate": "55.0%",
+    "by_category": {
+      "adversarial_edge": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "branch_banking": {
+        "total": 2,
+        "passed": 1,
+        "failed": 1
+      },
+      "consultant": {
+        "total": 6,
+        "passed": 3,
+        "failed": 3
+      },
+      "greeting": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "hardware_upsell": {
+        "total": 4,
+        "passed": 2,
+        "failed": 2
+      },
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "price_lookup": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "quote_generation": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "returning_customer": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "sales_closing": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 19452,
+      "p95": 57793,
+      "avg": 24286
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "AE-003",
+      "name": "Adversarial - extremely long message",
+      "category": "adversarial_edge",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 51397ms exceeds max 20000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 51397,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey Long Message! 👋 You've already got quote **Q-20260822-7744** ready: 30 sheets Value White 16mm melamine + cutting = **R21,600 incl VAT**. PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-7744\n\nQuick answers to everything:\n\nYes we deliver to Pretoria East — your nearest branch is **HDS Waltloo**, address 321 Price Street, Waltloo, Pretoria (012 803 4739), and they'll confirm the delivery rate. Banking: account name HDS Waltloo, account number 126222…"
+    },
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 27164,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've done a thorough search across Cape Town and all the surrounding areas — Cape Town itself, Bellville, Paarl, Stellenbosch, Somerset West, Kuils River, Goodwood, Parow, Brackenfell, Montague Gardens, Worcester, and George — and I can confirm we don't currently have an HDS branch in the Cape Town / Western Cape area. Our branches are based in other regions of South Africa.\n\nI'm sorry I can't give you a local address. The good news is we can still supply your boards — I can put together a quote…"
+    },
+    {
+      "scenario_id": "BB-003",
+      "name": "Branch lookup - Durban",
+      "category": "branch_banking",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'address'. Last reply: \"Sorry for the repeat — we don't have a branch in Durban itself 🙈 The closest KZN branches are HDS PMB at 10 Birmingham Road, Willowton, Pietermaritzburg (Tel: 031 001 5085) and HDS South Coast at 3 Q…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 16816,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Sorry for the repeat — we don't have a branch in Durban itself 🙈 The closest KZN branches are HDS PMB at 10 Birmingham Road, Willowton, Pietermaritzburg (Tel: 031 001 5085) and HDS South Coast at 3 Quality Street, Grosvenor, Port Shepstone (Tel: 039 682 0344). Which area of Durban are you in so I can point you to the closest one?"
+    },
+    {
+      "scenario_id": "HC-001",
+      "name": "Homeowner consultant mode - kitchen renovation",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 22314,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Sarah, for kitchen cabinets I'd go with White Melamine Chipboard 16mm — it's durable, easy to clean, and the best value for a full kitchen. 😊\n\nIf you send me a photo of your kitchen, I can help work out the measurements and even draw up a cutting sketch for your carpenter. Want to give that a try?"
+    },
+    {
+      "scenario_id": "HC-002",
+      "name": "Homeowner - image service offered selectively",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 19452,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey John! Welcome back 🙂 You've already got two quotes saved with us, so you're closer than you think.\n\nEasiest next step: just snap a photo of the garage wall where the cabinets will go and send it here — I'll work out the measurements and a cutting sketch so you know *exactly* what to get. Sound good?"
+    },
+    {
+      "scenario_id": "HC-003",
+      "name": "Carpenter NOT offered image service",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8909,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Mike! That quote is already waiting for you 😊 Quote Q-20260822-2327: 20 sheets of White Melamine Chipboard 16mm, R14,400 incl. VAT. PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-2327\n\nWhich area are you in? I'll assign it to your nearest branch so you can collect."
+    },
+    {
+      "scenario_id": "HC-006",
+      "name": "Homeowner sends partial kitchen photo - AI asks for another photo",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [another photo, other side, left side, right side, wider, more of, full kitchen, different angle, second photo, more light, clearer]. Last reply: \"Thanks, Lerato — got the photo again! 😊 Your quote's already ready: **8 sheets White Melamine Chipboard 16mm at R5,760 incl. VAT** (Quote Q-20260822-9571).\n\nTo get this sorted, which area are you in?…\""
+        },
+        {
+          "type": "not_contains_keyword",
+          "detail": "Reply contains forbidden keyword 'quote'. Reply: \"Thanks, Lerato — got the photo again! 😊 Your quote's already ready: **8 sheets White Melamine Chipboard 16mm at R5,760 incl. VAT** (Quote Q-20260822-9571).\n\nTo get this sorted, which area are you in?…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 8890,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks, Lerato — got the photo again! 😊 Your quote's already ready: **8 sheets White Melamine Chipboard 16mm at R5,760 incl. VAT** (Quote Q-20260822-9571).\n\nTo get this sorted, which area are you in? I'll assign it to your nearest HDS branch so you can collect."
+    },
+    {
+      "scenario_id": "HC-007",
+      "name": "Homeowner sends blurry/dark photo - AI asks for clearer photo",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [clearer, better light, more light, another photo, better photo, can't see, hard to see, not clear, blurry, dark, take another]. Last reply: \"Thanks for the photo again, Pieter! 👍 Your quote's all set — 9 sheets of Value White melamine 16mm at R6,480 incl. VAT and cutting.\n\nTo get your order processed, I just need to know which area or cit…\""
+        },
+        {
+          "type": "not_contains_keyword",
+          "detail": "Reply contains forbidden keyword 'quote'. Reply: \"Thanks for the photo again, Pieter! 👍 Your quote's all set — 9 sheets of Value White melamine 16mm at R6,480 incl. VAT and cutting.\n\nTo get your order processed, I just need to know which area or cit…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 12267,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks for the photo again, Pieter! 👍 Your quote's all set — 9 sheets of Value White melamine 16mm at R6,480 incl. VAT and cutting.\n\nTo get your order processed, I just need to know which area or city you're in so I can assign it to your nearest HDS branch for collection. Where are you based?"
+    },
+    {
+      "scenario_id": "HC-008",
+      "name": "Homeowner has no more photos - AI proceeds with estimates",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [no problem, work with, that's fine, no worries, that's okay, completely fine, totally fine]. Last reply: \"Nomsa, the photo is perfect — I don't need another one! 😊\n\nI just need you to **type the name of your city or area** so I can set up collection. For example, just reply with a word like:\n\n- Johannesb…\""
+        },
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [carpenter, verify, on site, measure]. Last reply: \"Nomsa, the photo is perfect — I don't need another one! 😊\n\nI just need you to **type the name of your city or area** so I can set up collection. For example, just reply with a word like:\n\n- Johannesb…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 41194,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Nomsa, the photo is perfect — I don't need another one! 😊\n\nI just need you to **type the name of your city or area** so I can set up collection. For example, just reply with a word like:\n\n- Johannesburg\n- Durban\n- Cape Town\n- Pretoria\n- Soweto\n- Pietermaritzburg\n\nWhich area are you in? Just type the name and I'll handle the rest!"
+    },
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 18354,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey! 😊 Quick rundown: we stock melamine chipboard, MDF, UV gloss, and plywood — all cut to size at our factory. Our bestseller is White Melamine Chipboard 16mm, perfect for cabinets and cupboards. Want me to put together a quote for you? Just let me know how many sheets you need."
+    },
+    {
+      "scenario_id": "HU-001",
+      "name": "Hardware upsell - customer asks about handles",
+      "category": "hardware_upsell",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 13407,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Just sent the handle range above 👆 — 8 styles from R3 PVC up to R165 Juliette Aluminium. Tap through the images and let me know which ones you like and how many you need — I'll get you a quote right away. 😊"
+    },
+    {
+      "scenario_id": "HU-003",
+      "name": "Hardware upsell - customer asks about hinges",
+      "category": "hardware_upsell",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 9612,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! Yes, we stock them — the Soft Close Full-Overlay 4 Hole Clip-On Hinge at R14 each (photos above 👆). Just let me know how many you need and I'll get your quote ready in seconds."
+    },
+    {
+      "scenario_id": "HU-004",
+      "name": "Hardware upsell - customer asks about drawer runners",
+      "category": "hardware_upsell",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 17778,
+      "tool_calls": [
+        "lookup_price",
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey Test Runners! I've sent through our drawer runner range a few times now 😊\n\nHere's the quick summary of what we stock:\n\n**Types available:**\n- White Roller Runner – R13\n- Ball Bearing Full Extension – R38\n- Ball Bearing Soft Close – R77\n- Ball Bearing Push to Open – R82\n- Under Mount Soft Close – R166\n- Metal Box System 500mm – R375 to R445\n\nMost of these come in standard kitchen drawer lengths (400mm, 450mm, 500mm, 550mm).\n\nTo get you a proper quote, I just need two things:\n\n1. Which type d…"
+    },
+    {
+      "scenario_id": "HU-005",
+      "name": "Hardware upsell - complete kitchen build bundle",
+      "category": "hardware_upsell",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 27514,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Dakota Oak Linear is my top pick for a modern look, Test Bundle — warm wood grain melamine that looks stunning with the black aluminium handles and soft-close hardware already in your quote. Everything's ready at R11,790 incl. VAT (Quote Q-20260822-0944). Which area are you in so I can assign it to your nearest branch for collection?"
+    },
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 41494,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I hear you, Objection Test — R14,400 is a real outlay. But at R650/sheet with cutting included, you're getting precision-ready boards with no hidden extras. Would 10 sheets to start work better for your budget? I can quote that right away."
+    },
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 40730,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "R650/sheet for the MEL CHIP Value White 9x6x16 DF (16mm) melamine 🙂 Most customers order around 10 sheets — want me to just quote you for 10 so you have the full breakdown on paper?"
+    },
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8032,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Test Customer, you're all set — your latest quote **Q-20260822-0563** is ready: 20 sheets White Melamine Chipboard 16mm, **R14,400** incl. VAT. 📋 PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-0563\n\nTo get your order moving, which area or city are you in? I'll assign your nearest HDS branch for collection."
+    },
+    {
+      "scenario_id": "QG-005",
+      "name": "Quote generation - MDF 18mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10806,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I've already got that quote ready for you 😊 Just a reminder — we don't stock plain 18mm MDF, so I quoted 12 sheets of **MEL MDF Platinum White 16mm** at R1 250/sheet. Total: **R15 840.00 incl. VAT** (cutting included).\n\nQuote ID: Q-20260822-4210\n📄 https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-4210\n\nWhich area are you in so I can assign this to your nearest branch? Or would you prefer a different material?"
+    },
+    {
+      "scenario_id": "RC-001",
+      "name": "Returning customer - greeted by name",
+      "category": "returning_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 57793ms exceeds max 45000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 57793,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hey Returning Test, welcome back! 😊 Quote Q-20260822-5067 is still ready to go — 20 sheets White Melamine Chipboard 16mm at R14,400 incl. VAT.\n\nOne quick thing to move forward: which area or city are you in? I'll assign your nearest branch for collection."
+    },
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price, get_branch]"
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]"
+        }
+      ],
+      "latency_ms": 31798,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Glad you're happy with the quote, Close! To get your order processed, I just need to know where you'll collect. Are you near Johannesburg, Durban, Cape Town, or Pretoria? Just tell me the closest city and I'll sort the rest. 😊"
+    }
+  ]
+}

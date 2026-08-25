@@ -1,0 +1,63 @@
+{
+  "id": "SS-E-018",
+  "name": "Easy - Project ready: TV stand with 8 sheets 16mm MDF board",
+  "category": "sales_simulation",
+  "difficulty": "easy",
+  "persona_type": "project_ready",
+  "customer_name": "Themba R",
+  "customer_profile": "Customer in Louis Trichardt building TV stand, clear specs",
+  "phone_number": "27900000417",
+  "sender_name": "Themba R",
+  "messages": [
+    {
+      "text": "Hi, I'm building TV stand. I need 8 sheets of 16mm MDF board, cut and edge. Can you quote me?",
+      "delay_ms": 0
+    },
+    {
+      "text": "That works for me. When can I collect?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Project-driven customer with clear specs. AI should quote and close."
+}

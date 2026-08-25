@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-11T12-21-29-099Z",
+  "started_at": "2026-08-11T12:21:05.204Z",
+  "finished_at": "2026-08-11T12:21:29.098Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 21031,
+      "p95": 21031,
+      "avg": 21031
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "OH-005",
+      "name": "Need to check with partner objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: authority' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 21031,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand, David—family decisions matter! I'll hold this pricing of R13,000 for 48 hours while you chat with her. \n\nOnce she gives the thumbs up, shall I go ahead and get this order processed for you? 😊"
+    }
+  ]
+}

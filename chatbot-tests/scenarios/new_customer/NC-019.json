@@ -1,0 +1,53 @@
+{
+  "id": "NC-019",
+  "name": "Full kitchen quote with hardware",
+  "category": "new_customer",
+  "description": "New customer wants a complete kitchen quote including hardware.",
+  "phone_number": "27900000819",
+  "sender_name": "New Customer 19",
+  "messages": [
+    {
+      "text": "I want a quote for a full kitchen: 10 sheets white melamine + handles and hinges",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain pricing"
+    },
+    {
+      "type": "quote_generated",
+      "description": "Quote should include hardware"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 40000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Hardware quoting test. AI should include hardware in quote."
+}

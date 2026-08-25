@@ -1,0 +1,40 @@
+{
+  "id": "HC-006",
+  "name": "Homeowner sends partial kitchen photo - AI asks for another photo",
+  "category": "consultant",
+  "description": "Homeowner sends a photo that only shows part of their kitchen. The image analysis indicates ANOTHER PHOTO is needed. AI should ask the customer for an additional photo showing the missing area, and should NOT generate a quote or offer a sketch yet.",
+  "phone_number": "27900000506",
+  "sender_name": "Lerato",
+  "messages": [
+    {
+      "type": "image",
+      "media_id": "test-partial-kitchen-001",
+      "caption": "Here's my kitchen",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "forbidden_patterns": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 45 seconds (image analysis takes longer)"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": ["another photo", "other side", "left side", "right side", "wider", "more of", "full kitchen", "different angle", "second photo", "more light", "clearer"],
+      "description": "AI should ask for another photo showing the missing part of the kitchen"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "quote",
+      "description": "AI should NOT generate a quote yet - wait for the second photo"
+    }
+  ]
+}

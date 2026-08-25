@@ -1,0 +1,33 @@
+{
+  "id": "HC-004",
+  "name": "Confused customer - decision simplification",
+  "category": "consultant",
+  "description": "Customer is overwhelmed by too many options. AI should recommend ONE product, not list many options.",
+  "phone_number": "27900000504",
+  "sender_name": "Lisa",
+  "messages": [
+    {
+      "text": "Hi, I need boards for my kitchen cabinets but there are so many options I don't know what to choose. Can you help?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 30000,
+      "description": "Reply should arrive within 30 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "melamine",
+      "description": "AI should recommend melamine (the default/popular product)"
+    }
+  ],
+  "forbidden_patterns": []
+}

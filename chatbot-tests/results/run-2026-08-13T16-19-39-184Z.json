@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-13T16-19-39-184Z",
+  "started_at": "2026-08-13T16:19:24.770Z",
+  "finished_at": "2026-08-13T16:19:39.184Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 13658,
+      "p95": 13658,
+      "avg": 13658
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-003",
+      "name": "Quote generation - 5 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13658,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! Here is your quote for 5 sheets of Value White Melamine 16mm. \n\nThe total comes to R3,600.00 incl. VAT and cutting fees. You can view your formal quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-7881\n\nShall I go ahead and process this order for you?"
+    }
+  ]
+}

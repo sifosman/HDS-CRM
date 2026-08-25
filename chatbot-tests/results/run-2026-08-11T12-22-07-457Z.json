@@ -1,0 +1,60 @@
+{
+  "run_id": "run-2026-08-11T12-22-07-457Z",
+  "started_at": "2026-08-11T12:21:33.260Z",
+  "finished_at": "2026-08-11T12:22:07.457Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 32004,
+      "p95": 32004,
+      "avg": 32004
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "OH-004",
+      "name": "Need to think about it objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called (likely didn't complete before objection arrived), but objection was handled and close was attempted. Tools called: [lookup_price, handover]"
+        },
+        {
+          "type": "objection_handled",
+          "detail": "Partial objection handling: has empathy  but not both. Reply: \"I completely understand, Mike – take all the time you need! I can hold this pricing for 48 hours for you. Shall I go ahead and reserve these 20 sheets…\""
+        },
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: think_about_it' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 32004,
+      "tool_calls": [
+        "lookup_price",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand, Mike – take all the time you need! I can hold this pricing for 48 hours for you. Shall I go ahead and reserve these 20 sheets so they don't sell out? 👍"
+    }
+  ]
+}

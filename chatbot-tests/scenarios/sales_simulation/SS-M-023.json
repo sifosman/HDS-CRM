@@ -1,0 +1,68 @@
+{
+  "id": "SS-M-023",
+  "name": "Medium - Location-bound: customer in Burgersfort",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "location_bound",
+  "customer_name": "Bafana M",
+  "customer_profile": "Customer in Burgersfort, location drives the conversation",
+  "phone_number": "27900000442",
+  "sender_name": "Bafana M",
+  "messages": [
+    {
+      "text": "Hi, do you have a branch near Burgersfort?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I need 15 sheets of 16mm postform board. Can you deliver to Burgersfort?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Ok, can you give me a quote then?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "get_branch",
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Location-bound customer. AI should find nearest branch, confirm delivery, quote and close."
+}

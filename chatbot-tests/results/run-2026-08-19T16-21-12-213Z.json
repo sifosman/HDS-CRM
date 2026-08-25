@@ -1,0 +1,149 @@
+{
+  "run_id": "run-2026-08-19T16-21-12-213Z",
+  "started_at": "2026-08-19T16:20:47.700Z",
+  "finished_at": "2026-08-19T16:21:12.212Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "skipped": 0,
+    "pass_rate": "33.3%",
+    "by_category": {
+      "new_customer": {
+        "total": 6,
+        "passed": 2,
+        "failed": 4
+      }
+    },
+    "latency_ms": {
+      "p50": 5626,
+      "p95": 10794,
+      "avg": 6835
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "NC-008",
+      "name": "What colors available",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: []"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 5221,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Our melamine range includes:\n\n- Solid colors: White Melamine Chipboard, Black, Pearl Grey, Olivia, and Dune\n- Wood grains: Dakota Oak, Vintage Pine, Flagstaff Oak, and White Cedar\n\nIf you let me know what you're building and roughly how many sheets you need, I'd be happy to prepare a quote for you!"
+    },
+    {
+      "scenario_id": "NC-014",
+      "name": "What hardware do you sell",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 10794,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Yes, we supply a wide range of hardware for all your cabinetry needs:\n\n• **Handles:** Bar handles, profile handles, square, round, and PVC handles (from R3)\n• **Hinges:** Soft-close clip-on hinges (R14), standard flush hinges (from R3), 165° wide opening hinges, and corner hinges\n• **Drawer Runners:** White roller runners (from R13), soft-close ball bearing runners, and undermount slides\n• **Accessories:** Gas stays, push-to-open catches, cabinet legs, and fasteners\n\nLet me know what items and q…"
+    },
+    {
+      "scenario_id": "NC-015",
+      "name": "Quote for 5 sheets white melamine",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 10645,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "That comes to R3,250 incl. VAT for the 5 sheets of White Melamine Chipboard (16mm). \n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-016",
+      "name": "Price for 20 sheets MDF",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4570,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 20 sheets of 16mm Melamine MDF (2750x1830mm), the price is R1,000 per sheet, coming to a total of R20,000 incl. VAT. \n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-019",
+      "name": "Full kitchen quote with hardware",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 5626,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For your full kitchen, 10 sheets of our **White Melamine Chipboard (16mm)** come to **R6,500 incl. VAT** (R650 per sheet).\n\nFor the hardware, we have soft-close clip-on hinges at R14 each and hollow barrel handles starting from R4.75 each (available in 96mm, 128mm, 160mm, etc.). \n\nHow many doors and drawers are you installing so I can get the exact hardware quantities ready for you?"
+    },
+    {
+      "scenario_id": "NC-020",
+      "name": "15 sheets UV gloss quote",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4156,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 15 sheets of UV Gloss, the total cost depends on your chosen finish:\n\n• **Iceland White UV Gloss**: R2,000 / sheet = **R30,000** total incl. VAT\n• **UV Black Gloss**: R2,400 / sheet = **R36,000** total incl. VAT\n• **Traeviso / Banbridge Super Gloss**: R2,800 – R3,000 / sheet = **R42,000 – R45,000** total incl. VAT\n\nWhich colour or finish do you have in mind? Shall I go ahead and process this order for you?"
+    }
+  ]
+}

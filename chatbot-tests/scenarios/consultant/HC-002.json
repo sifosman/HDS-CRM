@@ -1,0 +1,33 @@
+{
+  "id": "HC-002",
+  "name": "Homeowner - image service offered selectively",
+  "category": "consultant",
+  "description": "Homeowner who seems unsure should be offered the image/photo service. AI should mention they can send a photo for help with measurements/sketch.",
+  "phone_number": "27900000502",
+  "sender_name": "John",
+  "messages": [
+    {
+      "text": "Hi, I want to build some cabinets for my garage but I really don't know what I need. Never done this before.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 30000,
+      "description": "Reply should arrive within 30 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "photo",
+      "description": "AI should offer the photo/image service to an unsure homeowner"
+    }
+  ],
+  "forbidden_patterns": []
+}

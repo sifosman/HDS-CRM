@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-11T12-49-21-756Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-11T12-49-21-756Z<br>
+  Started: 2026-08-11T12:47:36.282Z | Finished: 2026-08-11T12:49:21.755Z<br>
+  Latency p50: 6819ms | p95: 37667ms | avg: 11784ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">15</div><div>total</div></div>
+  <div class="stat passed"><div class="big">12</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">3</div><div>failed</div></div>
+  <div class="stat"><div class="big">80.0%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card warn"><h3>quote_generation</h3>
+        <div class="big">12/15</div>
+        <div>80% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="passed">
+        <td>QG-001</td>
+        <td>Quote generation - 20 sheets white melamine chipboard 16mm</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>5790ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! I&#39;ve generated your quote above for R13,000 for the 20 sheets of white melamine chipboard. 
+
+Here is the PDF link again just in case: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-8438
+
+Would you prefer to pay by EFT or card to get this order placed?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-002</td>
+        <td>Quote generation - PDF clamping regression test</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>15489ms</td>
+        <td>generate_quote</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Clamping! I&#39;ve set up your quote for 10 sheets of MEL CHIP Value White 16mm. The total comes to R6,500 including VAT. 📄
+
+You can download your PDF quote here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6753
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-003</td>
+        <td>Quote generation - 5 sheets white melamine 16mm</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>5754ms</td>
+        <td>generate_quote</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! Your quote for 5 sheets of 16mm Value White Melamine is R3,250 (incl. VAT). 
+
+Here is your quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-9143
+
+We have stock ready to go — shall I secure these 5 sheets for you today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-004</td>
+        <td>Quote generation - 30 sheets white melamine 16mm</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>3644ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! I&#39;ve got your quote ready for 30 sheets of 16mm Value White Melamine at R19,500 VAT incl. 👍
+
+Here is your quote PDF link: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2693
+
+Would you like to pay by EFT or card to get this order processed today?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>QG-005</td>
+        <td>Quote generation - MDF 18mm</td>
+        <td>quote_generation</td>
+        <td>FAIL</td>
+        <td>4105ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;R&#39;. Last reply: &quot;&quot;</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li></ul></td>
+        <td>—</td>
+      </tr>
+<tr class="passed">
+        <td>QG-006</td>
+        <td>Quote generation - single sheet order</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>3590ms</td>
+        <td>generate_quote</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! Here is your quote for 1 sheet of 16mm Value White Melamine at R650 incl VAT: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-9359 📄
+
+Shall I secure this sheet and get the order processed for you today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-007</td>
+        <td>Quote generation - name provided in different phrasing</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>8477ms</td>
+        <td>generate_quote</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi John! Thanks for reaching out. 
+
+Your quote for 8 sheets of Value White Melamine 16mm comes to R5,200 incl. VAT. You can download the quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6677
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-008</td>
+        <td>Quote generation - missing quantity then provided</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>19793ms</td>
+        <td>generate_quote</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Awesome! That&#39;s 15 sheets of 16mm White Melamine for R9,750 ready to go. 
+
+Would you like me to send you a payment link so we can get this order locked in?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-009</td>
+        <td>Quote generation - colored melamine</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>4544ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! I have your quote ready for 18 sheets of 16mm Black Melamine at R17,910 incl VAT. Here is your quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6921
+
+Would you prefer to pay by card or EFT to get this order processed today?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>QG-010</td>
+        <td>Quote generation - explicit size 2750x1830</td>
+        <td>quote_generation</td>
+        <td>FAIL</td>
+        <td>16455ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li></ul></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Could you confirm the exact material name and quantity you need? I&#39;ll get it sorted for you straight away.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-011</td>
+        <td>Quote generation - Afrikaans request</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>5584ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Dagse Test! Ek het pas die kwotasie vir die 20 velle Value White Melamine 16mm vir jou reggekry. 
+
+Die totaal is R13,000 (BTW ingesluit) en jy kan die PDF weer hier kry: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-2267
+
+Wil jy verkies om per EFT of kaart te betaal sodat ons hierdie bestelling kan afhandel?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-012</td>
+        <td>Quote generation - with extra project context</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>6819ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test! Here is your quote for 15 sheets of 16mm White Melamine: R9,750 (incl. VAT). 
+
+You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-5922
+
+I can get this secured for you right away — would you like to proceed with card or EFT payment?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-013</td>
+        <td>Quote generation - revise quantity after first quote</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>37667ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>No problem, Test Customer! I&#39;ve updated your quote to 25 sheets of 16mm Value White Melamine.
+
+The updated total is R16,250 (VAT included). You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-4271
+
+Would you prefer to pay by EFT or card for this order?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>QG-014</td>
+        <td>Quote generation - missing thickness then provided</td>
+        <td>quote_generation</td>
+        <td>PASS</td>
+        <td>18375ms</td>
+        <td>generate_quote, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Yes, perfect! That quote is indeed for the 16mm Value White Melamine.
+
+Would you prefer to pay by card or EFT so we can get this order ready for you? 👍</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>QG-015</td>
+        <td>Quote generation - edge case 50 sheets</td>
+        <td>quote_generation</td>
+        <td>FAIL</td>
+        <td>20677ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li></ul></td>
+        <td><details><summary>view</summary><pre>I&#39;m having trouble generating your quote right now. Could you confirm the exact material name and quantity you need? I&#39;ll get it sorted for you straight away.</pre></details></td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "id": "RC-003",
+  "name": "returning_customer_remembered",
+  "category": "returning_customer",
+  "description": "Returning customer says 'Hi, I'm back' and the AI should remember them from the earlier interaction, referencing prior context.",
+  "phone_number": "27900000088",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is James, can I get a quote for 15 sheets of black melamine chipboard 18mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Hi, I'm back",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "James",
+      "description": "AI should remember and address the customer as 'James'"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies that the AI retains context across a short delay and welcomes the customer back by name, demonstrating memory of the earlier quote request."
+}

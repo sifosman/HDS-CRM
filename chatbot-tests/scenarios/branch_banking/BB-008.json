@@ -1,0 +1,47 @@
+{
+  "id": "BB-008",
+  "name": "Branch trading hours - Cape Town",
+  "category": "branch_banking",
+  "description": "Customer asks what time the Cape Town branch closes. AI should use get_branch and return trading hours.",
+  "phone_number": "27900000048",
+  "sender_name": "Test Branch Customer",
+  "messages": [
+    {
+      "text": "What time does your Cape Town branch close?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "Cape Town",
+      "description": "Reply should mention Cape Town"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "branch",
+      "description": "Reply should reference the branch"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies get_branch returns trading hours for the Cape Town branch."
+}

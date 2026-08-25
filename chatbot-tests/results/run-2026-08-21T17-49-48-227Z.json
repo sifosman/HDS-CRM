@@ -1,0 +1,44 @@
+{
+  "run_id": "run-2026-08-21T17-49-48-227Z",
+  "started_at": "2026-08-21T17:49:40.701Z",
+  "finished_at": "2026-08-21T17:49:48.226Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "new_customer": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 5557,
+      "p95": 5557,
+      "avg": 5557
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "NC-001",
+      "name": "Simple Hi",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5557,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey there! 👋 I'm Sam from HDS Group — we help with boards, cutting, and edging for kitchens, cabinets, furniture, all that good stuff.\n\nWhat can I help you with today? Are you working on a project, or just checking out what we offer?"
+    }
+  ]
+}

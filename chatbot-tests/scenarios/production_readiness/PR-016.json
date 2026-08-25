@@ -1,0 +1,86 @@
+{
+  "id": "PR-016",
+  "name": "Full sales cycle - greeting to payment",
+  "category": "production_readiness",
+  "description": "Complete sales cycle: greeting, discovery, quote, objection, close, payment request.",
+  "phone_number": "27900000555",
+  "sender_name": "Full Cycle Customer",
+  "messages": [
+    {
+      "text": "Hi there! I'm building kitchen cabinets and need melamine boards.",
+      "delay_ms": 0
+    },
+    {
+      "text": "I need about 12 sheets of 16mm white melamine. What's the price?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "That's a bit more than I expected. Is there any discount for 12 sheets?",
+      "delay_ms": 10000
+    },
+    {
+      "text": "OK, I'll take it. Can you send me a payment link? I'm in Springs.",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "keyword": "R",
+      "description": "AI should provide pricing"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "factory",
+        "quality",
+        "precision",
+        "cutting",
+        "value",
+        "innowood"
+      ],
+      "description": "AI should handle price objection with value"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "springs",
+        "branch",
+        "collect"
+      ],
+      "description": "AI should mention Springs branch"
+    },
+    {
+      "type": "close_attempt",
+      "description": "AI should attempt to close"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 60000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Full sales cycle. Tests greeting, discovery, quote, objection, close, payment."
+}

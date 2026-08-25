@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-19T16-56-20-411Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-19T16-56-20-411Z<br>
+  Started: 2026-08-19T16:53:00.009Z | Finished: 2026-08-19T16:56:20.410Z<br>
+  Latency p50: 7163ms | p95: 21572ms | avg: 8221ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">40</div><div>total</div></div>
+  <div class="stat passed"><div class="big">39</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">1</div><div>failed</div></div>
+  <div class="stat"><div class="big">97.5%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card good"><h3>new_customer</h3>
+        <div class="big">39/40</div>
+        <div>98% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="passed">
+        <td>NC-001</td>
+        <td>Simple Hi</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>5518ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi! 👋 I&#39;m here and ready to help whenever you&#39;re ready. What kind of project or boards are you looking into today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-002</td>
+        <td>Hello</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>6171ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi there! 😊 I&#39;m here and ready to help. Are you looking for boards, cutting services, or hardware today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-003</td>
+        <td>Good morning</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>4096ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Good morning! 😊 How can I help you today? Let me know what you need and I&#39;ll be glad to assist!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-004</td>
+        <td>Who is this</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3932ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi! I&#39;m Sam from HDS Group. We do board cutting, edging, and melamine supply. 
+
+Are you looking for a quote or info on our products?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-005</td>
+        <td>Hey</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>4719ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hey there! 😊 How can I help you out today? Are you looking for a quote on some boards, or need help with a project?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-006</td>
+        <td>Emoji greeting</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3336ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi! Let me know what you need help with whenever you&#39;re ready — boards, cutting, or hardware, I&#39;m here! 😊</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-007</td>
+        <td>10 sheets white melamine</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>11634ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For 10 sheets of 16mm White Melamine Chipboard (**MEL CHIP Value White 9x6x16 DF**), the total comes to **R6,500 incl. VAT** (R650 per sheet).
+
+Shall I go ahead and secure this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-008</td>
+        <td>What colors available</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>10835ms</td>
+        <td>show_products</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I&#39;ve just sent through images of our solid color melamine boards directly to your WhatsApp, including Black, Pearl Grey, Olivia, Desert Sky, and our popular White Melamine Chipboard.
+
+These are all manufactured directly in our HDS factories for top quality and competitive pricing. 
+
+Would you like me to put together a quote for any of these colors?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-009</td>
+        <td>Do you sell MDF</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>5446ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Yes, we definitely sell MDF boards! We stock plain MDF, melamine-faced MDF, and UV/matte finishes across standard thicknesses. 
+
+Let me know what thickness or how many sheets you&#39;re looking for, and I can get you sorted right away!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-010</td>
+        <td>Kitchen cabinet materials</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>9074ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Most of our customers choose our 16mm White Melamine Chipboard for cabinet carcasses and pairs it with decorative boards or postform counter tops. 
+
+How many cabinets or sheets do you think you&#39;ll need for your project?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-011</td>
+        <td>Price of 16mm white</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>23793ms</td>
+        <td>lookup_price, show_products</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Our 16mm White Melamine Chipboard is R650 per sheet (2750 x 1830mm, VAT included). 
+
+I&#39;ve also sent through some of our solid color board options above. How many sheets do you need for your project?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-012</td>
+        <td>Do you have gloss boards</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>9063ms</td>
+        <td>lookup_price, show_products</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Yes, we do! We manufacture a beautiful range of Chrometree UV gloss boards in our own factories, offering top quality and great value at R2,450 per sheet. ✨
+
+I&#39;ve just sent some images of our gloss options directly to your WhatsApp. Do any of these catch your eye, or would you like a quote for a specific colour?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-013</td>
+        <td>Need plywood</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>8576ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>While we don&#39;t supply standard plywood, our MDF and Innowood melamine boards are popular, strong alternatives for cabinetry, furniture, and shelving. 
+
+How many sheets do you need for your project, or would you like me to prepare a quote on MDF?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-014</td>
+        <td>What hardware do you sell</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>10358ms</td>
+        <td>lookup_price, show_products</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I&#39;ve sent through our range of handles directly to your WhatsApp!
+
+We carry various styles including PVC Dimple handles (R3), Square handles (from R8), and modern Aluminium handles. 
+
+Let me know if you see a style you like or how many you need, and I&#39;d be happy to prepare a quote for you!</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>NC-015</td>
+        <td>Quote for 5 sheets white melamine</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>8831ms</td>
+        <td>lookup_price</td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: [lookup_price]</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li></ul></td>
+        <td><details><summary>view</summary><pre>Your quote for 5 sheets of White Melamine Chipboard 16mm (MEL CHIP Value White 9x6x16 DF at R650/sheet) comes to R3,250 incl. VAT.
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-016</td>
+        <td>Price for 20 sheets MDF</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>8868ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For 20 sheets of 16mm UV MDF White (2750x1220mm) at R999 per sheet, your total comes to R19,980 incl. VAT.
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-017</td>
+        <td>Quote for Dakota Oak</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>15939ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For 8 sheets of 16mm Dakota Oak Melamine Chipboard (MEL CHIP Dakota Oak Linear 9x6x16 DF) at R800 per sheet, your total is R6,400.00 incl. VAT.
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-018</td>
+        <td>Mixed boards quote</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>15533ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For 3 sheets of White Melamine Chipboard (R650 each) and 2 sheets of Black Melamine Chipboard (R995 each), your total comes to R3,940 incl VAT.
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-019</td>
+        <td>Full kitchen quote with hardware</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>11261ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For 10 sheets of **White Melamine Chipboard (16mm)**, the total is **R6,500 incl. VAT**.
+
+We also have soft-close clip-on hinges at R14 each and hollow barrel handles starting from R4.75 each. 
+
+How many doors and drawers are in your kitchen layout so we can include the exact handle and hinge counts and get this order processed?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-020</td>
+        <td>15 sheets UV gloss quote</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>9915ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For 15 sheets of **UV - Black 9x6x17**, the price is R2,400 per sheet, coming to a total of **R36,000 incl. VAT**. If you prefer the **UV Traeviso Super Gloss**, it is R3,000 per sheet, totaling **R45,000 incl. VAT**.
+
+Which finish would you like to proceed with? Shall I get this order processed for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-021</td>
+        <td>Closest branch to Centurion</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>5970ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Our closest branch is HDS Sunderland in Centurion. The address is 16 Van Tonder St, Sunderland Ridge, Centurion, and their phone number is 010 822 2873.
+
+Let me know if you need help with boards, hardware, or a quote for your project!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-022</td>
+        <td>Branch in Johannesburg</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>5171ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Yes, we do! Our closest branch in Johannesburg is HDS Kya Sands, and the address is 37 Kya Sands Road, Kya Sands, Johannesburg (Phone: 011 100 4881). We also have our HDS Main Reef branch nearby at 25 Main Reef Road, Longdale.
+
+Can I help you with any board cutting or hardware quotes today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-023</td>
+        <td>Banking details</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3257ms</td>
+        <td>get_branch, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Here are the banking details:
+
+**Account Name:** HDS Kya Sands  
+**Account Number:** 1262234573  
+**Account Type:** Current  
+
+Please use your quote number or name as the payment reference. If you are collecting from a different branch, let me know which area you are in and I will get you the specific account details!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-024</td>
+        <td>Can I visit factory</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3491ms</td>
+        <td>get_branch, handover</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Yes, you are very welcome to visit our branch showrooms to view our board range, check out samples, and speak with our team in person! 
+
+Which city or area are you based in so I can give you the nearest branch address and contact details?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-025</td>
+        <td>Building cupboards don&#39;t know what to buy</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>16876ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>For your cupboards, our White Melamine Chipboard (16mm) is the top recommendation — it&#39;s durable, easy to clean, and the standard choice for cupboard carcasses and shelving.
+
+At 5 sheets to get you started, the White Melamine Chipboard is R650 per sheet, giving you great Innowood quality and precision cutting.
+
+Shall I go ahead and get this order processed for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-026</td>
+        <td>What boards for kitchen cabinets</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>5529ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Most of our customers go with **16mm White Melamine Chipboard** for their kitchen cabinets. It is the industry standard because it&#39;s durable, easy to wipe clean, moisture-resistant, and offers the best value for both the internal carcasses and shelving. 
+
+Do you know roughly how many sheets you&#39;ll need, or would you like help working that out?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-027</td>
+        <td>Renovating kitchen where to start</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3740ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Love that you&#39;re taking on this project! We manufacture quality boards with precision cutting across 32 branches nationwide, so we&#39;ll make this super simple for you.
+
+To get started, what kind of style or colour do you have in mind for your kitchen cabinets — classic white, warm wood grain, or a sleek modern finish?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-028</td>
+        <td>Help me choose materials</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>9155ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Most of our customers go with our **White Melamine Chipboard 16mm** for internal carcases (it&#39;s durable, clean, and our best value at R650/sheet), paired with either a Wood Grain or one of our HDS-manufactured Chrometree Gloss boards for the doors.
+
+What type of project are you building, and roughly how many sheets do you need?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-029</td>
+        <td>Prices probably too expensive</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3912ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I understand price is important. Our White Melamine is R650/sheet which works out to just R32.50/m² — that&#39;s very competitive for Innowood quality and great value for your investment. 
+
+Shall I prepare a quote so you can see the full breakdown?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-030</td>
+        <td>Usually buy from Builders</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>12921ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I completely understand why you&#39;d ask — Builders is a familiar name! 
+
+The big difference is that HDS manufactures our own Innowood White Melamine Chipboard boards directly in our own factories. That means you get premium quality, precision cutting, and a solid guarantee at competitive, factory-direct pricing (around R650 per sheet), giving you much better value without retail markups.
+
+Shall I prepare a full quote for your boards so you can see the price comparison directly?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-031</td>
+        <td>Do you deliver I&#39;m far</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>7163ms</td>
+        <td>get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>You can collect from your nearest branch! What area or city are you in? I will find the closest HDS branch for you.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-032</td>
+        <td>Only need 2 sheets too small</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>9670ms</td>
+        <td>generate_quote, lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Not at all, I completely understand! No order is too small for us, and our competitive per-sheet pricing gives you great value whether you need 2 sheets or 20.
+
+For 2 sheets of our Value White Melamine Chipboard (16mm at R650 per sheet), your total is R1,300.00 incl. VAT. 
+
+Shall I go ahead and prepare this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-033</td>
+        <td>Cutting list photo</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>5722ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Thanks for sending that through! Could you snap a quick photo showing the left side of your kitchen as well? 
+
+That way I can see your full cabinet layout and give you an accurate sheet count and quote. 😊</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-034</td>
+        <td>Kitchen photo for consultant</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>4408ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>No problem if you don&#39;t have another photo handy! 
+
+Based on what&#39;s visible, I estimate roughly 9 to 12 sheets of 16mm White Melamine Chipboard for a kitchen of this size (rough estimate — your carpenter should verify on site).
+
+I can draw up a cutting sketch with measurements for your carpenter, and even show you what it could look like with the new boards installed. Want me to?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-035</td>
+        <td>Blurry photo first message</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3701ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Thanks for the picture! I can see the right side with your cabinets and sink clearly. 
+
+Could you send another photo showing the left side of your kitchen? That will let me count all your cabinets and get you an accurate quote and board count!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-036</td>
+        <td>Photo with text question</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>8191ms</td>
+        <td>show_products</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I&#39;ve sent through our range of wood grain melamine options so you can see if one of these matches your cabinets!
+
+Could you also send a photo showing the left side of your kitchen? A photo of the other side will let me count all your cabinets and give you an accurate quote.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-037</td>
+        <td>Empty message</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3031ms</td>
+        <td>lookup_price, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi there! 👋 Welcome to HDS Group. We manufacture and supply melamine boards, MDF, hardware, and more across our 32 branches nationwide. How can I help you with your project today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-038</td>
+        <td>Testing message</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>3733ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>All working on this end! 👍 How can I help you today? Let me know what boards, cutting, or hardware you need for your project.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-039</td>
+        <td>Very long first message</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>21572ms</td>
+        <td>lookup_price, get_branch, get_banking, show_products</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi John! Great to meet you.
+
+We don&#39;t offer delivery, but you can collect your order directly from our **HDS Wynberg branch** in **Johannesburg** (closest branch to Midrand). The **address** is **2 North Street, Cnr Old Pretoria Main Road, Wynberg, Johannesburg** (Phone: 011 440 5271).
+
+Here are our banking details:
+- **Account** Name: HDS Wynberg
+- **Account** Number: 1262222168
+- **Account** Type: Current
+
+I&#39;ve just sent you product images of our HDS-manufactured oak wood grain options (like D…</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-040</td>
+        <td>Call me message</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>4714ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I completely understand you&#39;d prefer a phone call. While I operate directly here on WhatsApp, I can get you instant competitive pricing and generate an official quote with full quality assurance for your project right now. 
+
+Are you looking for melamine, MDF, or hardware today?</pre></details></td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

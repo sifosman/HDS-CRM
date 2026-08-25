@@ -1,0 +1,65 @@
+{
+  "id": "PR-006",
+  "name": "Branch + banking combined request",
+  "category": "production_readiness",
+  "description": "Customer asks for branch location AND banking details in one message.",
+  "phone_number": "27900000545",
+  "sender_name": "Fatima",
+  "messages": [
+    {
+      "text": "Hi, where is your nearest branch to Durban and what are your banking details for EFT payment?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch",
+    "get_banking"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "address",
+        "street",
+        "branch",
+        "located"
+      ],
+      "description": "AI should provide branch address"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "account",
+        "banking",
+        "eft",
+        "account number"
+      ],
+      "description": "AI should provide banking details"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Two tools in one response. Tests multi-tool calling."
+}

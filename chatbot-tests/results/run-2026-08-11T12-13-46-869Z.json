@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-11T12-13-46-869Z",
+  "started_at": "2026-08-11T12:13:36.545Z",
+  "finished_at": "2026-08-11T12:13:46.869Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "handover": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 8645,
+      "p95": 8645,
+      "avg": 8645
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HO-005",
+      "name": "complex custom request triggers handover",
+      "category": "handover",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8645,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Handover Customer! 👋 Since you need custom-cut boards with 2mm PVC edge banding on all sides, I'm passing this over to our specialist sales team to get you an accurate quote. \n\nOne of our agents will be in touch with you shortly to assist with all your custom specifications!"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "HO-004",
+  "name": "frustrated customer requests manager",
+  "category": "handover",
+  "description": "Customer expresses frustration and anger, demanding to speak to a manager, which should trigger handover to a human agent",
+  "phone_number": "27900000079",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "This is taking too long, let me speak to your manager. I've been waiting for ages and nobody is helping me.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Frustrated or angry customers requesting escalation should be handed over immediately to de-escalate and provide personalised service."
+}

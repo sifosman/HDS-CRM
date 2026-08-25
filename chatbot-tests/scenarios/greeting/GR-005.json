@@ -1,0 +1,72 @@
+{
+  "id": "GR-005",
+  "name": "afrikaans_greeting",
+  "category": "greeting",
+  "description": "A new customer greets in Afrikaans and mentions looking for melamine boards. Tests that the AI recognizes Afrikaans, responds appropriately, and asks clarifying questions in a compatible language.",
+  "phone_number": "27900000005",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Goeie dag, ek soek melamine borde",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "goeie",
+        "hallo",
+        "hi",
+        "hello",
+        "welcome",
+        "dag",
+        "dankie"
+      ],
+      "description": "Reply should acknowledge the greeting warmly, ideally in Afrikaans or a bilingual response"
+    },
+    {
+      "type": "contains_keyword",
+      "keywords": [
+        "size",
+        "grootte",
+        "quantity",
+        "hoeveelheid",
+        "thickness",
+        "dikte",
+        "melamine",
+        "board",
+        "borde"
+      ],
+      "description": "Reply should ask clarifying questions about size, thickness, or quantity"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "R\\$|\\$[0-9]+|[0-9]+\\.[0-9]{2}",
+      "description": "No pricing or quotes in the greeting response"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "The AI should recognize the Afrikaans greeting and respond in Afrikaans or a bilingual Afrikaans/English response. It should acknowledge the melamine board request and ask for specifics: board size, thickness, colour, and quantity. No tools should be called yet since details are missing."
+}

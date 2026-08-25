@@ -1,0 +1,51 @@
+{
+  "id": "PL-007",
+  "name": "Fuzzy colloquial product name",
+  "category": "price_lookup",
+  "description": "Tests price lookup with a very fuzzy, colloquial product reference. The customer says 'the white stuff, 16mil' instead of using the proper product name. The AI should infer they mean 16mm white melamine and return the real price.",
+  "phone_number": "27900000017",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "how much for the white stuff, 16mil",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should identify the product as melamine"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests fuzzy matching capability. '16mil' should be interpreted as 16mm and 'the white stuff' should be matched to white melamine. The AI should confirm the product it looked up so the customer knows they were understood correctly."
+}

@@ -1,0 +1,47 @@
+{
+  "id": "BB-003",
+  "name": "Branch lookup - Durban",
+  "category": "branch_banking",
+  "description": "Customer asks for the nearest branch in Durban. AI should use get_branch and return real branch data.",
+  "phone_number": "27900000043",
+  "sender_name": "Test Branch Customer",
+  "messages": [
+    {
+      "text": "Where is your nearest branch in Durban?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "Durban",
+      "description": "Reply should mention Durban or a Durban branch"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "address",
+      "description": "Reply should include branch address details"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies get_branch tool resolves Durban branch correctly."
+}

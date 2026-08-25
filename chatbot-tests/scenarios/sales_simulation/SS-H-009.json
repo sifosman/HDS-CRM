@@ -1,0 +1,77 @@
+{
+  "id": "SS-H-009",
+  "name": "Hard - Budget constraint: only R5000",
+  "category": "sales_simulation",
+  "difficulty": "hard",
+  "persona_type": "budget_constraint",
+  "customer_name": "Naledi O",
+  "customer_profile": "Customer in Vereeniging with fixed budget of R5000, wants 30 sheets",
+  "phone_number": "27900000478",
+  "sender_name": "Naledi O",
+  "messages": [
+    {
+      "text": "Hi, I need 30 sheets of 16mm white melamine chipboard. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I only have R5000 to spend. What can you do for me?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Hmm, that's still a lot. Can I get fewer sheets?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "objection",
+      "description": "AI should handle objections with empathy and value"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    },
+    {
+      "type": "objection_handled",
+      "objection_type": "budget",
+      "description": "AI should work within the budget constraint"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Budget constraint. AI should offer solutions within R5000: fewer sheets, different grade, or payment plan."
+}

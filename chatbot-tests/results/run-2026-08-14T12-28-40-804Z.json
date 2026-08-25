@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-14T12-28-40-804Z",
+  "started_at": "2026-08-14T12:28:26.607Z",
+  "finished_at": "2026-08-14T12:28:40.803Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 13056,
+      "p95": 13056,
+      "avg": 13056
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13056,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Here is your quote! \nQuote ID: Q-20260814-0335\nTOTAL (VAT incl): R6500\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-0335\n\n\nShall I go ahead and process this order for you? I can hold this pricing for 48 hours."
+    }
+  ]
+}

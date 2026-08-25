@@ -1,0 +1,42 @@
+{
+  "id": "NC-039",
+  "name": "Very long first message",
+  "category": "new_customer",
+  "description": "New customer sends an extremely long first message with multiple unrelated requests.",
+  "phone_number": "27900000839",
+  "sender_name": "New Customer 39",
+  "messages": [
+    {
+      "text": "Hi I need 10 sheets of white melamine 16mm for kitchen cabinets. I also need handles - about 20 of them. What colours do you have for the melamine? I want something that looks like oak. Also do you deliver to Midrand? And what are your banking details? I need to make payment today. Also can I get a quote for all of this? My name is John and my number is 0825551234.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "min_messages",
+      "count": 1
+    },
+    {
+      "type": "response_time",
+      "max_ms": 40000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Very long first message with multiple requests. AI should address as many as possible."
+}

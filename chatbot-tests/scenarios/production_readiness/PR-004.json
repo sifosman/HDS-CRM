@@ -1,0 +1,60 @@
+{
+  "id": "PR-004",
+  "name": "Product browse - wood grain options",
+  "category": "production_readiness",
+  "description": "Customer asks about wood grain options. AI should show products carousel.",
+  "phone_number": "27900000543",
+  "sender_name": "Ahmed",
+  "messages": [
+    {
+      "text": "Hi, do you have wood grain melamine boards? I want to see what options you have.",
+      "delay_ms": 0
+    },
+    {
+      "text": "I like the Dakota Oak. Can you quote me for 8 sheets?",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "show_products"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "dakota",
+        "oak",
+        "wood",
+        "grain",
+        "flagstaff",
+        "cedar"
+      ],
+      "description": "AI should mention wood grain products"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Product browsing. AI should show carousel then move to quote."
+}

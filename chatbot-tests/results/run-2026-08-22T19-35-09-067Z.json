@@ -1,0 +1,44 @@
+{
+  "run_id": "run-2026-08-22T19-35-09-067Z",
+  "started_at": "2026-08-22T19:34:51.929Z",
+  "finished_at": "2026-08-22T19:35:09.067Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "greeting": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 15844,
+      "p95": 15844,
+      "avg": 15844
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 15844,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey, welcome back! 😊 Quick version: we stock melamine chipboard, MDF, UV gloss, and plywood — all cut to size. Our bestseller is White Melamine Chipboard 16mm, great for cabinets and cupboards.\n\nWhat are you building? Once I know that, I can point you to the right board and give you pricing straight away."
+    }
+  ]
+}

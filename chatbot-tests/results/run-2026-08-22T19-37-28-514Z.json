@@ -1,0 +1,52 @@
+{
+  "run_id": "run-2026-08-22T19-37-28-514Z",
+  "started_at": "2026-08-22T19:36:32.363Z",
+  "finished_at": "2026-08-22T19:37:28.513Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 55113,
+      "p95": 55113,
+      "avg": 55113
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 55113ms exceeds max 30000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 55113,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Welcome back, Test Customer! 👋 Your fresh quote is ready: **Q-20260822-9393** — 20 sheets of Value White melamine chipboard 16mm at **R14,400** incl. VAT (cutting included).\n\n📋 PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-9393\n\nShall I go ahead and process this order for you? Just tell me which area you're in so I can assign your nearest branch for collection. I'll hold this pricing for 48 hours."
+    }
+  ]
+}

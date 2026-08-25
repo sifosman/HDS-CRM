@@ -1,0 +1,66 @@
+{
+  "id": "PR-021",
+  "name": "MDF board inquiry",
+  "category": "production_readiness",
+  "description": "Customer asks about MDF boards. AI should recognize MDF as standard product and quote.",
+  "phone_number": "27900000560",
+  "sender_name": "MDF Customer",
+  "messages": [
+    {
+      "text": "Hi, do you sell MDF boards? I need 8 sheets of 16mm MDF for some shelving.",
+      "delay_ms": 0
+    },
+    {
+      "text": "Great, can you quote me? I'm in Witbank.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "mdf",
+        "board",
+        "sheet",
+        "R"
+      ],
+      "description": "AI should confirm MDF and provide pricing"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "witbank",
+        "branch"
+      ],
+      "description": "AI should mention Witbank branch"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "MDF is a standard product. AI should quote, not handover."
+}

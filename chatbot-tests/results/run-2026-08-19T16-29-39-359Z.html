@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-19T16-29-39-359Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-19T16-29-39-359Z<br>
+  Started: 2026-08-19T16:26:33.109Z | Finished: 2026-08-19T16:29:39.358Z<br>
+  Latency p50: 61474ms | p95: 61683ms | avg: 61464ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">6</div><div>total</div></div>
+  <div class="stat passed"><div class="big">0</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">6</div><div>failed</div></div>
+  <div class="stat"><div class="big">0.0%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card bad"><h3>new_customer</h3>
+        <div class="big">0/6</div>
+        <div>0% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="failed">
+        <td>NC-008</td>
+        <td>What colors available</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>61683ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;show_products&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;melamine&#39;. Last reply: &quot;&quot;</li><li>Response latency 61683ms exceeds max 30000ms</li><li>Expected at least 1 assistant replies, got 0</li></ul></td>
+        <td>—</td>
+      </tr>
+<tr class="failed">
+        <td>NC-014</td>
+        <td>What hardware do you sell</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>61474ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;show_products&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;r&#39;. Last reply: &quot;&quot;</li><li>Response latency 61474ms exceeds max 30000ms</li><li>Expected at least 1 assistant replies, got 0</li></ul></td>
+        <td>—</td>
+      </tr>
+<tr class="failed">
+        <td>NC-015</td>
+        <td>Quote for 5 sheets white melamine</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>61257ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;r&#39;. Last reply: &quot;&quot;</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li><li>Response latency 61257ms exceeds max 35000ms</li><li>Expected at least 1 assistant replies, got 0</li></ul></td>
+        <td>—</td>
+      </tr>
+<tr class="failed">
+        <td>NC-016</td>
+        <td>Price for 20 sheets MDF</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>61389ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;r&#39;. Last reply: &quot;&quot;</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li><li>Response latency 61389ms exceeds max 35000ms</li><li>Expected at least 1 assistant replies, got 0</li></ul></td>
+        <td>—</td>
+      </tr>
+<tr class="failed">
+        <td>NC-019</td>
+        <td>Full kitchen quote with hardware</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>61355ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;r&#39;. Last reply: &quot;&quot;</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li><li>Response latency 61355ms exceeds max 40000ms</li><li>Expected at least 1 assistant replies, got 0</li></ul></td>
+        <td>—</td>
+      </tr>
+<tr class="failed">
+        <td>NC-020</td>
+        <td>15 sheets UV gloss quote</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>61627ms</td>
+        <td></td>
+        <td><ul><li>Expected tool &#39;generate_quote&#39; was not called. Tools called: []</li><li>Reply does not contain keyword &#39;r&#39;. Last reply: &quot;&quot;</li><li>No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed.</li><li>Response latency 61627ms exceeds max 35000ms</li><li>Expected at least 1 assistant replies, got 0</li></ul></td>
+        <td>—</td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

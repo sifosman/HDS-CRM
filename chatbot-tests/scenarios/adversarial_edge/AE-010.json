@@ -1,0 +1,45 @@
+{
+  "id": "AE-010",
+  "name": "only_punctuation",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to handle a message containing only punctuation marks and ask the user what they need",
+  "phone_number": "27900000105",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "???!!!...",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "clarification_request",
+      "description": "AI should ask the user what they need help with"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "(error|null|undefined|NaN|exception|stack trace)",
+      "flags": "i",
+      "description": "AI should not expose internal error messages"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Message with only punctuation. The AI should interpret this as a confused or incomplete message and ask the user what they need, not crash or produce an error."
+}

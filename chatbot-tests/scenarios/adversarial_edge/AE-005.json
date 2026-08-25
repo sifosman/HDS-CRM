@@ -1,0 +1,45 @@
+{
+  "id": "AE-005",
+  "name": "gibberish_input",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to handle complete gibberish input and ask for clarification rather than crashing or hallucinating a response",
+  "phone_number": "27900000100",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "asdkjfh asdkjfh asdkjfh",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "clarification_request",
+      "description": "AI should ask the user to clarify or rephrase their message"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "asdkjfh",
+      "flags": "i",
+      "description": "AI should not echo the gibberish back as if it understood it"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Gibberish input. The AI should not pretend to understand or fabricate a product response. It should politely ask the user to clarify what they need."
+}

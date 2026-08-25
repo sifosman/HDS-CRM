@@ -1,0 +1,41 @@
+{
+  "id": "AE-016",
+  "name": "unicode_fancy_script",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to handle a message written in Unicode mathematical/fancy script characters and still understand the intent",
+  "phone_number": "27900000111",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "\ud835\udcd7\ud835\udcee\ud835\udcf5\ud835\udcf5\ud835\udcf8, \ud835\udcd8 \ud835\udcf7\ud835\udcee\ud835\udcee\ud835\udced \ud835\udcf6\ud835\udcee\ud835\udcf5\ud835\udcea\ud835\udcf6\ud835\udcf2\ud835\udcf7\ud835\udcee",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "melamine",
+      "description": "AI should recognize the word 'melamine' despite the fancy Unicode script"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Message uses Unicode mathematical script characters (\ud835\udcd7\ud835\udcee\ud835\udcf5\ud835\udcf5\ud835\udcf8 = Hello, \ud835\udcd8 \ud835\udcf7\ud835\udcee\ud835\udcee\ud835\udced \ud835\udcf6\ud835\udcee\ud835\udcf5\ud835\udcea\ud835\udcf6\ud835\udcf2\ud835\udcf7\ud835\udcee = I need melamine). The AI should either decode the fancy text and respond about melamine, or ask for clarification if it cannot parse the characters. It should not crash."
+}

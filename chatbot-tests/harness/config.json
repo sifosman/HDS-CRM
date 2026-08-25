@@ -1,0 +1,45 @@
+{
+  "webhook": {
+    "url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "verify_token": "ae73a5a490552fdf6d9141a5fa4bfb91",
+    "waba_id": "651569391231371",
+    "display_phone_number": "27787060895",
+    "phone_number_id": "732486796615007",
+    "timeout_ms": 30000
+  },
+  "supabase": {
+    "url": "https://xzsibbbghotreolzwnyk.supabase.co",
+    "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6c2liYmJnaG90cmVvbHp3bnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE3MTcyMzUsImV4cCI6MjA2NzI5MzIzNX0.Yq6YS2Mw8fE4pTloeCTUSmI06RrUYe_WW_pC0NTqUDE"
+  },
+  "runner": {
+    "concurrency": 5,
+    "retries": 1,
+    "retry_delay_ms": 5000,
+    "poll_interval_ms": 2000,
+    "poll_timeout_ms": 120000,
+    "default_response_timeout_ms": 60000
+  },
+  "safe_mode": {
+    "enabled": true,
+    "warn_on_send": true,
+    "note": "Safe mode is ON by default. Test phone numbers (27900000001-200) use invalid SA area code 279, so Meta will reject outbound sends to them \u2014 real WhatsApp users will never receive test messages. For full isolation, point webhook.url at a cloned n8n workflow that has the 'Send WhatsApp Reply' node disabled."
+  },
+  "paths": {
+    "scenarios_dir": "../scenarios",
+    "results_dir": "../results"
+  },
+  "smoke": {
+    "scenario_ids": [
+      "GR-001",
+      "PL-001",
+      "QG-001",
+      "BB-001",
+      "SC-001",
+      "OH-001",
+      "HO-001",
+      "RC-001",
+      "AE-001",
+      "AE-002"
+    ]
+  }
+}

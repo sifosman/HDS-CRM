@@ -1,0 +1,67 @@
+{
+  "id": "SS-M-005",
+  "name": "Medium - Vague inquiry: customer unsure of product",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "vague_inquiry",
+  "customer_name": "Lerato M",
+  "customer_profile": "Customer in Cape Town who needs boards but doesn't know exactly what type",
+  "phone_number": "27900000424",
+  "sender_name": "Lerato M",
+  "messages": [
+    {
+      "text": "Hey, I'm a carpenter looking for a supplier. What products do you sell?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I'm in Cape Town. I think I need about 12 sheets.",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Ok let's go with 16mm charcoal grey gloss board. Can I get a quote?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Vague inquiry. AI should ask clarifying questions, help select product, then quote and close."
+}

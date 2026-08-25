@@ -1,0 +1,56 @@
+{
+  "id": "NC-034",
+  "name": "Kitchen photo for consultant",
+  "category": "new_customer",
+  "description": "New customer sends a kitchen photo as first message.",
+  "phone_number": "27900000834",
+  "sender_name": "New Customer 34",
+  "messages": [
+    {
+      "type": "image",
+      "media_id": "test-kitchen-photo-001",
+      "caption": "My kitchen",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "kitchen",
+        "cabinet",
+        "melamine",
+        "estimate",
+        "measure",
+        "sketch"
+      ],
+      "description": "AI should analyze kitchen photo and offer help"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 60000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Kitchen photo as first message. AI should enter consultant mode."
+}

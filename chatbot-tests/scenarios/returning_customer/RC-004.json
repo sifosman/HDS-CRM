@@ -1,0 +1,42 @@
+{
+  "id": "RC-004",
+  "name": "returning_customer_reference_past_interaction",
+  "category": "returning_customer",
+  "description": "Returning customer asks 'Remember me? We spoke earlier' and the AI should reference the past interaction, confirming it recalls the earlier conversation.",
+  "phone_number": "27900000089",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is Priya, can I get a quote for 30 sheets of oak melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Remember me? We spoke earlier",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "Priya",
+      "description": "AI should address the customer as 'Priya' and reference the earlier conversation"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests explicit recall: the customer challenges the AI to remember them. The AI should confirm it recalls the earlier interaction, ideally mentioning the product (oak melamine chipboard) that was discussed."
+}

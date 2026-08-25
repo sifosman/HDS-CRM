@@ -1,0 +1,42 @@
+{
+  "id": "RC-009",
+  "name": "returning_customer_recall_by_topic",
+  "category": "returning_customer",
+  "description": "Returning customer says 'I'm the one who asked about melamine earlier' to test whether the AI can recall them by the topic of the previous interaction.",
+  "phone_number": "27900000094",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is Robert, can I get a quote for 35 sheets of black melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "I'm the one who asked about melamine earlier",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "Robert",
+      "description": "AI should address the customer as 'Robert' and confirm the melamine enquiry"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Recall-by-topic test: the customer identifies themselves by the subject of their earlier enquiry (melamine). The AI should match this to the stored conversation history, confirm the enquiry, and address them by name."
+}

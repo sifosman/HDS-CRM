@@ -1,0 +1,71 @@
+{
+  "id": "SS-M-042",
+  "name": "Medium - Quantity uncertain: 2m wardrobe",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "quantity_uncertain",
+  "customer_name": "Sipho N",
+  "customer_profile": "Customer in East London doesn't know how many sheets they need for 2m wardrobe",
+  "phone_number": "27900000461",
+  "sender_name": "Sipho N",
+  "messages": [
+    {
+      "text": "Hi, I'm building a 2m wardrobe. How many sheets of 18mm white melamine chipboard do I need?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I'm in East London. Ok, let's go with your recommendation.",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Can you give me a quote for that?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Sounds reasonable. I'll take it.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Quantity uncertainty. AI should help estimate quantity, quote, and close."
+}

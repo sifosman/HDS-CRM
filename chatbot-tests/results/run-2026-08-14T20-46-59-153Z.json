@@ -1,0 +1,129 @@
+{
+  "run_id": "run-2026-08-14T20-46-59-153Z",
+  "started_at": "2026-08-14T20:46:15.168Z",
+  "finished_at": "2026-08-14T20:46:59.152Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 5,
+    "passed": 2,
+    "failed": 3,
+    "skipped": 0,
+    "pass_rate": "40.0%",
+    "by_category": {
+      "consultant": {
+        "total": 5,
+        "passed": 2,
+        "failed": 3
+      }
+    },
+    "latency_ms": {
+      "p50": 14929,
+      "p95": 16340,
+      "avg": 14081
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HC-001",
+      "name": "Homeowner consultant mode - kitchen renovation",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "not_contains_keyword",
+          "detail": "Reply contains forbidden keyword 'undefined'. Reply: \"Hi Sarah! Love that you're taking on a kitchen renovation! At HDS Group, we have 32 branches across South Africa to ensure you get top Innowood quality. \n\nMost of our customers choose 16mm White Melam…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 12841,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Sarah! Love that you're taking on a kitchen renovation! At HDS Group, we have 32 branches across South Africa to ensure you get top Innowood quality. \n\nMost of our customers choose 16mm White Melamine Chipboard (R650 per sheet) for the cabinet interiors because it's durable, clean, and great value. \n\nWhat look are you envisioning for your cabinet doors — classic white melamine or a warm wood grain finish?"
+    },
+    {
+      "scenario_id": "HC-002",
+      "name": "Homeowner - image service offered selectively",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 14929,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Love that you're taking on this project, John! For garage cabinets, most of our customers go with White Melamine Chipboard 16mm — it's durable, easy to clean, and great value at R650 per sheet. At HDS Group, we have 32 branches across South Africa with precision cutting services to make building easy for you. \n\nDo you know roughly how many sheets or cabinets you'll need, or would you like me to put together a quick quote for White Melamine Chipboard to get you started?"
+    },
+    {
+      "scenario_id": "HC-003",
+      "name": "Carpenter NOT offered image service",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "not_contains_keyword",
+          "detail": "Reply contains forbidden keyword 'undefined'. Reply: \"Hi Mike! Here is your quote for 20 sheets of Value White 16mm melamine chipboard. The total comes to R14,400.00 including VAT and cutting fee. \n\nYou can view and download your formal quote PDF here: h…\""
+        },
+        {
+          "type": "not_contains_keyword",
+          "detail": "Reply contains forbidden keyword 'undefined'. Reply: \"Hi Mike! Here is your quote for 20 sheets of Value White 16mm melamine chipboard. The total comes to R14,400.00 including VAT and cutting fee. \n\nYou can view and download your formal quote PDF here: h…\""
+        },
+        {
+          "type": "tool_called",
+          "detail": "Tool 'undefined' was not called. Tools called: [generate_quote]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 15835,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Mike! Here is your quote for 20 sheets of Value White 16mm melamine chipboard. The total comes to R14,400.00 including VAT and cutting fee. \n\nYou can view and download your formal quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-0963\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "HC-004",
+      "name": "Confused customer - decision simplification",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10461,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍"
+    },
+    {
+      "scenario_id": "HC-005",
+      "name": "Upsell - board upgrade offered",
+      "category": "consultant",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "tool_called",
+          "detail": "Tool 'undefined' was not called. Tools called: [generate_quote]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 16340,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi David! Love that you're taking on this kitchen project! 🛠️\n\nHere is your quote for 10 sheets of White Melamine Chipboard:\nTotal (incl. VAT & cutting): R7,200.00\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6652\n\nShall I go ahead and process this order for you?"
+    }
+  ]
+}

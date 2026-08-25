@@ -1,0 +1,56 @@
+{
+  "id": "PL-003",
+  "name": "18mm white melamine chipboard price",
+  "category": "price_lookup",
+  "description": "Tests price lookup for a specific thickness of white melamine chipboard (18mm). The AI should query the hds_prices table and return the exact product name and price for 18mm white melamine.",
+  "phone_number": "27900000013",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Hi, what's the price of 18mm white melamine chipboard?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "18mm",
+      "description": "Reply should reference the 18mm thickness requested"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies that the AI can match a specific thickness (18mm) to the correct product entry in hds_prices and return the real price, not a generic or guessed figure."
+}

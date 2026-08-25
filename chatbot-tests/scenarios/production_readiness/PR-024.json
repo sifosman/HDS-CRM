@@ -1,0 +1,66 @@
+{
+  "id": "PR-024",
+  "name": "Late night message - auto response",
+  "category": "production_readiness",
+  "description": "Customer messages late at night. AI should respond normally (24/7 bot).",
+  "phone_number": "27900000563",
+  "sender_name": "Night Owl",
+  "messages": [
+    {
+      "text": "Hi, I know it's late but do you have 16mm white melamine in stock? I need 7 sheets.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "hi",
+        "hey",
+        "hello",
+        "yes",
+        "sure",
+        "course"
+      ],
+      "description": "AI should respond normally regardless of time"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "melamine",
+        "white",
+        "board",
+        "sheet",
+        "R",
+        "stock"
+      ],
+      "description": "AI should address the product inquiry"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Late night message. Bot is 24/7, should respond normally."
+}

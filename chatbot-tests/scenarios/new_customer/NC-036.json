@@ -1,0 +1,48 @@
+{
+  "id": "NC-036",
+  "name": "Photo with text question",
+  "category": "new_customer",
+  "description": "New customer sends photo with a text caption asking a question.",
+  "phone_number": "2790000050036",
+  "sender_name": "New Customer 36",
+  "messages": [
+    {
+      "type": "image",
+      "media_id": "test-cabinet-photo-001",
+      "caption": "Can you match this colour?"
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": ["colour", "color", "options", "match", "matches", "matching", "finish", "shade", "tone"],
+      "description": "Reply should address colour/material matching"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 60000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Photo + text question. AI should analyze image and answer the specific question."
+}

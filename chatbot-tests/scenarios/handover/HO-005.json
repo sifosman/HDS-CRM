@@ -1,0 +1,35 @@
+{
+  "id": "HO-005",
+  "name": "complex custom request triggers handover",
+  "category": "handover",
+  "description": "Customer describes a complex custom request involving custom-cut boards with edge banding on all sides and special sizes, which should trigger handover",
+  "phone_number": "27900000080",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "I need custom-cut boards with edge banding on all sides, special sizes like 2440x1220 with 2mm PVC edge banding. Can you sort that out?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Complex custom cutting and edge banding requests require human expertise to confirm specifications, pricing, and lead times."
+}

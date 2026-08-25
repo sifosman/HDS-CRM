@@ -1,0 +1,67 @@
+{
+  "id": "SS-M-013",
+  "name": "Medium - Price shopper: comparing suppliers",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "price_shopper",
+  "customer_name": "Olebogeng T",
+  "customer_profile": "Customer in Bloemfontein comparing prices across suppliers",
+  "phone_number": "27900000432",
+  "sender_name": "Olebogeng T",
+  "messages": [
+    {
+      "text": "I need pricing on melamine boards, 16mm. What are your rates?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Ok, I'm in Bloemfontein. Can you do a proper quote for 30 sheets?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "That's reasonable. Let me think about it.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Price shopper. AI should give price, generate quote, and attempt close."
+}

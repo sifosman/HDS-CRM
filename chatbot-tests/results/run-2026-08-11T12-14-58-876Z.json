@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-11T12-14-58-876Z",
+  "started_at": "2026-08-11T12:14:47.778Z",
+  "finished_at": "2026-08-11T12:14:58.875Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "handover": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 8771,
+      "p95": 8771,
+      "avg": 8771
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HO-009",
+      "name": "product complaint triggers handover",
+      "category": "handover",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8771,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I sincerely apologize for the experience with your boards. I have flagged this directly to our management team, and a senior agent will be in touch with you shortly to assist and resolve this."
+    }
+  ]
+}

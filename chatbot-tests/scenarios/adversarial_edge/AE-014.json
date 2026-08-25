@@ -1,0 +1,40 @@
+{
+  "id": "AE-014",
+  "name": "very_short_ambiguous",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to handle a very short ambiguous message and ask for clarification about what kind of boards the user needs",
+  "phone_number": "27900000109",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "boards?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "clarification_request",
+      "description": "AI should ask the user to specify what type of boards they need (melamine, MDF, supawood, etc.)"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Very short ambiguous message. The AI should not assume a specific product but should ask the user to clarify which type of boards they are interested in (melamine, MDF, supawood, plywood, etc.) and what specifications they need."
+}

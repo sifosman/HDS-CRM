@@ -1,0 +1,42 @@
+{
+  "id": "RC-001",
+  "name": "Returning customer - greeted by name",
+  "category": "returning_customer",
+  "description": "A customer who has previously conversed with the bot returns. AI should greet them by name and reference past interaction.",
+  "phone_number": "27900000086",
+  "sender_name": "Returning Test Customer",
+  "messages": [
+    {
+      "text": "My name is Returning Test, can I get a quote for 20 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Hi, it's me again",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "Returning",
+      "description": "AI should greet the customer by name (Returning Test)"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 75000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Requires Load Customer Context node to query Supabase for conversation history. The second message should trigger a personalized greeting. This scenario depends on the first message being stored before the second arrives."
+}

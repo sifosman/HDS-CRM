@@ -1,0 +1,46 @@
+{
+  "id": "PL-005",
+  "name": "Colored melamine inquiry (grey)",
+  "category": "price_lookup",
+  "description": "Tests price lookup for a colored melamine variant. The customer asks about grey melamine. The AI should check the hds_prices table and return the real price if available, or state clearly if that color is not stocked.",
+  "phone_number": "27900000015",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Do you have grey melamine? What's the price?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Colored melamine may or may not be in the hds_prices table. If grey melamine is stocked, the AI should return the real price. If not, the AI should clearly state it's unavailable rather than inventing a price. The contains_keyword for 'R' is omitted because the product may not exist."
+}

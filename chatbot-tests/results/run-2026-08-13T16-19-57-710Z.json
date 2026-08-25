@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-13T16-19-57-710Z",
+  "started_at": "2026-08-13T16:19:40.537Z",
+  "finished_at": "2026-08-13T16:19:57.710Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 17806,
+      "p95": 17806,
+      "avg": 17806
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-004",
+      "name": "Quote generation - 30 sheets white melamine 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 17806,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I've prepared your quote for 30 sheets of White Melamine Chipboard (Value White 16mm). \n\n layout & total breakdown:\nTotal (incl. cutting & VAT): R21,600.00\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-5900\n\nShall I go ahead and process this order for you?"
+    }
+  ]
+}

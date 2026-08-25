@@ -1,0 +1,51 @@
+{
+  "id": "PL-008",
+  "name": "Price per sheet vs per board clarification",
+  "category": "price_lookup",
+  "description": "Tests price lookup with a question about pricing units \u2014 whether the price is per sheet or per board. The AI should clarify the unit and return the correct price from the hds_prices table.",
+  "phone_number": "27900000018",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Is the price for white melamine per sheet or per board? And how much is it?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests whether the AI can address unit-of-measure questions alongside the price. The response should clarify whether pricing is per sheet/board and provide the actual price from the table."
+}

@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-14T21-08-32-597Z",
+  "started_at": "2026-08-14T21:08:07.112Z",
+  "finished_at": "2026-08-14T21:08:32.596Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 23366,
+      "p95": 23366,
+      "avg": 23366
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 23366,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I understand price is important. Our White Melamine Chipboard offers great value and competitive pricing for quality boards with precision cutting included. Shall I go ahead and process this order for you?"
+    }
+  ]
+}

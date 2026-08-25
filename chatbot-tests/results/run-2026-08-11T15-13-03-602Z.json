@@ -1,0 +1,51 @@
+{
+  "run_id": "run-2026-08-11T15-13-03-602Z",
+  "started_at": "2026-08-11T15:12:51.973Z",
+  "finished_at": "2026-08-11T15:13:03.602Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "handover": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 8261,
+      "p95": 8261,
+      "avg": 8261
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "HO-001",
+      "name": "Handover - large order triggers handover (>50 sheets)",
+      "category": "handover",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "lead_status",
+          "detail": "customer_profiles.lead_status is 'quoting', expected 'handover'"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 8261,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Big Order Test! 👋 For a large order of 80 sheets, our team can offer you special bulk discount pricing. \n\nI'm connecting you with one of our human sales specialists right now to get you the best possible rate. They'll be with you shortly!"
+    }
+  ]
+}

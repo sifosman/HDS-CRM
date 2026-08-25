@@ -1,0 +1,47 @@
+{
+  "id": "NC-012",
+  "name": "Do you have gloss boards",
+  "category": "new_customer",
+  "description": "New customer asks about gloss boards.",
+  "phone_number": "27900000812",
+  "sender_name": "New Customer 12",
+  "messages": [
+    {
+      "text": "Do you have gloss boards?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "gloss",
+      "description": "Reply should mention gloss boards"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Chrometree Gloss is HDS manufactured. AI should confirm and list options."
+}

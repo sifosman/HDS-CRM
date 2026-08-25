@@ -1,0 +1,46 @@
+{
+  "id": "HC-003",
+  "name": "Carpenter NOT offered image service",
+  "category": "consultant",
+  "description": "Trade customer (carpenter) should NOT be offered the image/photo service. They know what they need.",
+  "phone_number": "27900000503",
+  "sender_name": "Mike",
+  "messages": [
+    {
+      "text": "Hi, I need 20 sheets of white melamine chipboard 16mm. Can I get a quote?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 30000,
+      "description": "Reply should arrive within 30 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "photo of",
+      "description": "AI should NOT offer the image service to a carpenter"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "send it through",
+      "description": "AI should NOT ask the carpenter to send a photo"
+    },
+    {
+      "type": "tool_not_called",
+      "tool": "generate_quote",
+      "description": "AI should generate a quote directly since the carpenter knows what they want",
+      "tool_name": "generate_after_image"
+    }
+  ],
+  "forbidden_patterns": []
+}

@@ -1,0 +1,54 @@
+{
+  "id": "PR-014",
+  "name": "Minimum order - just 1 sheet",
+  "category": "production_readiness",
+  "description": "Customer wants just 1 sheet. AI should handle small order and potentially upsell.",
+  "phone_number": "27900000553",
+  "sender_name": "Small Order",
+  "messages": [
+    {
+      "text": "Hi, can I buy just 1 sheet of 16mm white melamine? I only need a small piece for a shelf.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "yes",
+        "sure",
+        "course",
+        "sheet",
+        "R",
+        "price"
+      ],
+      "description": "AI should confirm they can sell 1 sheet"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Small order. AI should not refuse, should quote and maybe upsell."
+}

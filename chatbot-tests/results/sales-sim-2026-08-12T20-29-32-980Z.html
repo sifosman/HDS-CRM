@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Sales Simulation Report — sales-sim-2026-08-12T20-29-32-980Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  h2 { color: #333; margin-top: 30px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 120px; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.good .big { color: #16a34a; }
+  .stat.bad .big { color: #dc2626; }
+  .stat.warn .big { color: #f59e0b; }
+  .stat.info .big { color: #2563eb; }
+  .diff-cards { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .diff-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-width: 200px; flex: 1; }
+  .diff-card.easy { border-left: 4px solid #16a34a; }
+  .diff-card.medium { border-left: 4px solid #f59e0b; }
+  .diff-card.hard { border-left: 4px solid #dc2626; }
+  .diff-card h3 { margin: 0 0 8px 0; text-transform: capitalize; }
+  .big-score { font-size: 2em; font-weight: 700; color: #1a1a1a; }
+  .close-rate { color: #666; margin: 4px 0; }
+  .outcomes { display: flex; flex-direction: column; gap: 2px; font-size: 12px; margin-top: 8px; }
+  .outcome { padding: 2px 0; }
+  .outcome.converted { color: #16a34a; }
+  .outcome.followup { color: #f59e0b; }
+  .outcome.lost { color: #dc2626; }
+  .outcome.handover { color: #2563eb; }
+  .funnel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 20px 0; }
+  .funnel-row { display: flex; align-items: center; margin: 8px 0; }
+  .funnel-label { width: 180px; font-weight: 600; text-transform: capitalize; }
+  .funnel-bar-container { flex: 1; position: relative; height: 30px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+  .funnel-bar { height: 100%; transition: width 0.3s; }
+  .funnel-text { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #333; font-size: 13px; font-weight: 600; z-index: 1; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 16px 0; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  td.good { color: #16a34a; font-weight: 600; }
+  td.bad { color: #dc2626; font-weight: 600; }
+  td.warn { color: #f59e0b; font-weight: 600; }
+  .diff-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .diff-badge.easy { background: #dcfce7; color: #16a34a; }
+  .diff-badge.medium { background: #fef3c7; color: #b45309; }
+  .diff-badge.hard { background: #fee2e2; color: #dc2626; }
+  .stage-badge { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 2px; }
+  .stage-badge.pass { background: #dcfce7; color: #16a34a; }
+  .stage-badge.fail { background: #fee2e2; color: #dc2626; }
+  .stages { white-space: nowrap; }
+  .recommendations { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 20px 0; }
+  .recommendations ol { padding-left: 20px; }
+  .recommendations li { margin: 8px 0; }
+  .recommendations .priority { font-weight: 700; }
+  .recommendations .priority.high { color: #dc2626; }
+  .recommendations .priority.medium { color: #f59e0b; }
+  .recommendations .priority.low { color: #2563eb; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+</style>
+</head>
+<body>
+<h1>HDS Sales Simulation Report</h1>
+<div class="meta">
+  Run ID: sales-sim-2026-08-12T20-29-32-980Z<br>
+  Started: 2026-08-12T20:27:58.624Z | Finished: 2026-08-12T20:29:32.979Z<br>
+  Total Customers: 1 | Avg Score: 81/100 | Conversion Rate: 0%
+</div>
+
+<h2>Executive Summary</h2>
+<div class="summary">
+  <div class="stat"><div class="big">1</div><div>customers</div></div>
+  <div class="stat good"><div class="big">0</div><div>converted</div></div>
+  <div class="stat warn"><div class="big">0</div><div>follow-up</div></div>
+  <div class="stat bad"><div class="big">0</div><div>lost</div></div>
+  <div class="stat info"><div class="big">1</div><div>handover</div></div>
+  <div class="stat"><div class="big">81/100</div><div>avg score</div></div>
+  <div class="stat good"><div class="big">0%</div><div>conversion</div></div>
+</div>
+
+<h2>Difficulty Breakdown</h2>
+<div class="diff-cards">
+<div class="diff-card medium">
+        <h3>medium (1)</h3>
+        <div class="big-score">81/100</div>
+        <div class="close-rate">Close rate: 0%</div>
+        <div class="outcomes">
+          <span class="outcome converted">Converted: 0</span>
+          <span class="outcome followup">Follow-up: 0</span>
+          <span class="outcome lost">Lost: 0</span>
+          <span class="outcome handover">Handover: 1</span>
+        </div>
+      </div>
+</div>
+
+<h2>Sales Funnel Analysis</h2>
+<div class="funnel">
+  <div class="funnel-row">
+      <div class="funnel-label">greeting</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 100%; background: #16a34a;"></div>
+        <span class="funnel-text">1/1 (100%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">discovery</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 100%; background: #16a34a;"></div>
+        <span class="funnel-text">1/1 (100%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">quote</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 100%; background: #16a34a;"></div>
+        <span class="funnel-text">1/1 (100%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">objection_handling</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 0%; background: #dc2626;"></div>
+        <span class="funnel-text">0/1 (0%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">close</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 100%; background: #16a34a;"></div>
+        <span class="funnel-text">1/1 (100%)</span>
+      </div>
+    </div>
+<div class="funnel-row">
+      <div class="funnel-label">follow_up</div>
+      <div class="funnel-bar-container">
+        <div class="funnel-bar" style="width: 100%; background: #16a34a;"></div>
+        <span class="funnel-text">1/1 (100%)</span>
+      </div>
+    </div>
+</div>
+
+<h2>Outcome Distribution</h2>
+<div class="summary">
+<div class="stat good"><div class="big">0</div><div>converted (0%)</div></div>
+<div class="stat warn"><div class="big">0</div><div>follow_up (0%)</div></div>
+<div class="stat bad"><div class="big">0</div><div>lost (0%)</div></div>
+<div class="stat info"><div class="big">1</div><div>handover (100%)</div></div>
+</div>
+
+<h2>Performance by Persona Type</h2>
+<table>
+<thead><tr><th>Persona Type</th><th>Count</th><th>Avg Score</th><th>Close Rate</th><th>Converted</th><th>Follow-up</th><th>Lost</th><th>Handover</th></tr></thead>
+<tbody>
+<tr>
+        <td>location_bound</td>
+        <td>1</td>
+        <td class="good">81/100</td>
+        <td>0%</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+        <td>1</td>
+      </tr>
+</tbody>
+</table>
+
+<h2>Scenario Details</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Difficulty</th><th>Score</th><th>Outcome</th><th>Funnel Stages</th><th>Last Reply</th></tr></thead>
+<tbody>
+<tr>
+        <td>SS-M-017</td>
+        <td>Medium - Location-bound: customer in Wynberg</td>
+        <td><span class="diff-badge medium">medium</span></td>
+        <td class="good"><strong>81/100</strong></td>
+        <td class="info">handover</td>
+        <td class="stages"><span class="stage-badge pass">G</span> <span class="stage-badge pass">D</span> <span class="stage-badge pass">Q</span> <span class="stage-badge fail">O</span> <span class="stage-badge pass">C</span> <span class="stage-badge pass">F</span></td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I&#39;m here to help. 👍</pre></details></td>
+      </tr>
+</tbody>
+</table>
+
+<h2>Improvement Recommendations</h2>
+<div class="recommendations">
+  <ol>
+    <li><span class="priority high">[HIGH]</span> <strong>Funnel drop-off at objection_handling stage</strong>: 100% of customers drop off between quote and objection_handling. This is the biggest bottleneck in the sales process. Focus on improving AI behavior at this stage.</li>
+    <li><span class="priority high">[HIGH]</span> <strong>Weak objection handling (0%)</strong>: The AI struggles to handle objections. Add more objection handling patterns to the system prompt — empathy phrases + value arguments for price, quality, timing, authority, and budget objections.</li>
+    <li><span class="priority low">[LOW]</span> <strong>Best persona type: location_bound (avg 81/100)</strong>: The AI handles this customer type well. Use these successful patterns as a model for improving other persona types.</li>
+  </ol>
+</div>
+
+</body>
+</html>

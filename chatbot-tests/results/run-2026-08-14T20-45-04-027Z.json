@@ -1,0 +1,165 @@
+{
+  "run_id": "run-2026-08-14T20-45-04-027Z",
+  "started_at": "2026-08-14T20:44:12.416Z",
+  "finished_at": "2026-08-14T20:45:04.026Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "greeting": {
+        "total": 10,
+        "passed": 10,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 10963,
+      "p95": 13973,
+      "avg": 9628
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13973,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! I've sent through some photos of our popular wood grain and white melamine board options. \n\nWhat type of project are you working on, or would you like a quick quote on any of these? 😊"
+    },
+    {
+      "scenario_id": "GR-002",
+      "name": "New customer - vague request",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13563,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! Our most popular option is our White Melamine Chipboard 16mm at R650 per sheet—it's super versatile and ideal for cabinets, shelving, or DIY projects. \n\nWhat project are you working on, and how many sheets do you need so I can get a quote ready for you?"
+    },
+    {
+      "scenario_id": "GR-003",
+      "name": "formal_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 12394,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Good morning, Test Customer! 👋 We supply high-quality melamine boards, precision cutting, edging, and hardware for all types of cabinetry and DIY projects. \n\nI've just shared some of our popular wood grain melamine options above. What kind of project are you working on today?"
+    },
+    {
+      "scenario_id": "GR-004",
+      "name": "casual_slang_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10963,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey Test! Yes, we sure do — we supply a full range of melamine boards, MDF, and chipboard with precision cutting and edging. 🪵\n\nI've just shared some of our popular wood grain melamine options above! What project are you working on, or which board can I quote you on?"
+    },
+    {
+      "scenario_id": "GR-005",
+      "name": "afrikaans_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9084,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍"
+    },
+    {
+      "scenario_id": "GR-006",
+      "name": "time_based_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 12573,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! I'm available 24/7 here on WhatsApp to assist you! \n\nOur physical branch locations, like our Johannesburg branch, are open weekdays from 7:30 AM to 5:00 PM and Saturdays from 8:00 AM to 1:00 PM. The address is available if you need specific directions to your nearest location. \n\nWhat project are you working on today? I'd love to help you get a quote sorted!"
+    },
+    {
+      "scenario_id": "GR-007",
+      "name": "returning_pretender",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6616,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Welcome back, Test Customer! 😊 I don't have your previous board details saved in our chat context — was it White Melamine Chipboard or another finish? \n\nJust let me know which board you need and how many sheets, and I'll get a quote generated for you right away!"
+    },
+    {
+      "scenario_id": "GR-008",
+      "name": "business_inquiry_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5415,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi! Yes, we definitely supply trade customers and contractors with top-quality boards, precision cutting, and edging across South Africa. \n\nWhat specific materials or quantities are you looking for on your current project?"
+    },
+    {
+      "scenario_id": "GR-009",
+      "name": "very_short_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5664,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey Test Customer! How can I help you with your board cutting or edging project today? 😊"
+    },
+    {
+      "scenario_id": "GR-010",
+      "name": "services_question_greeting",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6035,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test Customer! At HDS Group, we supply top-quality melamine boards with precision cutting and edging for all your kitchen and cabinet projects. 🛠️ \n\nAre you planning a build or renovation at the moment?"
+    }
+  ]
+}

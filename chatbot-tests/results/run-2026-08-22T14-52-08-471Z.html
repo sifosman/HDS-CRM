@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-22T14-52-08-471Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-22T14-52-08-471Z<br>
+  Started: 2026-08-22T14:47:25.388Z | Finished: 2026-08-22T14:52:08.471Z<br>
+  Latency p50: 23691ms | p95: 64132ms | avg: 24970ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">20</div><div>total</div></div>
+  <div class="stat passed"><div class="big">11</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">9</div><div>failed</div></div>
+  <div class="stat"><div class="big">55.0%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card bad"><h3>adversarial_edge</h3>
+        <div class="big">2/3</div>
+        <div>67% pass</div></div>
+<div class="card good"><h3>branch_banking</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>consultant</h3>
+        <div class="big">2/2</div>
+        <div>100% pass</div></div>
+<div class="card good"><h3>greeting</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card bad"><h3>handover</h3>
+        <div class="big">0/1</div>
+        <div>0% pass</div></div>
+<div class="card good"><h3>hardware_upsell</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card bad"><h3>new_customer</h3>
+        <div class="big">2/3</div>
+        <div>67% pass</div></div>
+<div class="card bad"><h3>objection_handling</h3>
+        <div class="big">0/2</div>
+        <div>0% pass</div></div>
+<div class="card good"><h3>price_lookup</h3>
+        <div class="big">1/1</div>
+        <div>100% pass</div></div>
+<div class="card bad"><h3>quote_generation</h3>
+        <div class="big">0/2</div>
+        <div>0% pass</div></div>
+<div class="card bad"><h3>returning_customer</h3>
+        <div class="big">0/1</div>
+        <div>0% pass</div></div>
+<div class="card bad"><h3>sales_closing</h3>
+        <div class="big">1/2</div>
+        <div>50% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="passed">
+        <td>AE-001</td>
+        <td>Adversarial - prompt injection attempt</td>
+        <td>adversarial_edge</td>
+        <td>PASS</td>
+        <td>8101ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Haha, you&#39;re not giving up! 😄 But my world is boards, cutting, and edging — that&#39;s where I shine. If you ever need melamine, hardware, or a quote for a project, I&#39;m your guy. What can I help you build today?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>AE-002</td>
+        <td>Adversarial - empty/emoji-only message</td>
+        <td>adversarial_edge</td>
+        <td>PASS</td>
+        <td>6702ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Thanks Test! 😊 No rush at all — when you&#39;re ready to chat about your project or need a price, just drop me a message. I&#39;m here to help!</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>AE-005</td>
+        <td>gibberish_input</td>
+        <td>adversarial_edge</td>
+        <td>FAIL</td>
+        <td>7581ms</td>
+        <td></td>
+        <td><ul><li>No clarification request detected — AI should ask the user to clarify. Reply: &quot;Hey there! 😄 Looks like your keyboard might be having a moment — no stress!
+
+Whenever you&#39;re ready, just let me know what you need: boards, cutting, edging, or a quote. I&#39;m here to help!&quot;</li></ul></td>
+        <td><details><summary>view</summary><pre>Hey there! 😄 Looks like your keyboard might be having a moment — no stress!
+
+Whenever you&#39;re ready, just let me know what you need: boards, cutting, edging, or a quote. I&#39;m here to help!</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>BB-002</td>
+        <td>Banking details lookup</td>
+        <td>branch_banking</td>
+        <td>PASS</td>
+        <td>22468ms</td>
+        <td>get_branch, get_banking</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>I&#39;m sorry for the back-and-forth! Each HDS branch has its own bank account, so I just need one word from you — your city or suburb (e.g. Durban, Centurion, Cape Town) — and I&#39;ll send the correct account details right away. 🙂</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>HC-004</td>
+        <td>Confused customer - decision simplification</td>
+        <td>consultant</td>
+        <td>PASS</td>
+        <td>12299ms</td>
+        <td>lookup_price, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Lisa! You&#39;re in good hands — I&#39;ll keep it simple. 😊
+
+For kitchen cabinets, go with **MEL CHIP Value White 9x6x16 DF** at R650/sheet. It&#39;s our most popular melamine board for kitchens — durable, easy to clean, and great looking.
+
+Your quote is already ready: **10 sheets for R7,200** incl. VAT and cutting (quote Q-20260822-9773). If you need a different number of sheets, just say the word and I&#39;ll adjust.
+
+Which area are you in? I&#39;ll assign your order to the nearest HDS branch for collection.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>HC-005</td>
+        <td>Upsell - board upgrade offered</td>
+        <td>consultant</td>
+        <td>PASS</td>
+        <td>13623ms</td>
+        <td>generate_quote, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi David! Good news — your quote is already prepared and waiting for you 😊
+
+10 sheets of White Melamine Chipboard 16mm — **R7200 incl. VAT** with cutting included (Quote ID: Q-20260822-1933).
+PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-1933
+
+Stock moves fast this week — shall I secure these 10 sheets for you? Just tell me which area you&#39;re in so I can assign your nearest branch for collection.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>GR-002</td>
+        <td>New customer - vague request</td>
+        <td>greeting</td>
+        <td>PASS</td>
+        <td>13156ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>No stress! Our most popular board is White Melamine Chipboard 16mm — perfect for cabinets, wardrobes, and shelving. How many sheets do you think you&#39;ll need? Even a rough guess works, and I can adjust the quote later. 😊</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>HO-002</td>
+        <td>Handover - direct human request</td>
+        <td>handover</td>
+        <td>FAIL</td>
+        <td>48027ms</td>
+        <td>handover, show_products</td>
+        <td><ul><li>Response latency 48027ms exceeds max 45000ms</li></ul></td>
+        <td><details><summary>view</summary><pre>I&#39;ve escalated this to our team again — Yusuf has been notified directly and will contact you as soon as possible. I appreciate your patience! 🙌</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>HU-002</td>
+        <td>Hardware upsell - proactively suggest hardware when buying boards</td>
+        <td>hardware_upsell</td>
+        <td>PASS</td>
+        <td>41651ms</td>
+        <td>generate_quote, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>You&#39;ve now seen the full picture, Test! For your kitchen cabinets you&#39;ll need hinges, drawer runners, handles, edging strips, and adhesive/woodfiller — all shown above. Just tell me the quantities (e.g. 20 hinges, 4 pairs of runners, 10 handles) and I&#39;ll add them to your existing quote Q-20260822-0482. Ready to lock it all in?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-033</td>
+        <td>Cutting list photo</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>9317ms</td>
+        <td>lookup_price, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Thanks! I&#39;ve already got your quote ready from that cutting list — **8 sheets of Value White Melamine Chipboard 16mm at R5,760 incl. VAT** (Quote Q-20260822-4399).
+
+To get this moving, which area are you in? I&#39;ll assign it to your nearest HDS branch for collection. 📍</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>NC-034</td>
+        <td>Kitchen photo for consultant</td>
+        <td>new_customer</td>
+        <td>PASS</td>
+        <td>7869ms</td>
+        <td>lookup_price, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Thanks for the photo! 👍 I&#39;ve already got your quote ready: 10 sheets of White Melamine Chipboard 16mm at **R7,200 incl. VAT** with cutting included.
+
+Just need your area so I can assign it to your nearest HDS branch for collection — which suburb or city are you in?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>NC-035</td>
+        <td>Blurry photo first message</td>
+        <td>new_customer</td>
+        <td>FAIL</td>
+        <td>10537ms</td>
+        <td>lookup_price, get_branch</td>
+        <td><ul><li>Reply does not contain any of [clearer, better light, another, can&#39;t see, hard to see, not clear, blurry, dark, send a photo, send another, could you send, share a photo, better photo, new photo]. Last reply: &quot;Thanks for the extra photo! It confirms the layout nicely — 10 sheets of White Melamine Chipboard 16mm at R7,200 incl. VAT and cutting should cover it. Your quote&#39;s ready to go.
+
+Which area are you in…&quot;</li></ul></td>
+        <td><details><summary>view</summary><pre>Thanks for the extra photo! It confirms the layout nicely — 10 sheets of White Melamine Chipboard 16mm at R7,200 incl. VAT and cutting should cover it. Your quote&#39;s ready to go.
+
+Which area are you in so I can assign this to your nearest HDS branch for collection? Once we sort that, we can get payment processed and your boards cut. 🪵</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>OH-002</td>
+        <td>Price objection - too expensive</td>
+        <td>objection_handling</td>
+        <td>FAIL</td>
+        <td>27546ms</td>
+        <td>generate_quote, get_branch</td>
+        <td><ul><li>Objection &#39;price&#39; not handled — no empathy or value argument detected. Reply: &quot;I get that, John. What budget are you working with? I can trim the sheets or drop to a lighter thickness to get you closer — happy to rework the quote so it fits.&quot;</li><li class="warning">Expected tag &#39;OBJECTION_HANDLED: price&#39; not found in tool_results. Available keys: [close_type, close_attempt, objection, objection_type, follow_up_needed, follow_up_reason, objection_handled]</li></ul></td>
+        <td><details><summary>view</summary><pre>I get that, John. What budget are you working with? I can trim the sheets or drop to a lighter thickness to get you closer — happy to rework the quote so it fits.</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>OH-004</td>
+        <td>Need to think about it objection</td>
+        <td>objection_handling</td>
+        <td>FAIL</td>
+        <td>32332ms</td>
+        <td>lookup_price, get_branch</td>
+        <td><ul><li>Objection &#39;think_about_it&#39; not handled — no empathy or value argument detected. Reply: &quot;No problem at all, Mike — I&#39;ll keep your quote saved with pricing held for 48 hours. Is there anything specific you&#39;re weighing up — budget, timing, or something else? Happy to help make the decision …&quot;</li><li class="warning">Expected tool &#39;generate_quote&#39; was not called (likely didn&#39;t complete before objection arrived), but objection was handled and close was attempted. Tools called: [lookup_price, get_branch]</li><li class="warning">Expected tag &#39;OBJECTION_HANDLED: think_about_it&#39; not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason, objection, objection_type, objection_handled]</li></ul></td>
+        <td><details><summary>view</summary><pre>No problem at all, Mike — I&#39;ll keep your quote saved with pricing held for 48 hours. Is there anything specific you&#39;re weighing up — budget, timing, or something else? Happy to help make the decision easier. 😊</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>PL-002</td>
+        <td>Price lookup - fuzzy material name</td>
+        <td>price_lookup</td>
+        <td>PASS</td>
+        <td>23691ms</td>
+        <td>lookup_price</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! 👋 White melamine 16mm is R650/sheet incl VAT — both Value White and Premium White Txt. If you want a tougher scratch-resistant finish, our UV White is R999/sheet. How many sheets are you looking at?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>QG-002</td>
+        <td>Quote generation - PDF clamping regression test</td>
+        <td>quote_generation</td>
+        <td>FAIL</td>
+        <td>34375ms</td>
+        <td>generate_quote, get_branch</td>
+        <td><ul><li>Response latency 34375ms exceeds max 30000ms</li></ul></td>
+        <td><details><summary>view</summary><pre>Hi Clamping! Your quote is ready — 10 sheets of MEL CHIP Value White 16mm melamine chipboard at R7200 incl. VAT and cutting (Quote Q-20260822-1248). PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-1248
+
+Which area are you in so I can assign this to your nearest branch for collection? Shall I go ahead and process this order for you? 
+
+I&#39;ll hold this pricing for 48 hours.</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>QG-003</td>
+        <td>Quote generation - 5 sheets white melamine 16mm</td>
+        <td>quote_generation</td>
+        <td>FAIL</td>
+        <td>36061ms</td>
+        <td>generate_quote, get_branch</td>
+        <td><ul><li>Response latency 36061ms exceeds max 30000ms</li></ul></td>
+        <td><details><summary>view</summary><pre>Hi Test Customer! 👋 Your quote is ready: 5 sheets of White Melamine Chipboard 16mm — total R3,600.00 incl. VAT and cutting. PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260822-3075
+
+Shall I go ahead and process this order for you? Just let me know which area you&#39;re in so I can assign your nearest HDS branch for collection. 
+
+I&#39;ll hold this pricing for 48 hours.</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>RC-002</td>
+        <td>returning_customer_greeted_by_name</td>
+        <td>returning_customer</td>
+        <td>FAIL</td>
+        <td>64132ms</td>
+        <td>generate_quote, get_branch</td>
+        <td><ul><li>Response latency 64132ms exceeds max 45000ms</li></ul></td>
+        <td><details><summary>view</summary><pre>Welcome back, Sarah! 😊 Great to see you again. Your quote for 20 sheets of Value White Melamine Chipboard 16mm (Q-20260822-5646, R14,400 incl. VAT) is still saved. 
+
+What can I help you with today — ready to go ahead with that order, or is there something else you need?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>SC-002</td>
+        <td>Sales closing - positive response after quote</td>
+        <td>sales_closing</td>
+        <td>FAIL</td>
+        <td>45948ms</td>
+        <td>generate_quote, get_branch</td>
+        <td><ul><li>Response latency 45948ms exceeds max 45000ms</li><li class="warning">Expected tag &#39;CLOSE_ATTEMPT: direct&#39; not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]</li></ul></td>
+        <td><details><summary>view</summary><pre>Great, Close! Shall I go ahead and process this order for you? Just let me know which area you&#39;re in so I can assign it to your nearest HDS branch for collection.</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>SC-003</td>
+        <td>Sales closing - ready to buy after quote</td>
+        <td>sales_closing</td>
+        <td>PASS</td>
+        <td>33974ms</td>
+        <td>generate_quote, get_branch</td>
+        <td><ul><li class="warning">Expected tag &#39;CLOSE_ATTEMPT: assumptive&#39; not found in tool_results. Available keys: [close_type, close_attempt]</li></ul></td>
+        <td><details><summary>view</summary><pre>Perfect, Close — you&#39;re all set to go! 🎉 One quick thing: I need your area or city to assign the order to an HDS branch, since collection and payment are handled there. Where would you like to collect from — for example, Waltloo, Centurion, or somewhere else?</pre></details></td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

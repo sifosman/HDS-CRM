@@ -1,0 +1,47 @@
+{
+  "run_id": "run-2026-08-11T12-13-31-247Z",
+  "started_at": "2026-08-11T12:13:10.577Z",
+  "finished_at": "2026-08-11T12:13:31.247Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "branch_banking": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 18074,
+      "p95": 18074,
+      "avg": 18074
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "BB-010",
+      "name": "Banking details for Johannesburg branch",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 18074,
+      "tool_calls": [
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Our Johannesburg branch is HDS Kya Sands! Here are the banking details:\n\n**Account Name:** HDS Kya Sands  \n**Account Number:** 1262234573  \n**Account Type:** Current  \n\nAre you paying for an existing quote, or can I help you put an order together today? 😊"
+    }
+  ]
+}

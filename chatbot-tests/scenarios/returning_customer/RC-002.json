@@ -1,0 +1,42 @@
+{
+  "id": "RC-002",
+  "name": "returning_customer_greeted_by_name",
+  "category": "returning_customer",
+  "description": "Returning customer says 'Hi, it's me again' and the AI should greet them by name, recognising them from conversation history loaded via the Load Customer Context node.",
+  "phone_number": "27900000087",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is Sarah, can I get a quote for 20 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Hi, it's me again",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 75000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "Sarah",
+      "description": "AI should greet the returning customer by name 'Sarah'"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests whether the AI recognises a returning customer by name from Supabase conversation history. The Load Customer Context node should retrieve the prior interaction and the AI should address the customer as 'Sarah' in its reply."
+}

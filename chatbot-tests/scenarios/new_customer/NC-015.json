@@ -1,0 +1,53 @@
+{
+  "id": "NC-015",
+  "name": "Quote for 5 sheets white melamine",
+  "category": "new_customer",
+  "description": "New customer immediately requests a quote for 5 sheets.",
+  "phone_number": "27900000815",
+  "sender_name": "New Customer 15",
+  "messages": [
+    {
+      "text": "Can I get a quote for 5 sheets of white melamine 16mm?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a quote total"
+    },
+    {
+      "type": "quote_generated",
+      "description": "Quote should be generated with total"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 35000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Direct quote request from new customer. AI should generate quote immediately."
+}

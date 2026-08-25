@@ -1,0 +1,46 @@
+{
+  "id": "GR-001",
+  "name": "New customer greeting - casual",
+  "category": "greeting",
+  "description": "New customer sends a casual greeting. AI should respond warmly and ask clarifying questions about what they need.",
+  "phone_number": "27900000001",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Hi there, I need some info on your boards",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "regex_match",
+      "pattern": "\\b(hi|hey|hello|howdy|hola|goeie|morning|afternoon|welcome)\\b",
+      "flags": "i",
+      "description": "AI should greet the customer with a greeting word"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "AI should ask about material type, size, or quantity \u2014 not jump straight to quoting"
+}

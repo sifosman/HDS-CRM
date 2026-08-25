@@ -1,0 +1,57 @@
+{
+  "run_id": "run-2026-08-11T12-52-00-232Z",
+  "started_at": "2026-08-11T12:51:40.573Z",
+  "finished_at": "2026-08-11T12:52:00.232Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 16719,
+      "p95": 16719,
+      "avg": 16719
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-015",
+      "name": "Quote generation - edge case 50 sheets",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'R'. Last reply: \"\""
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 16719,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": ""
+    }
+  ]
+}

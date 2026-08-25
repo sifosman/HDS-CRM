@@ -1,0 +1,171 @@
+{
+  "run_id": "sales-sim-2026-08-12T20-27-02-515Z",
+  "started_at": "2026-08-12T20:26:20.574Z",
+  "finished_at": "2026-08-12T20:27:02.514Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 59,
+    "byDifficulty": {
+      "easy": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "medium": {
+        "count": 1,
+        "scores": [
+          59
+        ],
+        "outcomes": {
+          "handover": 1
+        },
+        "avgScore": 59
+      },
+      "hard": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 0,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 0,
+        "total": 1
+      },
+      "close": {
+        "passed": 1,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 1,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 0,
+      "quote": 100,
+      "objection_handling": 0,
+      "close": 100,
+      "follow_up": 100
+    },
+    "outcomeCounts": {
+      "converted": 0,
+      "follow_up": 0,
+      "lost": 0,
+      "handover": 1
+    },
+    "conversionRate": 0,
+    "byPersonaType": {
+      "location_bound": {
+        "count": 1,
+        "scores": [
+          59
+        ],
+        "outcomes": {
+          "handover": 1
+        },
+        "avgScore": 59
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-M-017",
+      "name": "Medium - Location-bound: customer in Wynberg",
+      "category": "sales_simulation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'get_branch' was not called. Tools called: [lookup_price, handover]"
+        },
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price, handover]"
+        },
+        {
+          "type": "funnel_stage",
+          "detail": "Discovery stage not reached — AI did not ask clarifying questions or confirm product specs. Reply: \"I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I have our sales team prepare this quote for you? I'll hold this pricing for 48 hours — feel free to …\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 40367,
+      "tool_calls": [
+        "lookup_price",
+        "handover"
+      ],
+      "assistant_reply_count": 3,
+      "last_reply": "I'm having trouble generating your quote right now, but I'd love to get this sorted for you! Shall I have our sales team prepare this quote for you? I'll hold this pricing for 48 hours — feel free to reach out anytime. 👍",
+      "sales_score": 59,
+      "sales_outcome": "handover",
+      "sales_difficulty": "medium",
+      "sales_persona_type": "location_bound",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": false,
+        "quote": true,
+        "objection_handling": false,
+        "close": true,
+        "follow_up": true
+      },
+      "sales_summary": "Score 59/100 (medium) — Outcome: handover. Stages passed: greeting, quote, close, follow_up. Stages missed: discovery, objection_handling."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-M-017",
+      "score": 59,
+      "outcome": "handover",
+      "difficulty": "medium",
+      "persona_type": "location_bound",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "close": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "follow_up": {
+          "passed": true,
+          "detail": "Stage reached"
+        }
+      },
+      "summary": "Score 59/100 (medium) — Outcome: handover. Stages passed: greeting, quote, close, follow_up. Stages missed: discovery, objection_handling."
+    }
+  ]
+}

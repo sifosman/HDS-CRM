@@ -1,0 +1,63 @@
+{
+  "id": "SS-E-010",
+  "name": "Easy - Ready to order: 15 sheets 16mm postform board",
+  "category": "sales_simulation",
+  "difficulty": "easy",
+  "persona_type": "ready_to_order",
+  "customer_name": "Rajesh P",
+  "customer_profile": "Customer in Alexandra, ready to place an order",
+  "phone_number": "27900000409",
+  "sender_name": "Rajesh P",
+  "messages": [
+    {
+      "text": "Hi, I want to order 15 sheets of 16mm postform board. What's the next step?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Perfect, let's go ahead with the order.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Customer is ready to order. AI should generate quote and close immediately."
+}

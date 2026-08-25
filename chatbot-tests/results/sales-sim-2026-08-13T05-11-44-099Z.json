@@ -1,0 +1,158 @@
+{
+  "run_id": "sales-sim-2026-08-13T05-11-44-099Z",
+  "started_at": "2026-08-13T05:11:08.443Z",
+  "finished_at": "2026-08-13T05:11:44.099Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 90,
+    "byDifficulty": {
+      "easy": {
+        "count": 1,
+        "scores": [
+          90
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 90
+      },
+      "medium": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "hard": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 1,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 0,
+        "total": 1
+      },
+      "close": {
+        "passed": 1,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 0,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 100,
+      "quote": 100,
+      "objection_handling": 0,
+      "close": 100,
+      "follow_up": 0
+    },
+    "outcomeCounts": {
+      "converted": 1,
+      "follow_up": 0,
+      "lost": 0,
+      "handover": 0
+    },
+    "conversionRate": 100,
+    "byPersonaType": {
+      "direct_quote": {
+        "count": 1,
+        "scores": [
+          90
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 90
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-E-003",
+      "name": "Easy - Direct quote: 25 sheets 16mm MDF board",
+      "category": "sales_simulation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 35070,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Fantastic, Lebo! Your nearest branch is our HDS Bloemfontein branch, and the address is 6 Rhodes Ave, Oranjesig, Bloemfontein.\n\nHere is your official quote for 25 sheets of 16mm MDF:\n**Total (VAT incl):** R74,750  \n**Quote PDF:** https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-7192\n\nShall I go ahead and send you a secure payment link to complete your order?",
+      "sales_score": 90,
+      "sales_outcome": "converted",
+      "sales_difficulty": "easy",
+      "sales_persona_type": "direct_quote",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": true,
+        "quote": true,
+        "objection_handling": false,
+        "close": true,
+        "follow_up": false
+      },
+      "sales_summary": "Score 90/100 (easy) — Outcome: converted. Stages passed: greeting, discovery, quote, close. Stages missed: objection_handling, follow_up."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-E-003",
+      "score": 90,
+      "outcome": "converted",
+      "difficulty": "easy",
+      "persona_type": "direct_quote",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "close": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "follow_up": {
+          "passed": false,
+          "detail": "Stage not reached"
+        }
+      },
+      "summary": "Score 90/100 (easy) — Outcome: converted. Stages passed: greeting, discovery, quote, close. Stages missed: objection_handling, follow_up."
+    }
+  ]
+}

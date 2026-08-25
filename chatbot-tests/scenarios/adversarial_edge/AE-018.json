@@ -1,0 +1,53 @@
+{
+  "id": "AE-018",
+  "name": "rapid_topic_switching",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to handle rapid topic switching across multiple messages without losing context or becoming confused",
+  "phone_number": "27900000113",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "quote me for boards",
+      "delay_ms": 0
+    },
+    {
+      "text": "actually what's your address?",
+      "delay_ms": 5000
+    },
+    {
+      "text": "wait, do you sell tools too?",
+      "delay_ms": 5000
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 50000,
+      "description": "Each reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond to each message, not crash"
+    },
+    {
+      "type": "context_awareness",
+      "description": "AI should handle each topic change gracefully and address the current question"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "(error|null|undefined|NaN|exception|stack trace|I'm confused|I don't understand what you want)",
+      "flags": "i",
+      "description": "AI should not break down or express confusion when topics change rapidly"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "User rapidly switches topics across 3 messages with 5-second delays: first asking for a board quote, then asking for the address, then asking about tools. The AI should handle each message in context, addressing the current question without getting confused by the topic changes."
+}

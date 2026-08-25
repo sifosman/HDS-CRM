@@ -1,0 +1,57 @@
+{
+  "id": "OH-005",
+  "name": "Need to check with partner objection",
+  "category": "objection_handling",
+  "description": "Customer receives a quote then says they need to discuss with their wife, testing the AI's ability to handle an authority objection by offering to help the decision-making process",
+  "phone_number": "27900000065",
+  "sender_name": "Test Objection Customer",
+  "messages": [
+    {
+      "text": "Hi there, I'm David. I'd like a quote for 20 sheets of white melamine chipboard 16mm.",
+      "delay_ms": 0
+    },
+    {
+      "text": "I need to discuss with my wife first",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "objection_handled",
+      "objection_type": "authority",
+      "description": "AI should handle the objection with empathy and offer to provide information to help the decision-maker"
+    },
+    {
+      "type": "close_attempt",
+      "description": "AI should re-attempt a close after handling the objection"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Objection handling reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "\\[OBJECTION_HANDLED|\\[CLOSE_ATTEMPT",
+      "description": "Tags should be stripped from customer-facing message"
+    },
+    {
+      "pattern": "sorry.*can't help|apologize.*unable",
+      "flags": "i",
+      "description": "AI should not give up after a single objection"
+    }
+  ],
+  "expected_tags": [
+    "OBJECTION_HANDLED: authority"
+  ],
+  "notes": "Authority objection. AI should respect the decision-making process, offer to send details for the partner, and suggest a follow-up timeline while re-attempting a close."
+}

@@ -1,0 +1,47 @@
+{
+  "id": "NC-010",
+  "name": "Kitchen cabinet materials",
+  "category": "new_customer",
+  "description": "New customer is building kitchen cabinets and wants material recommendations.",
+  "phone_number": "27900000810",
+  "sender_name": "New Customer 10",
+  "messages": [
+    {
+      "text": "I'm looking for kitchen cabinet materials",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should recommend melamine"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "AI should lead with HDS-manufactured melamine and offer to generate quote."
+}

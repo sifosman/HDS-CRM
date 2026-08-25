@@ -1,0 +1,52 @@
+{
+  "id": "NC-009",
+  "name": "Do you sell MDF",
+  "category": "new_customer",
+  "description": "New customer asks if HDS sells MDF boards. AI should confirm and provide details.",
+  "phone_number": "27900000809",
+  "sender_name": "New Customer 9",
+  "messages": [
+    {
+      "text": "Do you sell MDF boards?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "MDF",
+      "description": "Reply should mention MDF"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Should mention melamine as HDS manufactured option"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "MDF is distributed, not manufactured. AI should mention this but still help."
+}

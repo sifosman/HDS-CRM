@@ -1,0 +1,56 @@
+{
+  "id": "PL-006",
+  "name": "Multiple products in one message",
+  "category": "price_lookup",
+  "description": "Tests price lookup when the customer asks about multiple products in a single message (white melamine and MDF). The AI should return prices for both products.",
+  "phone_number": "27900000016",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "What's the price of white melamine and MDF?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain at least one price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "MDF",
+      "description": "Reply should reference MDF"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests the AI's ability to handle multi-product queries in a single message. The lookup_price tool may be called multiple times or once with multiple products. Both product names and their respective prices should appear in the response."
+}

@@ -1,0 +1,71 @@
+{
+  "phone_range": {
+    "start": "27900000114",
+    "end": "27900000399",
+    "note": "Reserved for load testing. 279 is invalid SA area code so Meta rejects outbound sends. Cleanup uses LIKE '2790000%' which covers this range."
+  },
+  "message_templates": {
+    "greeting": [
+      "Hi, I need some boards",
+      "Hello, can you help me with pricing?",
+      "Hi there, looking for melamine boards",
+      "Hey, do you cut boards to size?",
+      "Hi, I need a quote for some chipboard"
+    ],
+    "price_lookup": [
+      "What's the price of 16mm white melamine chipboard?",
+      "How much for 18mm melamine? I need about 10 sheets",
+      "Do you have white melamine? What's the price?",
+      "Price on 16mm mel chip please",
+      "I need pricing on melamine boards, 16mm"
+    ],
+    "quote_request": [
+      "I need a quote for 20 sheets of 16mm white melamine chipboard",
+      "Can you quote me for 15 sheets of 18mm melamine?",
+      "Please generate a quote for 25 sheets of white melamine 16mm",
+      "I'd like a quote for 30 sheets of 16mm mel chipboard",
+      "Quote please: 10 sheets 18mm white melamine"
+    ],
+    "rapid_fire_sequence": [
+      "Hi, I need some boards for a project",
+      "I need 16mm white melamine chipboard",
+      "About 20 sheets",
+      "Can you give me a quote?",
+      "What are your payment terms?",
+      "And where are you located?"
+    ]
+  },
+  "thresholds": {
+    "burst": {
+      "min_success_rate_pct": 95,
+      "max_p95_latency_ms": 30000,
+      "max_p99_latency_ms": 45000,
+      "contamination_check": true
+    },
+    "rapid_fire": {
+      "min_reply_count_ratio": 0.8,
+      "max_duplicate_replies": 0,
+      "ordering_check": true
+    },
+    "soak": {
+      "min_success_rate_pct": 90,
+      "max_latency_degradation_pct": 50,
+      "default_rate_per_min": 10,
+      "default_duration_min": 5
+    },
+    "failure_mode": {
+      "fallback_message_timeout_ms": 45000,
+      "required_fallback_keywords": ["sec", "moment", "help", "shortly", "soon"]
+    }
+  },
+  "defaults": {
+    "burst_counts": [20, 50, 100],
+    "rapid_fire_count": 6,
+    "rapid_fire_interval_ms": 800,
+    "soak_rate_per_min": 10,
+    "soak_duration_min": 5,
+    "poll_timeout_ms": 90000,
+    "poll_interval_ms": 2000,
+    "webhook_timeout_ms": 30000
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "id": "PL-015",
+  "name": "Specific brand or manufacturer inquiry",
+  "category": "price_lookup",
+  "description": "Tests price lookup when the customer asks about a specific brand or manufacturer. The AI should check the hds_prices table for the brand/product and return the real price if available, or clarify that pricing is by product specification rather than brand.",
+  "phone_number": "27900000025",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Do you stock Sonae melamine? What's the price for a 16mm white sheet?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests brand-specific inquiries. The hds_prices table may or may not track brands separately. If the brand is not in the table, the AI should provide the price for the equivalent product specification (16mm white melamine) and note that pricing is by specification rather than brand. The contains_keyword for 'R' is omitted because the brand-specific product may not be found, and the AI should not fabricate a brand-specific price."
+}

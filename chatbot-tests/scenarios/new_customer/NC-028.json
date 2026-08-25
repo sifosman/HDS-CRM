@@ -1,0 +1,55 @@
+{
+  "id": "NC-028",
+  "name": "Help me choose materials",
+  "category": "new_customer",
+  "description": "New customer needs help choosing materials.",
+  "phone_number": "27900000828",
+  "sender_name": "New Customer 28",
+  "messages": [
+    {
+      "text": "Can you help me choose materials?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "description": "Reply should mention melamine",
+      "keywords": [
+        "melamine",
+        "boards",
+        "mdf",
+        "chipboard",
+        "cabinets",
+        "project",
+        "kitchen"
+      ]
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "AI should ask about project type and offer recommendations."
+}

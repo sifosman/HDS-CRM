@@ -1,0 +1,142 @@
+{
+  "run_id": "run-2026-08-19T16-23-03-858Z",
+  "started_at": "2026-08-19T16:22:41.441Z",
+  "finished_at": "2026-08-19T16:23:03.857Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "skipped": 0,
+    "pass_rate": "50.0%",
+    "by_category": {
+      "new_customer": {
+        "total": 6,
+        "passed": 3,
+        "failed": 3
+      }
+    },
+    "latency_ms": {
+      "p50": 6195,
+      "p95": 7803,
+      "avg": 5728
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "NC-008",
+      "name": "What colors available",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: []"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 5400,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "We have a full range of melamine boards, including:\n\n- **Solid colors:** White Melamine Chipboard, Black, Pearl Grey, Dune, Olivia, Urban Blue, and Azure Blue.\n- **Wood grain finishes:** Dakota Oak, Vintage Pine, Flagstaff Oak, Sienna Oak, Carolina Cedar, and White Cedar.\n\nOur classic 16mm White Melamine Chipboard is by far the most popular and cost-effective choice. \n\nWhich shade would you like to use for your project?"
+    },
+    {
+      "scenario_id": "NC-014",
+      "name": "What hardware do you sell",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'show_products' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 6195,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "We sell a full range of cabinet hardware, including handles (from R3), soft-close and standard hinges (from R3 to R22), drawer runners, cabinet legs, and gas stays. \n\nCould you let me know what specific items or quantities you need for your project? I'd be happy to put together a quote for you!"
+    },
+    {
+      "scenario_id": "NC-015",
+      "name": "Quote for 5 sheets white melamine",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7558,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 5 sheets of 16mm White Melamine Chipboard, the total is R3,250 incl. VAT. \n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-016",
+      "name": "Price for 20 sheets MDF",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7803,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 20 sheets of 16mm Melamine MDF (2750x1830mm), the price is R1,000 per sheet, bringing your total to R20,000 incl. VAT. \n\nWould you prefer to pay by EFT or card for this order?"
+    },
+    {
+      "scenario_id": "NC-019",
+      "name": "Full kitchen quote with hardware",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 3947,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For your kitchen project, 10 sheets of **White Melamine Chipboard (16mm)** come to **R6,500 incl. VAT** (R650 per sheet).\n\nFor the hardware, our soft-close clip-on hinges are R14 each and hollow barrel handles start from R4.75 each. \n\nHow many doors and drawers are you fitting in total, or shall I base the hardware on a standard 20 hinges and 10 handles for this order?"
+    },
+    {
+      "scenario_id": "NC-020",
+      "name": "15 sheets UV gloss quote",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3466,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 15 sheets of UV Gloss, the pricing ranges from **R30,000 to R45,000** total incl. VAT, depending on the colour:\n\n• **Iceland White UV Gloss**: R30,000 total (R2,000/sheet)\n• **UV Black Gloss**: R36,000 total (R2,400/sheet)\n• **Traeviso Super Gloss**: R45,000 total (R3,000/sheet)\n\nWhich colour would you like to go with? Shall I go ahead and lock in this order for you?"
+    }
+  ]
+}

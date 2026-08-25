@@ -1,0 +1,55 @@
+{
+  "run_id": "run-2026-08-11T16-02-02-779Z",
+  "started_at": "2026-08-11T16:01:56.788Z",
+  "finished_at": "2026-08-11T16:02:02.775Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 4752,
+      "p95": 4752,
+      "avg": 4752
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 4752,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Your quote for 20 sheets of 16mm White Melamine Chipboard is R13,000 incl. VAT. \n\nStock for this melamine board is moving fast this week. Shall I lock in this quantity and process your order now?"
+    }
+  ]
+}

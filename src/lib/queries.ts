@@ -651,7 +651,13 @@ export async function getIntelligenceStats() {
   const total = reports.length;
 
   const byCategory = (
-    ["competitor", "pricing", "product_demand", "industry_trend"] as const
+    [
+      "ai_quality",
+      "competitor",
+      "pricing",
+      "product_demand",
+      "industry_trend",
+    ] as const
   ).map((cat) => ({
     category: cat,
     count: reports.filter((r) => r.category === cat).length,

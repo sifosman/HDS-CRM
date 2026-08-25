@@ -1,0 +1,46 @@
+{
+  "id": "HU-003",
+  "name": "Hardware upsell - customer asks about hinges",
+  "category": "hardware_upsell",
+  "description": "Customer asks about hinges. AI should use show_products to show hinge options with prices.",
+  "phone_number": "27900000703",
+  "sender_name": "Test Hinges",
+  "messages": [
+    {
+      "text": "Do you stock hinges? I need soft close hinges for my cabinets",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "show_products"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 45 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "hinge",
+      "description": "Reply should mention hinges"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests show_products for hinges category with variation pricing"
+}

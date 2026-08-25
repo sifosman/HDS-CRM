@@ -1,0 +1,35 @@
+{
+  "id": "HO-008",
+  "name": "trade account inquiry triggers handover",
+  "category": "handover",
+  "description": "Customer wants to open a trade account and asks who to speak to, which should trigger handover to a human agent",
+  "phone_number": "27900000083",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "I want to open a trade account, who do I speak to? I run a joinery shop and need regular supplies.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "handover_triggered",
+      "description": "AI should trigger handover to human agent"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Handover should complete within 20 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Trade account applications require human verification and onboarding, so handover should be triggered to route the customer to the accounts team."
+}

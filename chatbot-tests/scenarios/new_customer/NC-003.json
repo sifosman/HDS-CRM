@@ -1,0 +1,48 @@
+{
+  "id": "NC-003",
+  "name": "Good morning",
+  "category": "new_customer",
+  "description": "New customer says 'Good morning'. AI should respond in kind and engage.",
+  "phone_number": "27900000803",
+  "sender_name": "New Customer 3",
+  "messages": [
+    {
+      "text": "Good morning",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "regex_match",
+      "pattern": "\\b(morning|good|hi|hey|hello|welcome)\\b",
+      "flags": "i",
+      "description": "AI should acknowledge the greeting"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Time-of-day greeting from new customer."
+}

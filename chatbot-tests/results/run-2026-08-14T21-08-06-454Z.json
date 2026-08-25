@@ -1,0 +1,52 @@
+{
+  "run_id": "run-2026-08-14T21-08-06-454Z",
+  "started_at": "2026-08-14T21:07:40.606Z",
+  "finished_at": "2026-08-14T21:08:06.453Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "sales_closing": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 25056,
+      "p95": 25056,
+      "avg": 25056
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt]"
+        }
+      ],
+      "latency_ms": 25056,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Great, Close Test! I can get this order for your 16mm White Melamine Chipboard processed right away. Would you prefer to pay online via card link or by EFT?"
+    }
+  ]
+}

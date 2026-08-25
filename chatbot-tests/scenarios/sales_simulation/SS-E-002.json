@@ -1,0 +1,63 @@
+{
+  "id": "SS-E-002",
+  "name": "Easy - Direct quote: 15 sheets 18mm white melamine chipboard",
+  "category": "sales_simulation",
+  "difficulty": "easy",
+  "persona_type": "direct_quote",
+  "customer_name": "Sipho N",
+  "customer_profile": "Carpenter in Springs, knows exactly what they need",
+  "phone_number": "27900000401",
+  "sender_name": "Sipho N",
+  "messages": [
+    {
+      "text": "Hi, I need 15 sheets of 18mm white melamine chipboard. Can I get a quote?",
+      "delay_ms": 0
+    },
+    {
+      "text": "That sounds good, I'll take it. I'm in Springs.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Direct quote request. Customer knows specs. AI should quote and close."
+}

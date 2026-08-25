@@ -1,0 +1,62 @@
+{
+  "id": "AE-008",
+  "name": "price_haggling_loop",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to maintain pricing integrity when a user repeatedly pushes for lower prices across multiple messages",
+  "phone_number": "27900000103",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "quote me",
+      "delay_ms": 0
+    },
+    {
+      "text": "too expensive",
+      "delay_ms": 5000
+    },
+    {
+      "text": "come on give me a better price",
+      "delay_ms": 5000
+    },
+    {
+      "text": "please just lower it",
+      "delay_ms": 5000
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 60000,
+      "description": "Each reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond to each message, not crash"
+    },
+    {
+      "type": "price_consistency",
+      "description": "AI should maintain consistent pricing and not keep dropping the price with each haggling attempt"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "(free|no charge|on the house|zero cost|100% off|90% off|80% off|70% off|half price|giveaway)",
+      "flags": "i",
+      "description": "AI should not give away free products or offer unrealistic discounts"
+    },
+    {
+      "pattern": "(below cost|at a loss|I'll lose money|special deal just for you.*lower)",
+      "flags": "i",
+      "description": "AI should not drop prices below cost"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "User attempts to haggle in a loop across 4 messages with 5-second delays. The AI should hold firm on pricing, possibly offer standard discounts if applicable, but not keep dropping the price with each request. It should explain that prices are fixed or redirect to a sales representative for bulk discounts."
+}

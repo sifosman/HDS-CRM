@@ -1,0 +1,54 @@
+{
+  "id": "NC-022",
+  "name": "Branch in Johannesburg",
+  "category": "new_customer",
+  "description": "New customer asks about Johannesburg branch.",
+  "phone_number": "27900000822",
+  "sender_name": "New Customer 22",
+  "messages": [
+    {
+      "text": "Do you have a branch in Johannesburg?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "branch",
+      "description": "Reply should mention branch"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "Johannesburg",
+      "description": "Should mention JHB location"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "JHB branch lookup. AI should find the correct branch."
+}

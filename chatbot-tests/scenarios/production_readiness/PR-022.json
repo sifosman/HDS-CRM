@@ -1,0 +1,70 @@
+{
+  "id": "PR-022",
+  "name": "Rapid multi-question - price, delivery, hardware",
+  "category": "production_readiness",
+  "description": "Customer asks 3 questions in one message. AI should address all.",
+  "phone_number": "27900000561",
+  "sender_name": "Multi Question",
+  "messages": [
+    {
+      "text": "Hi! I need 10 sheets white melamine 16mm. What's the price? Can I collect in Pretoria? Do you also sell handles?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "keyword": "R",
+      "description": "AI should address pricing"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "pretoria",
+        "branch",
+        "waltloo",
+        "church",
+        "sunderland",
+        "collect"
+      ],
+      "description": "AI should address branch/location"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "handle",
+        "hardware",
+        "yes",
+        "stock",
+        "sell"
+      ],
+      "description": "AI should address hardware question"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Multi-question. AI should address all 3 parts: price, location, hardware."
+}

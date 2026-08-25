@@ -1,0 +1,51 @@
+{
+  "id": "PL-010",
+  "name": "Bulk pricing tiers inquiry",
+  "category": "price_lookup",
+  "description": "Tests price lookup when the customer asks about bulk pricing or volume discounts. The AI should return the standard price from the hds_prices table and address whether bulk/volume pricing is available.",
+  "phone_number": "27900000020",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Do you offer bulk pricing on white melamine? I need about 50 sheets. What's the price?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests whether the AI can handle bulk pricing questions. The hds_prices table likely contains standard per-unit pricing. The AI should provide the listed price and, if bulk tiers are not in the table, suggest contacting the branch or sales team for volume discounts rather than inventing tiered prices."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "GR-002",
+  "name": "New customer - vague request",
+  "category": "greeting",
+  "description": "New customer sends a very vague message. AI should ask clarifying questions.",
+  "phone_number": "27900000002",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "I need boards",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "At least one assistant reply expected"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "AI should ask what type of boards, what size, what quantity \u2014 not guess or fail"
+}

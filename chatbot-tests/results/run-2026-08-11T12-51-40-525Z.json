@@ -1,0 +1,57 @@
+{
+  "run_id": "run-2026-08-11T12-51-40-525Z",
+  "started_at": "2026-08-11T12:51:03.549Z",
+  "finished_at": "2026-08-11T12:51:40.524Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 34624,
+      "p95": 34624,
+      "avg": 34624
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-010",
+      "name": "Quote generation - explicit size 2750x1830",
+      "category": "quote_generation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: []"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        },
+        {
+          "type": "response_time",
+          "detail": "Response latency 34624ms exceeds max 30000ms"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 34624,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm having trouble generating your quote right now. Could you confirm the exact material name and quantity you need? I'll get it sorted for you straight away."
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": "PR-002",
+  "name": "Homeowner - uncertain, needs guidance",
+  "category": "production_readiness",
+  "description": "Homeowner wants to redo kitchen but doesn't know what they need. AI should activate consultant mode.",
+  "phone_number": "27900000541",
+  "sender_name": "Lerato",
+  "messages": [
+    {
+      "text": "Hi, I want to redo my kitchen but I don't know where to start. I've never done this before. Can you help?",
+      "delay_ms": 0
+    },
+    {
+      "text": "White melamine sounds good. How many sheets do I need for a small kitchen?",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "kitchen",
+        "project",
+        "renovat"
+      ],
+      "description": "AI should acknowledge the kitchen project"
+    },
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "melamine",
+        "white",
+        "board",
+        "sheet"
+      ],
+      "description": "AI should recommend a product"
+    },
+    {
+      "type": "not_contains_keyword",
+      "keyword": "cutting list",
+      "description": "Should NOT ask homeowner for a cutting list"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Homeowner consultant mode. AI should guide, not overwhelm."
+}

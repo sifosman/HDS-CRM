@@ -1,0 +1,242 @@
+{
+  "run_id": "run-2026-08-14T21-10-06-389Z",
+  "started_at": "2026-08-14T21:08:44.248Z",
+  "finished_at": "2026-08-14T21:10:06.388Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 2,
+    "skipped": 0,
+    "pass_rate": "80.0%",
+    "by_category": {
+      "branch_banking": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "consultant": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "greeting": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "handover": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "price_lookup": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "returning_customer": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "sales_closing": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 11526,
+      "p95": 24390,
+      "avg": 13096
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'get_branch' was not called. Tools called: []"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'cape'. Last reply: \"Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 6251,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Just a sec, I'm getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I'm here to help. 👍"
+    },
+    {
+      "scenario_id": "HC-002",
+      "name": "Homeowner - image service offered selectively",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 11526,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've sent through some of our popular board options above! For garage cabinets, White Melamine Chipboard 16mm is usually the best place to start because it's clean, durable, and super affordable. \n\nTo give you an idea, a standard 2-door cabinet usually takes about 2 to 3 sheets of melamine. Would you like me to prepare a quick quote for 4 sheets so you can see the cost?"
+    },
+    {
+      "scenario_id": "HC-004",
+      "name": "Confused customer - decision simplification",
+      "category": "consultant",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10146,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Lisa! Love that you're taking on your kitchen renovation! Don't worry at all—we'll make choosing your boards super simple.\n\nMost of our kitchen customers go with White **melamine** chipboard for the internal cabinet shells because it's clean, durable, and great value, and then pick a wood grain or color finish for the cabinet doors. I've just sent over some images of our top wood grain options directly to your WhatsApp so you can check them out! \n\nDo any of those finishes catch your eye, or w…"
+    },
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "regex_match",
+          "detail": "Reply does not match regex /\\b(hi|hey|hello|howdy|hola|goeie|morning|afternoon|welcome)\\b/i. Reply: \"We offer a wide range of quality board products, including White Melamine Chipboard at R650 per sheet, Wood Grain melamine boards from R795, and plain MDF or chipboards. \n\nWhat kind of project are you…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 6707,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "We offer a wide range of quality board products, including White Melamine Chipboard at R650 per sheet, Wood Grain melamine boards from R795, and plain MDF or chipboards. \n\nWhat kind of project are you working on, and how many sheets of melamine do you think you'll need? I'd be happy to prepare a quote for you! 😊"
+    },
+    {
+      "scenario_id": "HO-001",
+      "name": "Handover - large order triggers handover (>50 sheets)",
+      "category": "handover",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5791,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Big Order Test! Thanks for reaching out. \n\nSince your project requires 80 sheets of white melamine, our sales team will contact you directly to discuss bulk pricing and help you get everything sorted!"
+    },
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason, objection, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 24390,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I understand price is important. Our White Melamine Chipboard at R650 per sheet offers great value for top-quality Innowood boards, with precision cutting included. Shall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 14578,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Our standard 16mm White Melamine Chipboard is R650 per sheet including VAT. \n\nHow many sheets do you need for your project? I can generate your official quote PDF right now!"
+    },
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 11287,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Here is your quote! \nQuote ID: Q-20260814-2333\nTOTAL (VAT incl): R13000\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-2333\n\n\nShall I go ahead and process this order for you? I can hold this pricing for 48 hours."
+    },
+    {
+      "scenario_id": "RC-001",
+      "name": "Returning customer - greeted by name",
+      "category": "returning_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 16814,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 3,
+      "last_reply": "Welcome back, Returning Test! Great to chat with you again 😊\n\nAre you ready to finalize your order for the 20 sheets of 16mm White Melamine Chipboard today?"
+    },
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt]"
+        }
+      ],
+      "latency_ms": 23468,
+      "tool_calls": [
+        "generate_quote",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Great, Close Test! I can get this order for your 16mm White Melamine Chipboard processed right away. Would you prefer to pay online via card link or by EFT?"
+    }
+  ]
+}

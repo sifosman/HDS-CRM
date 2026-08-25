@@ -1,0 +1,36 @@
+{
+  "id": "AE-003",
+  "name": "Adversarial - extremely long message",
+  "category": "adversarial_edge",
+  "description": "Customer sends a very long message. AI should handle it without truncation errors or timeout.",
+  "phone_number": "27900000098",
+  "sender_name": "Test Long Message",
+  "messages": [
+    {
+      "text": "Hi I need a quote for boards. I want to build a kitchen with lots of cabinets. The kitchen is about 4 meters by 3 meters and I need upper and lower cabinets. I want to use white melamine 16mm for the cabinets and maybe some 18mm for the shelves. I also need some cut pieces for the doors. Can you give me a price for about 30 sheets? Also do you deliver to Pretoria? What are your banking details? Can I speak to someone about a bulk discount? I've been buying from another supplier but their prices have gone up. I usually pay about R550 per sheet but if you can beat that I'll switch. My name is Long Message Test and my number is the one I'm messaging from. Also do you have any MDF boards? I might need some for the drawer bottoms. And do you do edge banding? I would need pre-edged boards if possible. Let me know about delivery costs too because I'm in Pretoria East. Thanks.",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 20000,
+      "description": "Reply should arrive within 20 seconds even for a long message"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Long multi-topic message. AI should address the key points or ask to handle them one at a time."
+}

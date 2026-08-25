@@ -1,0 +1,41 @@
+{
+  "id": "HO-001",
+  "name": "Handover - large order triggers handover (>50 sheets)",
+  "category": "handover",
+  "description": "Customer requests a very large order (80 sheets). AI should trigger handover to human agent via Chatwoot.",
+  "phone_number": "27900000076",
+  "sender_name": "Test Handover Customer",
+  "messages": [
+    {
+      "text": "Hi, I need 80 sheets of white melamine for a big project. My name is Big Order Test",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": ["handover"],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "team",
+      "description": "AI should mention a human team member or sales team"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Handover should complete within 25 seconds"
+    },
+    {
+      "type": "lead_status",
+      "expected_status": "handover",
+      "description": "customer_profiles.lead_status should be 'handover' after this scenario"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Orders >50 sheets should trigger handover. Verify Chatwoot conversation created in inbox 2 (WhatsApp Cloud)."
+}

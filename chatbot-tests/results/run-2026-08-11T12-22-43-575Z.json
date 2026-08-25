@@ -1,0 +1,52 @@
+{
+  "run_id": "run-2026-08-11T12-22-43-575Z",
+  "started_at": "2026-08-11T12:22:07.513Z",
+  "finished_at": "2026-08-11T12:22:43.575Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "objection_handling": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 33702,
+      "p95": 33702,
+      "avg": 33702
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "OH-006",
+      "name": "Delivery and transport concern objection",
+      "category": "objection_handling",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: logistics' not found in tool_results. Available keys: [objection, close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 33702,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "We certainly do deliver straight to your site! 🚚\n\nHere is your quote for 20 sheets of Value White Melamine Chipboard (16mm) coming to R13,000 incl VAT: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6610\n\nWhat area are you in so I can add delivery, and shall I go ahead and get this order processed for you?"
+    }
+  ]
+}

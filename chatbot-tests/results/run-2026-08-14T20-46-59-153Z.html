@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDS Chatbot Test Report — run-2026-08-14T20-46-59-153Z</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; color: #222; }
+  h1 { color: #1a1a1a; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+  .stat { background: #fff; padding: 16px 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat .big { font-size: 2em; font-weight: 700; }
+  .stat.passed .big { color: #16a34a; }
+  .stat.failed .big { color: #dc2626; }
+  .stat.total .big { color: #1a1a1a; }
+  .categories { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+  .card { background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-width: 140px; }
+  .card.good { border-left: 4px solid #16a34a; }
+  .card.warn { border-left: 4px solid #f59e0b; }
+  .card.bad { border-left: 4px solid #dc2626; }
+  .card .big { font-size: 1.5em; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  th { background: #f9f9f9; font-weight: 600; position: sticky; top: 0; }
+  tr.passed { background: #f0fdf4; }
+  tr.failed { background: #fef2f2; }
+  tr.skipped { background: #f9fafb; color: #888; }
+  tr.passed td:nth-child(4) { color: #16a34a; font-weight: 600; }
+  tr.failed td:nth-child(4) { color: #dc2626; font-weight: 600; }
+  ul { margin: 4px 0; padding-left: 16px; }
+  li { margin: 2px 0; font-size: 12px; }
+  li.warning { color: #b45309; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 200px; overflow: auto; }
+  details summary { cursor: pointer; color: #2563eb; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>HDS Chatbot Test Report</h1>
+<div class="meta">
+  Run ID: run-2026-08-14T20-46-59-153Z<br>
+  Started: 2026-08-14T20:46:15.168Z | Finished: 2026-08-14T20:46:59.152Z<br>
+  Latency p50: 14929ms | p95: 16340ms | avg: 14081ms
+</div>
+<div class="summary">
+  <div class="stat total"><div class="big">5</div><div>total</div></div>
+  <div class="stat passed"><div class="big">2</div><div>passed</div></div>
+  <div class="stat failed"><div class="big">3</div><div>failed</div></div>
+  <div class="stat"><div class="big">40.0%</div><div>pass rate</div></div>
+</div>
+<h2>By Category</h2>
+<div class="categories"><div class="card bad"><h3>consultant</h3>
+        <div class="big">2/5</div>
+        <div>40% pass</div></div></div>
+<h2>Scenario Results</h2>
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Latency</th><th>Tools</th><th>Failures / Warnings</th><th>Reply</th></tr></thead>
+<tbody>
+<tr class="failed">
+        <td>HC-001</td>
+        <td>Homeowner consultant mode - kitchen renovation</td>
+        <td>consultant</td>
+        <td>FAIL</td>
+        <td>12841ms</td>
+        <td>lookup_price, get_branch</td>
+        <td><ul><li>Reply contains forbidden keyword &#39;undefined&#39;. Reply: &quot;Hi Sarah! Love that you&#39;re taking on a kitchen renovation! At HDS Group, we have 32 branches across South Africa to ensure you get top Innowood quality. 
+
+Most of our customers choose 16mm White Melam…&quot;</li></ul></td>
+        <td><details><summary>view</summary><pre>Hi Sarah! Love that you&#39;re taking on a kitchen renovation! At HDS Group, we have 32 branches across South Africa to ensure you get top Innowood quality. 
+
+Most of our customers choose 16mm White Melamine Chipboard (R650 per sheet) for the cabinet interiors because it&#39;s durable, clean, and great value. 
+
+What look are you envisioning for your cabinet doors — classic white melamine or a warm wood grain finish?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>HC-002</td>
+        <td>Homeowner - image service offered selectively</td>
+        <td>consultant</td>
+        <td>PASS</td>
+        <td>14929ms</td>
+        <td>lookup_price, get_branch</td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Love that you&#39;re taking on this project, John! For garage cabinets, most of our customers go with White Melamine Chipboard 16mm — it&#39;s durable, easy to clean, and great value at R650 per sheet. At HDS Group, we have 32 branches across South Africa with precision cutting services to make building easy for you. 
+
+Do you know roughly how many sheets or cabinets you&#39;ll need, or would you like me to put together a quick quote for White Melamine Chipboard to get you started?</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>HC-003</td>
+        <td>Carpenter NOT offered image service</td>
+        <td>consultant</td>
+        <td>FAIL</td>
+        <td>15835ms</td>
+        <td>generate_quote</td>
+        <td><ul><li>Reply contains forbidden keyword &#39;undefined&#39;. Reply: &quot;Hi Mike! Here is your quote for 20 sheets of Value White 16mm melamine chipboard. The total comes to R14,400.00 including VAT and cutting fee. 
+
+You can view and download your formal quote PDF here: h…&quot;</li><li>Reply contains forbidden keyword &#39;undefined&#39;. Reply: &quot;Hi Mike! Here is your quote for 20 sheets of Value White 16mm melamine chipboard. The total comes to R14,400.00 including VAT and cutting fee. 
+
+You can view and download your formal quote PDF here: h…&quot;</li><li>Tool &#39;undefined&#39; was not called. Tools called: [generate_quote]</li></ul></td>
+        <td><details><summary>view</summary><pre>Hi Mike! Here is your quote for 20 sheets of Value White 16mm melamine chipboard. The total comes to R14,400.00 including VAT and cutting fee. 
+
+You can view and download your formal quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-0963
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+<tr class="passed">
+        <td>HC-004</td>
+        <td>Confused customer - decision simplification</td>
+        <td>consultant</td>
+        <td>PASS</td>
+        <td>10461ms</td>
+        <td></td>
+        <td>—</td>
+        <td><details><summary>view</summary><pre>Just a sec, I&#39;m getting that sorted for you now! Shall I go ahead and prepare this for you? Feel free to reach out anytime — I&#39;m here to help. 👍</pre></details></td>
+      </tr>
+<tr class="failed">
+        <td>HC-005</td>
+        <td>Upsell - board upgrade offered</td>
+        <td>consultant</td>
+        <td>FAIL</td>
+        <td>16340ms</td>
+        <td>generate_quote</td>
+        <td><ul><li>Tool &#39;undefined&#39; was not called. Tools called: [generate_quote]</li></ul></td>
+        <td><details><summary>view</summary><pre>Hi David! Love that you&#39;re taking on this kitchen project! 🛠️
+
+Here is your quote for 10 sheets of White Melamine Chipboard:
+Total (incl. VAT &amp; cutting): R7,200.00
+Quote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6652
+
+Shall I go ahead and process this order for you?</pre></details></td>
+      </tr>
+</tbody>
+</table>
+</body>
+</html>

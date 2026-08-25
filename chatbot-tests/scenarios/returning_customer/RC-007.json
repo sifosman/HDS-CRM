@@ -1,0 +1,42 @@
+{
+  "id": "RC-007",
+  "name": "returning_customer_follow_up_reference",
+  "category": "returning_customer",
+  "description": "Returning customer says 'Hey, following up on our chat' and the AI should reference the previous conversation and pick up where things left off.",
+  "phone_number": "27900000092",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is David, can I get a quote for 10 sheets of walnut melamine chipboard 18mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Hey, following up on our chat",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "David",
+      "description": "AI should address the customer as 'David' and reference the previous conversation"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests conversation continuity: the customer is following up on a prior chat. The AI should acknowledge the earlier discussion (walnut melamine chipboard) and offer to continue, addressing them by name."
+}

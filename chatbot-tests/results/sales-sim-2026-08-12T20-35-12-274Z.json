@@ -1,0 +1,166 @@
+{
+  "run_id": "sales-sim-2026-08-12T20-35-12-274Z",
+  "started_at": "2026-08-12T20:34:36.365Z",
+  "finished_at": "2026-08-12T20:35:12.273Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 39,
+    "byDifficulty": {
+      "easy": {
+        "count": 1,
+        "scores": [
+          39
+        ],
+        "outcomes": {
+          "lost": 1
+        },
+        "avgScore": 39
+      },
+      "medium": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "hard": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 0,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 0,
+        "total": 1
+      },
+      "close": {
+        "passed": 0,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 0,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 0,
+      "quote": 100,
+      "objection_handling": 0,
+      "close": 0,
+      "follow_up": 0
+    },
+    "outcomeCounts": {
+      "converted": 0,
+      "follow_up": 0,
+      "lost": 1,
+      "handover": 0
+    },
+    "conversionRate": 0,
+    "byPersonaType": {
+      "direct_quote": {
+        "count": 1,
+        "scores": [
+          39
+        ],
+        "outcomes": {
+          "lost": 1
+        },
+        "avgScore": 39
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-E-003",
+      "name": "Easy - Direct quote: 25 sheets 16mm MDF board",
+      "category": "sales_simulation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "funnel_stage",
+          "detail": "Discovery stage not reached — AI did not ask clarifying questions or confirm product specs. Reply: \"Here is your quote! \nQuote ID: Q-20260812-9199\nTOTAL (VAT incl): R0\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-9199\""
+        },
+        {
+          "type": "funnel_stage",
+          "detail": "Close stage not reached — no close attempt detected. Reply: \"Here is your quote! \nQuote ID: Q-20260812-9199\nTOTAL (VAT incl): R0\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-9199\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 34181,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Here is your quote! \nQuote ID: Q-20260812-9199\nTOTAL (VAT incl): R0\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260812-9199",
+      "sales_score": 39,
+      "sales_outcome": "lost",
+      "sales_difficulty": "easy",
+      "sales_persona_type": "direct_quote",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": false,
+        "quote": true,
+        "objection_handling": false,
+        "close": false,
+        "follow_up": false
+      },
+      "sales_summary": "Score 39/100 (easy) — Outcome: lost. Stages passed: greeting, quote. Stages missed: discovery, objection_handling, close, follow_up."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-E-003",
+      "score": 39,
+      "outcome": "lost",
+      "difficulty": "easy",
+      "persona_type": "direct_quote",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "close": {
+          "passed": false,
+          "detail": "Stage not reached"
+        },
+        "follow_up": {
+          "passed": false,
+          "detail": "Stage not reached"
+        }
+      },
+      "summary": "Score 39/100 (easy) — Outcome: lost. Stages passed: greeting, quote. Stages missed: discovery, objection_handling, close, follow_up."
+    }
+  ]
+}

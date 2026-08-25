@@ -1,0 +1,51 @@
+{
+  "id": "PL-014",
+  "name": "Cheapest melamine price range inquiry",
+  "category": "price_lookup",
+  "description": "Tests price lookup when the customer asks about the cheapest melamine option. The AI should query the hds_prices table for melamine products and return the lowest-priced option with its real product name and price.",
+  "phone_number": "27900000024",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "What's your cheapest melamine?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a price with R prefix"
+    },
+    {
+      "type": "contains_keyword",
+      "value": "melamine",
+      "description": "Reply should reference melamine in the product name"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests the AI's ability to handle comparative/range queries. The AI should look up melamine products and identify the cheapest option from the hds_prices table. It should return the actual lowest-priced melamine product name and its price, not a fabricated range."
+}

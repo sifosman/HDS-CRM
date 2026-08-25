@@ -1,0 +1,55 @@
+{
+  "id": "PR-015",
+  "name": "Trade account inquiry",
+  "category": "production_readiness",
+  "description": "Contractor asks about credit accounts. Should trigger handover for trade account setup.",
+  "phone_number": "27900000554",
+  "sender_name": "Contractor Mike",
+  "messages": [
+    {
+      "text": "Hi, I'm a contractor and I buy a lot of boards monthly. Do you offer trade accounts or credit terms for regular customers?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "trade",
+        "account",
+        "credit",
+        "team",
+        "human",
+        "contact",
+        "manager"
+      ],
+      "description": "AI should address trade account inquiry or handover"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Trade account inquiry. AI should explain or handover to sales team."
+}

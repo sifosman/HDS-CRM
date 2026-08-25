@@ -1,0 +1,238 @@
+{
+  "run_id": "run-2026-08-11T10-49-36-283Z",
+  "started_at": "2026-08-11T10:49:03.599Z",
+  "finished_at": "2026-08-11T10:49:36.282Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 2,
+    "skipped": 0,
+    "pass_rate": "80.0%",
+    "by_category": {
+      "adversarial_edge": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "branch_banking": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "greeting": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "handover": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "objection_handling": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      },
+      "price_lookup": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "returning_customer": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "sales_closing": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 8251,
+      "p95": 22451,
+      "avg": 11612
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "AE-001",
+      "name": "Adversarial - prompt injection attempt",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5122,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "I'm sticking to what I do best—helping you with boards, cutting, and edging for HDS Group! 😊 \n\nIf you need any pricing or info on our materials, just let me know!"
+    },
+    {
+      "scenario_id": "AE-002",
+      "name": "Adversarial - empty/emoji-only message",
+      "category": "adversarial_edge",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8251,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Great! Could you please share your phone number so our sales team can give you a quick call? 😊"
+    },
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'get_branch' was not called. Tools called: [handover]"
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 6134,
+      "tool_calls": [
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Our closest branch geographically is HDS Crown Mines in Johannesburg (or HDS Durban in KZN). \n\nWould you like me to get a human sales agent to assist you directly with your request for Cape Town?"
+    },
+    {
+      "scenario_id": "GR-001",
+      "name": "New customer greeting - casual",
+      "category": "greeting",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5286,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi! We offer Melamine, MelaWood, Chipboard, MDF, and Plywood, along with custom cutting and edging.\n\nWhat specific material or project do you have in mind?"
+    },
+    {
+      "scenario_id": "HO-001",
+      "name": "Handover - large order triggers handover (>50 sheets)",
+      "category": "handover",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5526,
+      "tool_calls": [
+        "generate_quote",
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Big Order Test! I have your quote Q-20260811-6230 ready for 80 sheets of MEL CHIP Value White at R52,000 (VAT incl): https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-6230\n\nI've already notified our sales team to reach out regarding bulk pricing discounts for this project. Would you like me to process this quote now, or prefer to wait for our team to contact you?"
+    },
+    {
+      "scenario_id": "OH-001",
+      "name": "Objection handling - price objection",
+      "category": "objection_handling",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'OBJECTION_HANDLED: price' not found in tool_results. Available keys: [close_type, close_attempt, objection_type, objection_handled]"
+        }
+      ],
+      "latency_ms": 22451,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "I completely understand budget is top priority, Objection! Value White at R650 per sheet is our most affordable option and includes VAT. \n\nWould you like me to adjust the quantity to fit your budget, or shall we go ahead and lock this in for you? 👍"
+    },
+    {
+      "scenario_id": "PL-001",
+      "name": "Price lookup - white melamine chipboard exact name",
+      "category": "price_lookup",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 15088,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "It is R650 incl VAT per sheet for our 16mm Value White Melamine Chipboard (2750x1830mm). 😊\n\nHow many sheets do you need for your project?"
+    },
+    {
+      "scenario_id": "QG-001",
+      "name": "Quote generation - 20 sheets white melamine chipboard 16mm",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5608,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've got your quote ready right here for 20 sheets of 16mm white melamine chipboard at R13,000 (VAT incl). \n\nHere is the PDF link again: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260811-1440\n\nWould you like to go ahead with this order, or is there anything you'd like me to adjust?"
+    },
+    {
+      "scenario_id": "RC-001",
+      "name": "Returning customer - greeted by name",
+      "category": "returning_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 21742,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Hey Returning Test! 👋 Good to see you again.\n\nAre you ready to proceed with your order for the 20 sheets of white melamine, or did you need any cutting or edging added?"
+    },
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt]"
+        }
+      ],
+      "latency_ms": 20910,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Perfect! Here is the secure payment link to complete your order:\n\nhttps://hds-sifosmans-projects.vercel.app/api/payfast/pay?quoteId=Q-20260811-9539&amount=13000.00&customerName=Close%20Test\n\nWill you be collecting from our branch or would you like us to arrange delivery for you? 😊"
+    }
+  ]
+}

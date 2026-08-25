@@ -1,0 +1,47 @@
+{
+  "id": "SC-007",
+  "name": "Sales closing - urgency delivery after quote",
+  "category": "sales_closing",
+  "description": "Customer gets a quote and asks about this-week delivery. AI should attempt an urgency close.",
+  "phone_number": "27900000057",
+  "sender_name": "Test Close Customer",
+  "messages": [
+    {
+      "text": "My name is Close Test, can I get a quote for 20 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Can you deliver this week?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "close_attempt",
+      "description": "AI should attempt a sales close after customer expresses interest"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Second reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT",
+      "description": "Close attempt tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [
+    "CLOSE_ATTEMPT: urgency"
+  ],
+  "notes": "Customer introduces a time constraint by asking for this-week delivery. AI should attempt an urgency close by leveraging the timeline to encourage immediate order confirmation."
+}

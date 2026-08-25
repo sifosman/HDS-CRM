@@ -1,0 +1,47 @@
+{
+  "id": "SC-004",
+  "name": "Sales closing - payment question after quote",
+  "category": "sales_closing",
+  "description": "Customer gets a quote and asks how to pay. AI should attempt an assumptive close with payment details.",
+  "phone_number": "27900000054",
+  "sender_name": "Test Close Customer",
+  "messages": [
+    {
+      "text": "My name is Close Test, can I get a quote for 20 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "How do I pay?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "close_attempt",
+      "description": "AI should attempt a sales close after customer expresses interest"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Second reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT",
+      "description": "Close attempt tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [
+    "CLOSE_ATTEMPT: assumptive"
+  ],
+  "notes": "Customer asks about payment, indicating strong buying intent. AI should attempt an assumptive close by providing payment options and moving toward finalizing the order."
+}

@@ -1,0 +1,54 @@
+{
+  "id": "QG-010",
+  "name": "Quote generation - explicit size 2750x1830",
+  "category": "quote_generation",
+  "description": "Customer requests a quote with an explicit board size mention (2750x1830). AI should use generate_quote, return total and PDF link.",
+  "phone_number": "27900000035",
+  "sender_name": "Test Quote Customer",
+  "messages": [
+    {
+      "text": "Hi, my name is Test Customer. I need a quote for 10 sheets of white melamine 16mm, size 2750x1830",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain a quote total with R prefix"
+    },
+    {
+      "type": "quote_generated",
+      "description": "Quote should be generated (quote_total populated or PDF URL in reply)"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000,
+      "description": "Quote generation may take up to 30 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "boardsNeeded|grandTotal|finalTotal|cutPieces|stockPieces",
+      "description": "No internal optimizer variable names in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Tests quote generation when the customer explicitly states the board size (2750x1830). Verifies the clamping logic handles nominal sizes correctly."
+}

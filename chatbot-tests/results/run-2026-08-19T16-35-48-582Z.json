@@ -1,0 +1,646 @@
+{
+  "run_id": "run-2026-08-19T16-35-48-582Z",
+  "started_at": "2026-08-19T16:32:22.666Z",
+  "finished_at": "2026-08-19T16:35:48.581Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 40,
+    "passed": 36,
+    "failed": 4,
+    "skipped": 0,
+    "pass_rate": "90.0%",
+    "by_category": {
+      "new_customer": {
+        "total": 40,
+        "passed": 36,
+        "failed": 4
+      }
+    },
+    "latency_ms": {
+      "p50": 7270,
+      "p95": 22962,
+      "avg": 8400
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "NC-001",
+      "name": "Simple Hi",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4706,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey! 👋 How can I help you today? Let me know what you're working on and we can get you sorted."
+    },
+    {
+      "scenario_id": "NC-002",
+      "name": "Hello",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5063,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey! 👋 How can I help you today? Let me know if you need board prices, product options, or branch info!"
+    },
+    {
+      "scenario_id": "NC-003",
+      "name": "Good morning",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4434,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Good morning! 😊 How can I help you today? What project are you working on?"
+    },
+    {
+      "scenario_id": "NC-004",
+      "name": "Who is this",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3700,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi! I'm Sam from HDS Group. We specialize in board cutting, melamine, and cabinetry materials. \n\nHow can I assist you with your project today?"
+    },
+    {
+      "scenario_id": "NC-005",
+      "name": "Hey",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3472,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey! 😊 How can I help you today? Let me know what project or boards you have in mind!"
+    },
+    {
+      "scenario_id": "NC-006",
+      "name": "Emoji greeting",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4683,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hey! 😊 I'm here whenever you're ready. What can I help you with today — looking for some boards or hardware?"
+    },
+    {
+      "scenario_id": "NC-007",
+      "name": "10 sheets white melamine",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 11356,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've got your quote ready for 10 sheets of **MEL CHIP Value White 9x6x16 DF** (16mm White Melamine Chipboard) at R650 per sheet, coming to **R6,500 incl. VAT**.\n\nWhich area are you located in so I can check stock at your nearest HDS branch and get this processed for you?"
+    },
+    {
+      "scenario_id": "NC-008",
+      "name": "What colors available",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8409,
+      "tool_calls": [
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've sent images of our HDS-manufactured Wood Grain melamine boards to your WhatsApp, featuring options like Dakota Oak, Vintage Pine, Flagstaff Oak, and White Cedar. \n\nWe also manufacture classic solid colors, including White Melamine Chipboard. \n\nDo any of these catch your eye, or would you like me to prepare a quote for you?"
+    },
+    {
+      "scenario_id": "NC-009",
+      "name": "Do you sell MDF",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6216,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Yes, we certainly do! We stock a full range of MDF boards, including plain MDF, Melamine MDF, and decorative finishes in standard thicknesses like 3mm, 6mm, 9mm, 12mm, 16mm, and 18mm.\n\nWhat thickness and quantity are you looking for? I'd be happy to put together a quote for you!"
+    },
+    {
+      "scenario_id": "NC-010",
+      "name": "Kitchen cabinet materials",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 18161,
+      "tool_calls": [
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've sent some of our pre-cut flat pack kitchen units to your screen, and we also manufacture White Melamine Chipboard boards if you prefer custom cutting.\n\nAre you looking for complete flat pack units or raw melamine boards for a custom build?"
+    },
+    {
+      "scenario_id": "NC-011",
+      "name": "Price of 16mm white",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4663,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Our 16mm White Melamine Chipboard is R650 per sheet (2750 x 1830mm, VAT included). \n\nHow many sheets do you need for your project? I can put together a quick quote for you!"
+    },
+    {
+      "scenario_id": "NC-012",
+      "name": "Do you have gloss boards",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7754,
+      "tool_calls": [
+        "lookup_price",
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Yes, we manufacture our own premium Chrometree UV gloss boards directly in our factories, giving you top quality at great prices (R2,450 per sheet). ✨\n\nI've just sent some images of our gloss range to your chat. Do any of these catch your eye, or would you like a quote on a specific colour?"
+    },
+    {
+      "scenario_id": "NC-013",
+      "name": "Need plywood",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8587,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "We don't stock standard plywood, but we have high-quality alternatives like MDF, veneered boards (like Okoume veneer), and melamine chipboard that might work perfectly for your build.\n\nCould you tell me what you're making, or how many sheets you might need?"
+    },
+    {
+      "scenario_id": "NC-014",
+      "name": "What hardware do you sell",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9770,
+      "tool_calls": [
+        "lookup_price",
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've sent images of our hinges and cabinet fittings directly to your WhatsApp!\n\nWe have standard flush hinges from R3, soft-close clip-on hinges for R14, and wide opening 165° hinges at R22. \n\nWould you like a quote on any of these options?"
+    },
+    {
+      "scenario_id": "NC-015",
+      "name": "Quote for 5 sheets white melamine",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10436,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 5 sheets of White Melamine Chipboard 16mm (MEL CHIP Value White 9x6x16 DF at R650 per sheet), your total is R3,250 incl. VAT.\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-016",
+      "name": "Price for 20 sheets MDF",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9994,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 20 sheets of 16mm UV MDF White (2750x1220mm) at R999 per sheet, your total is R19,980 incl. VAT.\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-017",
+      "name": "Quote for Dakota Oak",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'generate_quote' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "quote_generated",
+          "detail": "No quote generated — quote_total and quote_id are both null across all conversation rows, and no URL in reply text. The generate_quote tool may not have completed."
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 7270,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 8 sheets of Dakota Oak Melamine Chipboard 16mm (MEL CHIP Dakota Oak Linear 9x6x16 DF), your quotation comes to R6,400.00 incl. VAT. \n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-018",
+      "name": "Mixed boards quote",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 12342,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 3 sheets of White Melamine Chipboard (R650 each) and 2 sheets of Black Melamine Chipboard (R995 each), your total is R3,940 including VAT. \n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-019",
+      "name": "Full kitchen quote with hardware",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 9019,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 10 sheets of **MEL CHIP Value White Melamine (16mm)**, the total is **R6,500 incl. VAT** (R650 per sheet).\n\nWe also carry soft-close hinges (R14 each) and barrel handles (from R4.75 each) for your kitchen doors. \n\nHow many handles and hinges do you need so we can get your order processed?"
+    },
+    {
+      "scenario_id": "NC-020",
+      "name": "15 sheets UV gloss quote",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10014,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "For 15 sheets of **UV - Black 9x6x17**, the price is R2,400 per sheet, bringing your total to **R36,000 incl. VAT**. If you're interested in our **UV Traeviso Super Gloss (9x6x16mm)** at R3,000 per sheet, that comes to **R45,000 incl. VAT**.\n\nWhich finish would suit your project best? Shall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-021",
+      "name": "Closest branch to Centurion",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6146,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Our closest branch is HDS Sunderland in Centurion. The address is 16 Van Tonder St, Sunderland Ridge, Centurion, and their phone number is 010 822 2873.\n\nAre you looking for any specific boards or cutting services today?"
+    },
+    {
+      "scenario_id": "NC-022",
+      "name": "Branch in Johannesburg",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 6870,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Yes, we have branches in Johannesburg! Our closest branch is HDS Kya Sands, located at address 37 Kya Sands Road, Kya Sands, Johannesburg (Tel: 011 100 4881), and we also have our HDS Main Reef branch in Longdale. \n\nIs there a specific material or board cutting quote I can help you with today?"
+    },
+    {
+      "scenario_id": "NC-023",
+      "name": "Banking details",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4381,
+      "tool_calls": [
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Here are our banking details:\n\n**Account Name:** HDS Kya Sands  \n**Account Number:** 1262234573  \n**Account Type:** Current  \n\nPlease use your name or quote number as the payment reference. If you need banking details for a specific branch, just let me know which area you're based in!"
+    },
+    {
+      "scenario_id": "NC-024",
+      "name": "Can I visit factory",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3674,
+      "tool_calls": [
+        "get_branch",
+        "handover"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Yes, you're welcome to visit! We have branch showrooms across South Africa where you can see our board samples, finishes, and talk to our team.\n\nWhich city or area are you in so I can give you the exact branch address?"
+    },
+    {
+      "scenario_id": "NC-025",
+      "name": "Building cupboards don't know what to buy",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 19752,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've put together a starter estimate for 5 sheets of 16mm White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF at R650 per sheet), which is the standard material used for cupboard carcasses and shelving.\n\nShall I go ahead and prepare this order for you so we can get your project started?"
+    },
+    {
+      "scenario_id": "NC-026",
+      "name": "What boards for kitchen cabinets",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 10363,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "For kitchen cabinets, we recommend **16mm White Melamine Chipboard** for the carcass framework—it is durable, hygienic, and the most cost-effective. \n\nFor the cabinet doors and outer panels, you can use our HDS-manufactured decorative melamine boards in wood grain or solid colors to give it a stylish look. \n\nAre you building new cabinets or replacing existing cabinet doors?"
+    },
+    {
+      "scenario_id": "NC-027",
+      "name": "Renovating kitchen where to start",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'melamine'. Last reply: \"Love that you're taking on a kitchen project! We manufacture top-quality boards with precision cutting and edging across 32 branches nationwide, so you're in great hands.\n\nTo get started, what kind of…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 4485,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Love that you're taking on a kitchen project! We manufacture top-quality boards with precision cutting and edging across 32 branches nationwide, so you're in great hands.\n\nTo get started, what kind of look or colour are you picturing for your new cabinets?"
+    },
+    {
+      "scenario_id": "NC-028",
+      "name": "Help me choose materials",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 8121,
+      "tool_calls": [
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've just sent through our solid color melamine options as well! \n\nTo help recommend the best board for you:\n1. What project are you working on (e.g., kitchen, bedroom cupboards, shelving)?\n2. Do you prefer a classic white, a solid colour, or a wood grain look?"
+    },
+    {
+      "scenario_id": "NC-029",
+      "name": "Prices probably too expensive",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3796,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I understand that price is a major factor. Because we manufacture our own Innowood boards, our White Melamine is R650 per sheet, giving you top quality and exceptional value at a very competitive per sheet cost. \n\nShall I prepare a quick quote so you can see the full breakdown for your project?"
+    },
+    {
+      "scenario_id": "NC-030",
+      "name": "Usually buy from Builders",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 26552,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I completely understand why you'd ask — sticking with your regular supplier feels safe! \n\nThe big difference is that HDS manufactures our own Innowood White Melamine Chipboard boards directly in our own factories. That means you get factory-direct pricing (around R650 per sheet), precision cutting, and a solid quality guarantee without the retail markups, saving you 20–30% on overall project value. \n\nShall I prepare a formal quote for your current board list so you can compare the savings direct…"
+    },
+    {
+      "scenario_id": "NC-031",
+      "name": "Do you deliver I'm far",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 5450,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "We do not offer delivery, but you can collect from any of our 32 branches nationwide! What area or town are you located in? I'll check to see if we have a branch closer to you than Pretoria."
+    },
+    {
+      "scenario_id": "NC-032",
+      "name": "Only need 2 sheets too small",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 19149,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Not at all, I completely understand! No order is too small for us — we gladly assist with single and small sheet orders, and our per-sheet pricing gives you great value. \n\nFor 2 sheets of our standard White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF at R650 each), the total is R1,300.00 incl. VAT.\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "NC-033",
+      "name": "Cutting list photo",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 4304,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Got the photo of the right side! Could you send a quick photo of the left side of your kitchen as well? A photo of the other side will let me count the rest of the cabinets and get you an accurate quote."
+    },
+    {
+      "scenario_id": "NC-034",
+      "name": "Kitchen photo for consultant",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3681,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks for sending that through! \n\nCould you snap a quick photo showing the left side of your kitchen as well? It will help me count all your cabinets and give you an accurate sheet estimate."
+    },
+    {
+      "scenario_id": "NC-035",
+      "name": "Blurry photo first message",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_any_keyword",
+          "detail": "Reply does not contain any of [clearer, better light, another, can't see, hard to see, not clear, blurry, dark]. Last reply: \"Thanks! I can see the right side clearly, but could you send a photo showing the left side of your kitchen as well? \n\nThat way I can see the full layout and give you an accurate sheet count and quote!\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 3720,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Thanks! I can see the right side clearly, but could you send a photo showing the left side of your kitchen as well? \n\nThat way I can see the full layout and give you an accurate sheet count and quote!"
+    },
+    {
+      "scenario_id": "NC-036",
+      "name": "Photo with text question",
+      "category": "new_customer",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'colour'. Last reply: \"I've sent through our range of wood grain melamine options so you can check which one best matches your cabinets!\n\nCould you also send a photo showing the left side of your kitchen? That way I can see…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 8727,
+      "tool_calls": [
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I've sent through our range of wood grain melamine options so you can check which one best matches your cabinets!\n\nCould you also send a photo showing the left side of your kitchen? That way I can see all your cabinets and give you an accurate sheet estimate and quote."
+    },
+    {
+      "scenario_id": "NC-037",
+      "name": "Empty message",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 2843,
+      "tool_calls": [
+        "lookup_price",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi! 👋 Welcome to HDS Group. We supply melamine boards, MDF, hardware, and more across our 32 branches nationwide. How can I help you today?"
+    },
+    {
+      "scenario_id": "NC-038",
+      "name": "Testing message",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 3534,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi! Looks like we're connected fine. 👍 How can I help you today — are you looking for boards, cutting, or hardware?"
+    },
+    {
+      "scenario_id": "NC-039",
+      "name": "Very long first message",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 22962,
+      "tool_calls": [
+        "generate_quote",
+        "lookup_price",
+        "get_branch",
+        "get_banking",
+        "show_products"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi John! Great to meet you.\n\nWe don't offer delivery, but you can collect your order directly from our **HDS Wynberg branch** in Johannesburg (the closest branch to Midrand). The address is **2 North Street, Cnr Old Pretoria Main Road, Wynberg, Gauteng** (Phone: 011 440 5271).\n\nHere are our banking details for your payment:\n- **Account Name:** HDS Wynberg\n- **Account Number:** 1262222168\n- **Account Type:** Current\n\nI've just sent you product images of our HDS-manufactured oak wood grain melamin…"
+    },
+    {
+      "scenario_id": "NC-040",
+      "name": "Call me message",
+      "category": "new_customer",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7437,
+      "tool_calls": [],
+      "assistant_reply_count": 1,
+      "last_reply": "I completely understand you'd prefer a call, but I can assist you right here on WhatsApp! I can give you instant competitive pricing on our quality Innowood boards and generate a formal quote in seconds.\n\nWhat materials or boards are you looking for today?"
+    }
+  ]
+}

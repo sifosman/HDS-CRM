@@ -1,0 +1,49 @@
+{
+  "id": "PR-020",
+  "name": "Large order - 55 sheets (below handover)",
+  "category": "production_readiness",
+  "description": "Customer orders 55 sheets, just below 60-sheet handover threshold. AI should quote, not handover.",
+  "phone_number": "27900000559",
+  "sender_name": "Big Order",
+  "messages": [
+    {
+      "text": "Hi, I need 55 sheets of 16mm white melamine for a big project. Can you handle that?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "keyword": "R",
+      "description": "AI should provide pricing"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "55 sheets is below 60-sheet handover. AI should quote directly."
+}

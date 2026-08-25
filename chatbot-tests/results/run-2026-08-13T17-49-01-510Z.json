@@ -1,0 +1,46 @@
+{
+  "run_id": "run-2026-08-13T17-49-01-510Z",
+  "started_at": "2026-08-13T17:48:47.169Z",
+  "finished_at": "2026-08-13T17:49:01.509Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 5,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": "100.0%",
+    "by_category": {
+      "quote_generation": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "latency_ms": {
+      "p50": 13681,
+      "p95": 13681,
+      "avg": 13681
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "QG-002",
+      "name": "Quote generation - PDF clamping regression test",
+      "category": "quote_generation",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13681,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Clamping Test! I've generated your quote for 10 sheets of White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF). The total comes to R7,200.00 incl. VAT.\n\nYou can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260813-4389\n\nShall I go ahead and process this order for you?"
+    }
+  ]
+}

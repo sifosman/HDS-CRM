@@ -1,0 +1,56 @@
+{
+  "id": "PR-009",
+  "name": "Delivery inquiry - can you deliver?",
+  "category": "production_readiness",
+  "description": "Customer asks about delivery. AI should clarify collection model and find nearest branch.",
+  "phone_number": "27900000548",
+  "sender_name": "Chris",
+  "messages": [
+    {
+      "text": "Hi, can you deliver 15 sheets of white melamine 16mm to Midrand?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "branch",
+        "collect",
+        "nearest",
+        "midrand",
+        "kya",
+        "soweto"
+      ],
+      "description": "AI should mention nearest branch for collection"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "HDS is collection-based. AI should find nearest branch."
+}

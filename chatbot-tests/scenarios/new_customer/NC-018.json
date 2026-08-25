@@ -1,0 +1,53 @@
+{
+  "id": "NC-018",
+  "name": "Mixed boards quote",
+  "category": "new_customer",
+  "description": "New customer wants a quote for mixed board types.",
+  "phone_number": "27900000818",
+  "sender_name": "New Customer 18",
+  "messages": [
+    {
+      "text": "How much for 3 sheets of white melamine + 2 sheets of black melamine?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "R",
+      "description": "Reply should contain pricing"
+    },
+    {
+      "type": "quote_generated",
+      "description": "Quote should include both board types"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 35000
+    },
+    {
+      "type": "min_messages",
+      "count": 1
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Mixed board types. AI should handle multiple products in one quote."
+}

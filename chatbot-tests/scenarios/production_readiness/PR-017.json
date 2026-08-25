@@ -1,0 +1,60 @@
+{
+  "id": "PR-017",
+  "name": "Wrong number - customer says sorry",
+  "category": "production_readiness",
+  "description": "Customer says wrong number. AI should respond gracefully.",
+  "phone_number": "27900000556",
+  "sender_name": "Wrong Number",
+  "messages": [
+    {
+      "text": "Hi, I need 10 sheets of white melamine",
+      "delay_ms": 0
+    },
+    {
+      "text": "Oh sorry, wrong number. Please ignore.",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "no problem",
+        "worries",
+        "okay",
+        "ok",
+        "sure",
+        "thanks",
+        "goodbye",
+        "bye"
+      ],
+      "description": "AI should respond gracefully"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 30000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Customer realizes wrong number. AI should be polite and end conversation."
+}

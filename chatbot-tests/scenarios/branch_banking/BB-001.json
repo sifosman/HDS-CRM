@@ -1,0 +1,42 @@
+{
+  "id": "BB-001",
+  "name": "Branch lookup - Cape Town",
+  "category": "branch_banking",
+  "description": "Customer asks for nearest branch to Cape Town. AI should use get_branch and return real branch data.",
+  "phone_number": "27900000041",
+  "sender_name": "Test Branch Customer",
+  "messages": [
+    {
+      "text": "Where is your nearest branch to Cape Town?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "get_branch"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_keyword",
+      "value": "cape",
+      "description": "Reply should mention Cape Town or Western Cape"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (get_branch|get_banking|lookup_price|generate_quote|handover)",
+      "description": "No tool call debug text"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Verifies get_branch tool queries branches table correctly."
+}

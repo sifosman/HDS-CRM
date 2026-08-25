@@ -1,0 +1,19 @@
+{
+  "name": "hds-chatbot-test-harness",
+  "version": "1.0.0",
+  "description": "Automated test harness for the HDS WhatsApp AI chatbot. Simulates Meta webhook payloads against the n8n webhook, captures AI replies from Supabase, and scores them against scenario assertions.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node runner.js",
+    "test:smoke": "node runner.js --smoke",
+    "test:category": "node runner.js --category",
+    "test:scenario": "node runner.js --scenario",
+    "lint:scenarios": "node runner.js --lint-scenarios",
+    "dry-run": "node runner.js --dry-run",
+    "cleanup": "node runner.js --cleanup"
+  }
+}

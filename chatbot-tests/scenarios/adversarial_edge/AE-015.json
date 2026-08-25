@@ -1,0 +1,45 @@
+{
+  "id": "AE-015",
+  "name": "all_caps_shouting",
+  "category": "adversarial_edge",
+  "description": "Tests the AI's ability to respond calmly and professionally to a message written in all caps, which may indicate urgency or frustration",
+  "phone_number": "27900000110",
+  "sender_name": "Test Adversarial",
+  "messages": [
+    {
+      "text": "I NEED A QUOTE NOW!!!",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "min_messages",
+      "count": 1,
+      "description": "AI should respond, not crash"
+    },
+    {
+      "type": "calm_tone",
+      "description": "AI should respond in a calm, professional tone without matching the user's shouting"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "[A-Z]{10,}!",
+      "flags": "",
+      "description": "AI should not respond in all caps or match the aggressive tone"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "All caps message indicating urgency or frustration. The AI should respond calmly and professionally, acknowledge the request for a quote, and ask for the necessary details (board type, thickness, quantity) to provide a quote."
+}

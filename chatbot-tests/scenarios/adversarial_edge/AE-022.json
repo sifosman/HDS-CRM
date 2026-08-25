@@ -1,0 +1,52 @@
+{
+  "id": "AE-022",
+  "name": "Adversarial - absurd quantity (1 million sheets)",
+  "category": "adversarial_edge",
+  "description": "Customer asks for 1 million sheets. AI should handle gracefully.",
+  "phone_number": "27900000583",
+  "sender_name": "Million Sheets",
+  "messages": [
+    {
+      "text": "Hi, I need 1 million sheets of 16mm white melamine. Can you quote me?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "team",
+        "human",
+        "large",
+        "bulk",
+        "order",
+        "project",
+        "discuss",
+        "manager"
+      ],
+      "description": "AI should suggest handover or discussion for unrealistic quantity"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 25000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Unrealistic quantity. AI should suggest handover or clarify."
+}

@@ -1,0 +1,167 @@
+{
+  "run_id": "sales-sim-2026-08-13T18-02-06-507Z",
+  "started_at": "2026-08-13T18:01:22.626Z",
+  "finished_at": "2026-08-13T18:02:06.506Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "aggregate": {
+    "total": 1,
+    "avgScore": 80,
+    "byDifficulty": {
+      "easy": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "medium": {
+        "count": 0,
+        "scores": [],
+        "outcomes": {},
+        "avgScore": 0
+      },
+      "hard": {
+        "count": 1,
+        "scores": [
+          80
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 80
+      }
+    },
+    "stageCounts": {
+      "greeting": {
+        "passed": 1,
+        "total": 1
+      },
+      "discovery": {
+        "passed": 1,
+        "total": 1
+      },
+      "quote": {
+        "passed": 1,
+        "total": 1
+      },
+      "objection_handling": {
+        "passed": 1,
+        "total": 1
+      },
+      "close": {
+        "passed": 1,
+        "total": 1
+      },
+      "follow_up": {
+        "passed": 0,
+        "total": 1
+      }
+    },
+    "funnelRates": {
+      "greeting": 100,
+      "discovery": 100,
+      "quote": 100,
+      "objection_handling": 100,
+      "close": 100,
+      "follow_up": 0
+    },
+    "outcomeCounts": {
+      "converted": 1,
+      "follow_up": 0,
+      "lost": 0,
+      "handover": 0
+    },
+    "conversionRate": 100,
+    "byPersonaType": {
+      "frustrated": {
+        "count": 1,
+        "scores": [
+          80
+        ],
+        "outcomes": {
+          "converted": 1
+        },
+        "avgScore": 80
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SS-H-014",
+      "name": "Hard - Frustrated/angry customer",
+      "category": "sales_simulation",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "funnel_stage",
+          "detail": "Follow-up stage not reached — no follow-up language or handover detected. Reply: \"I completely understand your hesitation after a poor experience. Our 16mm White Melamine Chipboard comes with precision cutting and a quality guarantee, ensuring you get exceptional value and a great …\""
+        }
+      ],
+      "warnings": [
+        {
+          "type": "funnel_stage",
+          "detail": "Unknown funnel stage 'objection' — skipped"
+        }
+      ],
+      "latency_ms": 42000,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 3,
+      "last_reply": "I completely understand your hesitation after a poor experience. Our 16mm White Melamine Chipboard comes with precision cutting and a quality guarantee, ensuring you get exceptional value and a great investment for your project. \n\nI would really love the opportunity to make this right for you — shall I go ahead and process this order for you today?",
+      "sales_score": 80,
+      "sales_outcome": "converted",
+      "sales_difficulty": "hard",
+      "sales_persona_type": "frustrated",
+      "sales_stage_summary": {
+        "greeting": true,
+        "discovery": true,
+        "quote": true,
+        "objection_handling": true,
+        "close": true,
+        "follow_up": false
+      },
+      "sales_summary": "Score 80/100 (hard) — Outcome: converted. Stages passed: greeting, discovery, quote, objection_handling, close. Stages missed: follow_up."
+    }
+  ],
+  "sales_results": [
+    {
+      "scenario_id": "SS-H-014",
+      "score": 80,
+      "outcome": "converted",
+      "difficulty": "hard",
+      "persona_type": "frustrated",
+      "stages": {
+        "greeting": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "discovery": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "quote": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "objection_handling": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "close": {
+          "passed": true,
+          "detail": "Stage reached"
+        },
+        "follow_up": {
+          "passed": false,
+          "detail": "Stage not reached"
+        }
+      },
+      "summary": "Score 80/100 (hard) — Outcome: converted. Stages passed: greeting, discovery, quote, objection_handling, close. Stages missed: follow_up."
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "run_id": "run-2026-08-14T20-43-58-904Z",
+  "started_at": "2026-08-14T20:42:23.296Z",
+  "finished_at": "2026-08-14T20:43:58.903Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 2,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 2,
+    "skipped": 0,
+    "pass_rate": "80.0%",
+    "by_category": {
+      "branch_banking": {
+        "total": 10,
+        "passed": 8,
+        "failed": 2
+      }
+    },
+    "latency_ms": {
+      "p50": 17173,
+      "p95": 34185,
+      "avg": 17559
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "BB-001",
+      "name": "Branch lookup - Cape Town",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 21658,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "While we do not have a physical branch directly in Cape Town, our main branch address details can be provided and we deliver our quality White Melamine boards right to your door across South Africa!\n\nI've generated a quote for 1 sheet of White Melamine Chipboard (R720.00 incl. VAT and cutting):\nQuote ID: Q-20260814-7014\nTotal: R720.00\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-7014\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "BB-002",
+      "name": "Banking details lookup",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 17652,
+      "tool_calls": [
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! Here are our banking details for EFT payment for our Bloemfontein branch:\n\nAccount Name: Cane Group t/a Hds Bloemfontein  \nAccount Number: 62820929711  \nAccount Type: Enterprise Business Account  \n\nPlease use your quote ID as your payment reference. Let me know which branch or city you are ordering from if you need details for a different branch!"
+    },
+    {
+      "scenario_id": "BB-003",
+      "name": "Branch lookup - Durban",
+      "category": "branch_banking",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'get_branch' was not called. Tools called: [lookup_price]"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'Durban'. Last reply: \"I found some matching products for you:\nACRYLIC White Matt 9x4x17 (R2250)\nMEL CHIP American White Oak LNR 9x6x16 DF (R795)\nMEL CHIP Iceberg White Linear 9x6x16 DF PG (R1250)\nMEL CHIP Iceberg White Pee…\""
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'address'. Last reply: \"I found some matching products for you:\nACRYLIC White Matt 9x4x17 (R2250)\nMEL CHIP American White Oak LNR 9x6x16 DF (R795)\nMEL CHIP Iceberg White Linear 9x6x16 DF PG (R1250)\nMEL CHIP Iceberg White Pee…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 11103,
+      "tool_calls": [
+        "lookup_price"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "I found some matching products for you:\nACRYLIC White Matt 9x4x17 (R2250)\nMEL CHIP American White Oak LNR 9x6x16 DF (R795)\nMEL CHIP Iceberg White Linear 9x6x16 DF PG (R1250)\nMEL CHIP Iceberg White Peen 9x6x16 DF PG (R1250)\nMEL CHIP Premium White Txt 9x6x16 DF (R650)\n\nWould you like me to generate a quote for any of these? Feel free to reach out anytime!"
+    },
+    {
+      "scenario_id": "BB-004",
+      "name": "Branch lookup - Johannesburg",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 17173,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Our Johannesburg branch address is located at our main hub in Johannesburg, open weekdays from 8:00 AM to 5:00 PM.\n\nI have generated a quote for 1 sheet of White Melamine Chipboard at R720.00 incl VAT (including cutting). You can view your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-0147\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "BB-005",
+      "name": "Branch lookup - Pretoria",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 22819,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "We serve the Pretoria area! The address for our nearest branch location can be shared upon order confirmation, or we can arrange direct delivery to your site in Pretoria.\n\nI have generated a quote for 1 sheet of White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF):\nTotal (incl VAT): R720.00\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-7412\n\nShall I go ahead and process this order for you?"
+    },
+    {
+      "scenario_id": "BB-006",
+      "name": "General location question",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 13144,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "We have 32 HDS branch locations across South Africa! 📍 What city or suburb are you based in? If you tell me your city, such as Johannesburg, Pretoria, or Cape Town, I can give you the exact branch address closest to you!"
+    },
+    {
+      "scenario_id": "BB-007",
+      "name": "Banking details then branch follow-up",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 34185,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "You can visit our Bloemfontein branch! The address is 6 Rhodes Ave, Oranjesig, Bloemfontein.\n\nI've generated your quote for 1 sheet of White Melamine Chipboard (MEL CHIP Value White 9x6x16 DF) for R720.00 incl VAT. You can download your quote PDF here: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-2555\n\nShall I go ahead and reserve this order for you to collect at the branch?"
+    },
+    {
+      "scenario_id": "BB-008",
+      "name": "Branch trading hours - Cape Town",
+      "category": "branch_banking",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "expected_tool",
+          "detail": "Expected tool 'get_branch' was not called. Tools called: [generate_quote]"
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'Cape Town'. Last reply: \"Here is your quote! \nQuote ID: Q-20260814-6620\nTOTAL (VAT incl): R6500\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6620\n\n\nShall I go ahead and pro…\""
+        },
+        {
+          "type": "contains_keyword",
+          "detail": "Reply does not contain keyword 'branch'. Last reply: \"Here is your quote! \nQuote ID: Q-20260814-6620\nTOTAL (VAT incl): R6500\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6620\n\n\nShall I go ahead and pro…\""
+        }
+      ],
+      "warnings": [],
+      "latency_ms": 14083,
+      "tool_calls": [
+        "generate_quote"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Here is your quote! \nQuote ID: Q-20260814-6620\nTOTAL (VAT incl): R6500\nQuote PDF: https://xzsibbbghotreolzwnyk.supabase.co/storage/v1/object/public/hdsquotes/Q-20260814-6620\n\n\nShall I go ahead and process this order for you? I can hold this pricing for 48 hours."
+    },
+    {
+      "scenario_id": "BB-009",
+      "name": "All branches list",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 7995,
+      "tool_calls": [
+        "get_branch"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "We have 32 HDS branch locations across South Africa, with our main branch in Johannesburg. If you share your city or area, I can give you the exact address for your nearest branch! \n\nWhat project are you working on today, Test Branch Customer?"
+    },
+    {
+      "scenario_id": "BB-010",
+      "name": "Banking details for Johannesburg branch",
+      "category": "branch_banking",
+      "passed": true,
+      "skipped": false,
+      "failures": [],
+      "warnings": [],
+      "latency_ms": 15782,
+      "tool_calls": [
+        "get_branch",
+        "get_banking"
+      ],
+      "assistant_reply_count": 1,
+      "last_reply": "Hi Test! For our Johannesburg branch, payment is made into our bank account using your quote ID as the payment reference. \n\nCould you let me know which area in Johannesburg you're located in so I can give you the exact branch address details?"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "PL-009",
+  "name": "Non-existent product inquiry (mahogany plywood)",
+  "category": "price_lookup",
+  "description": "Tests price lookup for a product that may not exist in the hds_prices table (mahogany plywood). The AI should call lookup_price to check, and if the product is not found, it should clearly state that the product is not available rather than inventing a price.",
+  "phone_number": "27900000019",
+  "sender_name": "Test Customer",
+  "messages": [
+    {
+      "text": "Do you have mahogany plywood? What does it cost?",
+      "delay_ms": 0
+    }
+  ],
+  "expected_tools": [
+    "lookup_price"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 25000,
+      "description": "Reply should arrive within 15 seconds"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Critical hallucination test. The lookup_price tool should still be called to verify availability. If mahogany plywood is not in the hds_prices table, the AI must say it is not available or not stocked. The forbidden pattern 'R\\s?\\d' catches any invented price. Note: if HDS does stock mahogany plywood, this test may need to be adjusted \u2014 the forbidden price pattern should be removed and a contains_keyword for 'R' added."
+}

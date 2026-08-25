@@ -1,0 +1,64 @@
+{
+  "id": "PR-019",
+  "name": "Homeowner - edging included in quote",
+  "category": "production_readiness",
+  "description": "Homeowner asks about edging. AI should include edging in quote (L1 front edge).",
+  "phone_number": "27900000558",
+  "sender_name": "Homeowner Edging",
+  "messages": [
+    {
+      "text": "Hi, I'm a homeowner building my first kitchen. I need 6 sheets of white melamine 16mm. Do I need edging on the boards?",
+      "delay_ms": 0
+    },
+    {
+      "text": "Yes, please include edging in my quote. I'm in Krugersdorp.",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "contains_any_keyword",
+      "keywords": [
+        "edging",
+        "edge",
+        "front",
+        "L1",
+        "band"
+      ],
+      "description": "AI should explain edging"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "R",
+      "description": "AI should provide total price including edging"
+    },
+    {
+      "type": "response_time",
+      "max_ms": 45000
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "function\\(|=>|const\\s+\\w+\\s*=|let\\s+\\w+\\s*=|var\\s+\\w+\\s*=",
+      "description": "No JavaScript code in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover|show_products|send_payment_link)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Homeowner mode with edging. Tests edging in quotes."
+}

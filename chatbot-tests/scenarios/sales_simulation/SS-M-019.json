@@ -1,0 +1,68 @@
+{
+  "id": "SS-M-019",
+  "name": "Medium - Location-bound: customer in Brits",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "location_bound",
+  "customer_name": "Tebogo R",
+  "customer_profile": "Customer in Brits, location drives the conversation",
+  "phone_number": "27900000438",
+  "sender_name": "Tebogo R",
+  "messages": [
+    {
+      "text": "Hi, do you have a branch near Brits?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I need 8 sheets of 16mm UV gloss board high gloss plain white. Can you deliver to Brits?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Ok, can you give me a quote then?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "get_branch",
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Location-bound customer. AI should find nearest branch, confirm delivery, quote and close."
+}

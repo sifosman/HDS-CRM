@@ -1,0 +1,71 @@
+{
+  "id": "SS-M-029",
+  "name": "Medium - Project: Renovating my kitchen, need melamine for",
+  "category": "sales_simulation",
+  "difficulty": "medium",
+  "persona_type": "project_describer",
+  "customer_name": "Tshepo L",
+  "customer_profile": "Customer in Swaneville describing a project, needs help with product selection",
+  "phone_number": "27900000448",
+  "sender_name": "Tshepo L",
+  "messages": [
+    {
+      "text": "Hi, Renovating my kitchen, need melamine for cupboards. What boards do I need?",
+      "delay_ms": 0
+    },
+    {
+      "text": "I'm in Swaneville. I think I need about 18 sheets of 16mm white melamine chipboard.",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Can you give me a quote for that?",
+      "delay_ms": 8000
+    },
+    {
+      "text": "Sounds good. What's the next step?",
+      "delay_ms": 8000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "funnel_stage",
+      "stage": "greeting",
+      "description": "AI should greet and acknowledge the customer"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "discovery",
+      "description": "AI should discover/confirm customer needs"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "quote",
+      "description": "AI should generate a quote or provide pricing"
+    },
+    {
+      "type": "funnel_stage",
+      "stage": "close",
+      "description": "AI should attempt to close the sale"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    },
+    {
+      "pattern": "Calling (lookup_price|generate_quote|get_branch|get_banking|handover)",
+      "description": "No tool call debug text in reply"
+    },
+    {
+      "pattern": "\\[CLOSE_ATTEMPT|\\[OBJECTION_HANDLED|\\[FUNNEL",
+      "description": "Internal tags should be stripped from customer-facing message"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Project describer. AI should help with product selection, quote, and close."
+}

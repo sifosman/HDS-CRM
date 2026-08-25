@@ -1,0 +1,57 @@
+{
+  "run_id": "run-2026-08-22T19-38-26-756Z",
+  "started_at": "2026-08-22T19:37:37.986Z",
+  "finished_at": "2026-08-22T19:38:26.756Z",
+  "config": {
+    "webhook_url": "https://n8n.owdsolutions.co.za/webhook/hds-whatsapp",
+    "concurrency": 1,
+    "safe_mode": true
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "pass_rate": "0.0%",
+    "by_category": {
+      "sales_closing": {
+        "total": 1,
+        "passed": 0,
+        "failed": 1
+      }
+    },
+    "latency_ms": {
+      "p50": 46609,
+      "p95": 46609,
+      "avg": 46609
+    }
+  },
+  "scenarios": [
+    {
+      "scenario_id": "SC-001",
+      "name": "Sales closing - direct close after quote",
+      "category": "sales_closing",
+      "passed": false,
+      "skipped": false,
+      "failures": [
+        {
+          "type": "response_time",
+          "detail": "Response latency 46609ms exceeds max 45000ms"
+        }
+      ],
+      "warnings": [
+        {
+          "type": "expected_tag",
+          "detail": "Expected tag 'CLOSE_ATTEMPT: direct' not found in tool_results. Available keys: [close_type, close_attempt, follow_up_needed, follow_up_reason]"
+        }
+      ],
+      "latency_ms": 46609,
+      "tool_calls": [
+        "generate_quote",
+        "get_branch"
+      ],
+      "assistant_reply_count": 2,
+      "last_reply": "Great, Close! To get your order processed, I just need to know where you'll be collecting from. Which area or city are you in? For example, Centurion, Durban, Cape Town, or Johannesburg? I'll assign your nearest HDS branch right away. 🚚"
+    }
+  ]
+}

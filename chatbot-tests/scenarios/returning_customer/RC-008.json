@@ -1,0 +1,42 @@
+{
+  "id": "RC-008",
+  "name": "returning_customer_continuity_test",
+  "category": "returning_customer",
+  "description": "Returning customer asks 'Hi again, did you get my last message?' to test conversation continuity and whether the AI acknowledges prior messages.",
+  "phone_number": "27900000093",
+  "sender_name": "Test Returning Customer",
+  "messages": [
+    {
+      "text": "My name is Emma, can I get a quote for 50 sheets of white melamine chipboard 16mm",
+      "delay_ms": 0
+    },
+    {
+      "text": "Hi again, did you get my last message?",
+      "delay_ms": 10000
+    }
+  ],
+  "expected_tools": [
+    "generate_quote"
+  ],
+  "expected_behaviors": [
+    {
+      "type": "response_time",
+      "max_ms": 45000,
+      "description": "Reply should arrive within 15 seconds"
+    },
+    {
+      "type": "contains_keyword",
+      "keyword": "Emma",
+      "description": "AI should address the customer as 'Emma' and confirm receipt of the previous message"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "\\{.*\\}",
+      "flags": "s",
+      "description": "No raw JSON in reply"
+    }
+  ],
+  "expected_tags": [],
+  "notes": "Continuity test: the customer checks whether their previous message was received. The AI should confirm it has the context of the earlier quote request (white melamine chipboard 16mm) and reassure the customer, addressing them by name."
+}
