@@ -95,19 +95,15 @@ export function TrainingWorkspace({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prevSessionIdRef = useRef<string | null>(currentSession?.id ?? null);
 
-  // Sync state when session changes (navigation). This is a derived reset
-  // pattern that avoids calling setState inside useEffect.
-  if (currentSession?.id !== prevSessionIdRef.current) {
-    prevSessionIdRef.current = currentSession?.id ?? null;
-    // We use direct state setters during render — React allows this for
-    // the "adjust state during render" pattern documented in the docs.
+  // Sync state when session changes (navigation).
+  useEffect(() => {
     setMessages(initialMessages);
     setTitleValue(currentSession?.title ?? "");
     setError(null);
     setStreamingText("");
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSession?.id]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
