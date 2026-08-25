@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AdvisorToolContract } from "@/lib/types";
 import { createHash } from "crypto";
+import fallbackContext from "./fallback-context.json";
 
 /**
  * Sanitized context builder for the AI Training Advisor.
@@ -12,14 +13,14 @@ import { createHash } from "crypto";
  *
  * It NEVER exposes jsCode, credentials, API keys, tokens, webhook secrets,
  * customer data, or any raw executable code.
+ *
+ * If the live workflow file is unavailable (e.g. on Vercel), it falls back
+ * to a committed sanitized context file extracted from the workflow export.
  */
 
 const WORKFLOW_PATH =
   process.env.HDS_WORKFLOW_PATH ||
   "/home/asif/Documents/FX GROUP/Chatbot Tests/n8n-workflow/HDS-WhatsApp-AI-Sales-Assistant.json";
-
-// Suppress Turbopack NFT tracing warning for this dynamic path by using
-// a runtime-only import of fs/promises inside the function body.
 
 type RawNode = {
   name: string;
@@ -154,14 +155,24 @@ function containsSensitiveData(text: string): boolean {
 
 /**
  * Builds the full sanitized context from the workflow export.
- * If the workflow file is unavailable, returns null (caller handles fallback).
+ * If the workflow file is unavailable (e.g. on Vercel), falls back to the
+ * committed sanitized context file (fallback-context.json).
  */
 export async function buildSanitizedWorkflowContext(): Promise<SanitizedContext | null> {
   let workflow: RawWorkflow;
   try {
     workflow = await readWorkflow();
   } catch {
-    return null;
+    // Fall back to the committed sanitized context
+    return {
+      workflowName: fallbackContext.workflowName,
+      workflowVersion: fallbackContext.workflowVersion ?? null,
+      workflowModel: fallbackContext.workflowModel ?? null,
+      systemPrompt: fallbackContext.systemPrompt ?? null,
+      toolContracts: (fallbackContext.toolContracts as unknown as AdvisorToolContract[]),
+      topology: fallbackContext.topology as SanitizedContext["topology"],
+      sourceTimestamp: new Date().toISOString(),
+    };
   }
 
   const systemPrompt = extractSystemPrompt(workflow.nodes);
@@ -177,7 +188,6 @@ export async function buildSanitizedWorkflowContext(): Promise<SanitizedContext 
 
   if (containsSensitiveData(combinedForCheck)) {
     // If sensitive data is detected, strip the system prompt as a precaution
-    // (tool descriptions are shorter and less likely to contain secrets)
     return {
       workflowName: workflow.name,
       workflowVersion: workflow.versionId ?? null,
@@ -410,7 +420,7 @@ export async function assembleContext(): Promise<AssembledContext> {
     dashboardManifest: dashboardManifest as unknown as Record<string, unknown>,
     supabaseAggregates: (supabaseAggregates ?? { error: "unavailable" }) as Record<string, unknown>,
     sourceTimestamps,
-    isStale: workflowContext === null,
+    isStale: workflowContext?.systemPrompt == null,
     contentHash,
   };
 }
