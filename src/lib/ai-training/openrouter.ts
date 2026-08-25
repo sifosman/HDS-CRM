@@ -76,7 +76,7 @@ export async function streamChatCompletion(
         max_tokens: maxTokens,
         temperature: options.temperature ?? 0.7,
         stream: true,
-        usage: { include_tokens: true },
+        usage: { include: true },
       }),
       signal: options.signal,
     });
