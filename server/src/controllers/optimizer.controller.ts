@@ -173,7 +173,7 @@ export const importIQData = async (req: Request, res: Response) => {
 // Generate a complete quote with optimization, pricing, and PDF
 export const generateQuote = async (req: Request, res: Response) => {
   try {
-    const { sections, customerName, projectName, phoneNumber, branchData, hardware, source } = req.body;
+    const { sections, customerName, projectName, phoneNumber, branchData, hardware, source, priceList } = req.body;
 
     // Validate input — allow hardware-only quotes too (no sections required if hardware present)
     const hasSections = sections && Array.isArray(sections) && sections.length > 0;
@@ -278,7 +278,7 @@ export const generateQuote = async (req: Request, res: Response) => {
       console.log(`Getting pricing for material: ${material}`);
       
       // 1. Look up pricing for this material from Supabase
-      const pricingResult = await SupabaseService.getProductPricingByDescription(material, true);
+      const pricingResult = await SupabaseService.getProductPricingByDescription(material, true, priceList);
       
       if (!pricingResult.success) {
         console.error(`No pricing found for ${material}`);

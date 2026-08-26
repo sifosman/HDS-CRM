@@ -92,8 +92,9 @@ const SupabaseService = {
 
   /**
    * Get product pricing by description from hds_prices table
+   * @param priceList Optional pricing list selector: 'william' uses hds_prices_william, default uses hds_prices
    */
-  async getProductPricingByDescription(description: string, includeSizes: boolean = false): Promise<{
+  async getProductPricingByDescription(description: string, includeSizes: boolean = false, priceList: string = 'default'): Promise<{
     success: boolean;
     error?: string;
     data?: {
@@ -104,8 +105,9 @@ const SupabaseService = {
     };
   }> {
     try {
-      console.log(`Fetching product pricing for description: "${description}" from hds_prices table`);
-      
+      const tableName = priceList === 'william' ? 'hds_prices_william' : 'hds_prices';
+      console.log(`Fetching product pricing for description: "${description}" from ${tableName} table (priceList: ${priceList})`);
+
       // Select columns based on whether dimensions are needed
       let selectColumns = 'description, price';
       if (includeSizes) {
@@ -113,48 +115,48 @@ const SupabaseService = {
       }
       
       // Log the exact query we're about to run for debugging
-      console.log(`Running exact match query on 'hds_prices' table for description: "${description}"`);
+      console.log(`Running exact match query on '${tableName}' table for description: "${description}"`);
       console.log(`Select columns: ${selectColumns}`);
-      
+
       // First try an exact match
       let { data, error } = await supabase
-        .from('hds_prices')
+        .from(tableName)
         .select(selectColumns)
         .eq('description', description.trim());
-        
+
       // If no match, try with explicit column ILIKE for an exact match (handles case insensitivity)
       if (!data || data.length === 0 || error) {
         console.log(`No exact match with .eq(), trying with .ilike() for exact match...`);
         ({ data, error } = await supabase
-          .from('hds_prices')
+          .from(tableName)
           .select(selectColumns)
           .ilike('description', description.trim()));
       }
-      
+
       // If no exact match or direct ILIKE match, try an exact phrase LIKE search
       if (!data || data.length === 0 || error) {
         console.log(`No exact or case-insensitive match, trying exact phrase with wildcards...`);
-        
+
         // Surround with % to find the exact phrase anywhere in the description
         const exactPhrasePattern = `%${description.trim()}%`;
-        
+
         ({ data, error } = await supabase
-          .from('hds_prices')
+          .from(tableName)
           .select(selectColumns)
           .ilike('description', exactPhrasePattern)
           .order('description', { ascending: true }));
       }
-      
+
       // If still no match, try a partial match using ILIKE with keywords
       if (!data || data.length === 0 || error) {
         console.log(`No exact phrase match found for "${description}", trying keyword partial match...`);
         const materialKeywords = description.split(' ');
-        
+
         // Try to match the first two words which are usually the material type
         const searchPattern = `%${materialKeywords[0]}%${materialKeywords[1] || ''}%`;
-        
+
         ({ data, error } = await supabase
-          .from('hds_prices')
+          .from(tableName)
           .select(selectColumns)
           .ilike('description', searchPattern)
           .order('description', { ascending: true }));
@@ -180,7 +182,7 @@ const SupabaseService = {
         
         try {
           const looseResult = await supabase
-            .from('hds_prices')
+            .from(tableName)
             .select(selectColumns)
             .ilike('description', looseSearchPattern)
             .order('description', { ascending: true });
@@ -760,11 +762,13 @@ const SupabaseService = {
 
   /**
    * Fetch material options for cascading dropdowns from the hds_prices table
+   * @param priceList Optional pricing list selector: 'william' uses hds_prices_william, default uses hds_prices
    */
-  async getMaterialOptions(): Promise<any> {
+  async getMaterialOptions(priceList: string = 'default'): Promise<any> {
     try {
+      const tableName = priceList === 'william' ? 'hds_prices_william' : 'hds_prices';
       const { data, error } = await supabase
-        .from('hds_prices')
+        .from(tableName)
         .select('description, price')
         .order('description', { ascending: true });
       
@@ -789,25 +793,27 @@ const SupabaseService = {
 
   /**
    * Get all product descriptions
+   * @param priceList Optional pricing list selector: 'william' uses hds_prices_william, default uses hds_prices
    */
-  async getProductDescriptions(): Promise<any> {
+  async getProductDescriptions(priceList: string = 'default'): Promise<any> {
     try {
+      const tableName = priceList === 'william' ? 'hds_prices_william' : 'hds_prices';
       // Specifically log the table name we're querying
-      console.log('Fetching product descriptions from hds_prices table...');
-      
+      console.log(`Fetching product descriptions from ${tableName} table...`);
+
       // First verify if the table exists
       const { data: tablesData, error: tablesError } = await supabase
         .rpc('get_tables');
-        
+
       if (tablesError) {
         console.error('Error checking tables:', tablesError);
       } else {
         console.log('Available tables in Supabase:', tablesData);
       }
-      
-      // Force use of hds_prices table
+
+      // Force use of the selected pricing table
       const { data, error } = await supabase
-        .from('hds_prices')
+        .from(tableName)
         .select('description')
         .order('description', { ascending: true });
       

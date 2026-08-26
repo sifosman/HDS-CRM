@@ -298,7 +298,8 @@ const supabaseController = {
    */
   async getMaterialOptions(req: Request, res: Response) {
     try {
-      const result = await SupabaseService.getMaterialOptions();
+      const priceList = (req.query.priceList as string) || 'default';
+      const result = await SupabaseService.getMaterialOptions(priceList);
       
       if (!result.success) {
         return res.status(404).json({ success: false, message: result.error || 'Material options not found' });
@@ -316,7 +317,8 @@ const supabaseController = {
    */
   async getProductDescriptions(req: Request, res: Response) {
     try {
-      const result = await SupabaseService.getProductDescriptions();
+      const priceList = (req.query.priceList as string) || 'default';
+      const result = await SupabaseService.getProductDescriptions(priceList);
       
       if (!result.success) {
         return res.status(404).json({ success: false, message: result.error || 'Product descriptions not found' });
@@ -336,12 +338,13 @@ const supabaseController = {
     try {
       const { description } = req.query;
       const includeSizes = req.query.includeSizes === 'true';
-      
+      const priceList = (req.query.priceList as string) || 'default';
+
       if (!description) {
         return res.status(400).json({ success: false, message: 'Product description is required' });
       }
-      
-      const result = await SupabaseService.getProductPricingByDescription(description.toString(), includeSizes);
+
+      const result = await SupabaseService.getProductPricingByDescription(description.toString(), includeSizes, priceList);
       
       if (!result.success) {
         return res.status(404).json({ success: false, message: result.error || 'Product pricing not found' });

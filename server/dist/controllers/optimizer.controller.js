@@ -149,7 +149,7 @@ exports.importIQData = importIQData;
 const generateQuote = async (req, res) => {
     var _a, _b, _c, _d, _e;
     try {
-        const { sections, customerName, projectName, phoneNumber, branchData, hardware, source } = req.body;
+        const { sections, customerName, projectName, phoneNumber, branchData, hardware, source, priceList } = req.body;
         // Validate input — allow hardware-only quotes too (no sections required if hardware present)
         const hasSections = sections && Array.isArray(sections) && sections.length > 0;
         const hasHardware = hardware && Array.isArray(hardware) && hardware.length > 0;
@@ -239,7 +239,7 @@ const generateQuote = async (req, res) => {
             // 1. Get product pricing by description from Supabase
             console.log(`Getting pricing for material: ${material}`);
             // 1. Look up pricing for this material from Supabase
-            const pricingResult = await supabase_service_1.default.getProductPricingByDescription(material, true);
+            const pricingResult = await supabase_service_1.default.getProductPricingByDescription(material, true, priceList);
             if (!pricingResult.success) {
                 console.error(`No pricing found for ${material}`);
                 // Instead of skipping, add error information to the response
