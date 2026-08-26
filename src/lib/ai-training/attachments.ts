@@ -196,7 +196,7 @@ export function hasSpreadsheetAttachment(
 }
 
 type CurrentPriceRow = {
-  id: number;
+  ID: number;
   description: string | null;
   price: number | null;
   dimensions: string | null;
@@ -216,13 +216,13 @@ export async function fetchCurrentPricingForDiff(): Promise<string | null> {
   const [defaultRes, williamRes] = await Promise.all([
     admin
       .from("hds_prices")
-      .select("id,description,price,dimensions,category")
-      .order("id", { ascending: true })
+      .select("ID,description,price,dimensions,category")
+      .order("ID", { ascending: true })
       .limit(500),
     admin
       .from("hds_prices_william")
-      .select("id,description,price,dimensions,category")
-      .order("id", { ascending: true })
+      .select("ID,description,price,dimensions,category")
+      .order("ID", { ascending: true })
       .limit(500),
   ]);
 
@@ -232,7 +232,7 @@ export async function fetchCurrentPricingForDiff(): Promise<string | null> {
     lines.push("=== CURRENT PRICES (hds_prices — used by web app and old chatbot) ===");
     for (const row of defaultRes.data as CurrentPriceRow[]) {
       lines.push(
-        `ID:${row.id}\t${row.description ?? ""}\tR${row.price ?? 0}\t${row.dimensions ?? ""}\t${row.category ?? ""}`,
+        `ID:${row.ID}\t${row.description ?? ""}\tR${row.price ?? 0}\t${row.dimensions ?? ""}\t${row.category ?? ""}`,
       );
     }
   }
@@ -242,7 +242,7 @@ export async function fetchCurrentPricingForDiff(): Promise<string | null> {
     lines.push("=== CURRENT PRICES (hds_prices_william — used by William WhatsApp bot) ===");
     for (const row of williamRes.data as CurrentPriceRow[]) {
       lines.push(
-        `ID:${row.id}\t${row.description ?? ""}\tR${row.price ?? 0}\t${row.dimensions ?? ""}\t${row.category ?? ""}`,
+        `ID:${row.ID}\t${row.description ?? ""}\tR${row.price ?? 0}\t${row.dimensions ?? ""}\t${row.category ?? ""}`,
       );
     }
   }
