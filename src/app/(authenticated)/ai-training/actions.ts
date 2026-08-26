@@ -288,6 +288,15 @@ export async function createChangeRequestAction(
     priority?: "low" | "medium" | "high" | "critical";
     risks?: string;
     acceptanceCriteria?: string;
+    pricingChanges?: Array<{
+      code: string;
+      description?: string;
+      action: "add" | "update" | "remove";
+      oldPrice?: number | null;
+      newPrice?: number | null;
+      dimensions?: string;
+      category?: string;
+    }>;
   },
 ): Promise<ActionResult<AdvisorChangeRequest>> {
   const user = await getCurrentUser();
@@ -307,6 +316,7 @@ export async function createChangeRequestAction(
     priority: input.priority,
     risks: input.risks,
     acceptanceCriteria: input.acceptanceCriteria,
+    pricingChanges: input.pricingChanges,
   });
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -325,6 +335,7 @@ export async function createChangeRequestAction(
     priority: parsed.data.priority,
     risks: parsed.data.risks,
     acceptanceCriteria: parsed.data.acceptanceCriteria,
+    pricingChanges: parsed.data.pricingChanges,
   });
 
   if (!result.ok) return result;
@@ -357,6 +368,15 @@ export async function createChangeRequestRecord(
     priority?: "low" | "medium" | "high" | "critical";
     risks?: string;
     acceptanceCriteria?: string;
+    pricingChanges?: Array<{
+      code: string;
+      description?: string;
+      action: "add" | "update" | "remove";
+      oldPrice?: number | null;
+      newPrice?: number | null;
+      dimensions?: string;
+      category?: string;
+    }>;
   },
 ): Promise<ActionResult<AdvisorChangeRequest>> {
   const supabase = await createClient();
@@ -377,6 +397,7 @@ export async function createChangeRequestRecord(
       priority: input.priority ?? "medium",
       risks: input.risks ?? null,
       acceptance_criteria: input.acceptanceCriteria ?? null,
+      pricing_changes: input.pricingChanges ?? [],
       model_id: input.modelId ?? null,
       context_snapshot_id: input.contextSnapshotId ?? null,
       status: "pending",

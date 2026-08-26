@@ -31,6 +31,7 @@ import type {
   AdvisorModelId,
   AdvisorChangeRequestPriority,
   AdvisorAttachment,
+  AdvisorPricingChange,
 } from "@/lib/types";
 import { getPublicAdvisorModels } from "@/lib/ai-training/models";
 import { stripChangeRequestBlock } from "@/lib/ai-training/change-request-parser";
@@ -926,6 +927,14 @@ function ChangeRequestCard({
   onRetry: () => void;
   onStatusChange: (status: AdvisorChangeRequest["status"]) => void;
 }) {
+  const [showPricing, setShowPricing] = useState(false);
+  const pricingChanges = (request.pricing_changes ?? []) as AdvisorPricingChange[];
+  const hasPricing = pricingChanges.length > 0;
+
+  const addCount = pricingChanges.filter((p) => p.action === "add").length;
+  const updateCount = pricingChanges.filter((p) => p.action === "update").length;
+  const removeCount = pricingChanges.filter((p) => p.action === "remove").length;
+
   return (
     <Card className="text-xs">
       <CardHeader className="p-3 pb-2">
@@ -958,6 +967,74 @@ function ChangeRequestCard({
                 {area}
               </Badge>
             ))}
+          </div>
+        )}
+        {hasPricing && (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <Badge variant="outline" className="text-[10px] text-green-600">
+                +{addCount} new
+              </Badge>
+              <Badge variant="outline" className="text-[10px] text-blue-600">
+                ~{updateCount} changed
+              </Badge>
+              <Badge variant="outline" className="text-[10px] text-red-600">
+                -{removeCount} removed
+              </Badge>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-5 px-1.5 text-[10px]"
+                onClick={() => setShowPricing((v) => !v)}
+              >
+                {showPricing ? "Hide" : "Show"} ({pricingChanges.length})
+              </Button>
+            </div>
+            {showPricing && (
+              <div className="max-h-48 overflow-y-auto rounded border bg-muted/50">
+                <table className="w-full text-[10px]">
+                  <thead className="sticky top-0 bg-muted">
+                    <tr>
+                      <th className="text-left p-1 font-medium">Code</th>
+                      <th className="text-left p-1 font-medium">Action</th>
+                      <th className="text-right p-1 font-medium">Old</th>
+                      <th className="text-right p-1 font-medium">New</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pricingChanges.slice(0, 100).map((p, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="p-1 truncate max-w-[80px]" title={p.description}>
+                          {p.code}
+                        </td>
+                        <td className="p-1">
+                          <span className={
+                            p.action === "add" ? "text-green-600" :
+                            p.action === "remove" ? "text-red-600" :
+                            "text-blue-600"
+                          }>
+                            {p.action}
+                          </span>
+                        </td>
+                        <td className="p-1 text-right text-muted-foreground">
+                          {p.oldPrice != null ? `R${p.oldPrice}` : "—"}
+                        </td>
+                        <td className="p-1 text-right font-medium">
+                          {p.newPrice != null ? `R${p.newPrice}` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                    {pricingChanges.length > 100 && (
+                      <tr className="border-t">
+                        <td colSpan={4} className="p-1 text-center text-muted-foreground">
+                          +{pricingChanges.length - 100} more...
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
         <div className="flex items-center gap-1 pt-1">

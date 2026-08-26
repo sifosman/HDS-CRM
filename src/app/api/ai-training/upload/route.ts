@@ -20,6 +20,9 @@ const ALLOWED_MIME: Record<string, AdvisorAttachmentType> = {
   "text/csv": "document",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
     "document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+    "document",
+  "application/vnd.ms-excel": "document",
   "audio/mpeg": "audio",
   "audio/mp3": "audio",
   "audio/wav": "audio",
@@ -57,6 +60,30 @@ async function extractDocumentText(
       return result.text || null;
     }
 
+    if (
+      contentType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      contentType === "application/vnd.ms-excel"
+    ) {
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      // ExcelJS declares its own Buffer interface (extends ArrayBuffer) which
+      // conflicts with Node's Buffer<ArrayBufferLike>. Cast through unknown.
+      await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
+      const rows: string[] = [];
+      workbook.eachSheet((worksheet) => {
+        rows.push(`--- Sheet: ${worksheet.name} ---`);
+        worksheet.eachRow((row) => {
+          const values = row.values as unknown[];
+          // values[0] is undefined (ExcelJS is 1-indexed)
+          const cells = values
+            .slice(1)
+            .map((v) => (v === null || v === undefined ? "" : String(v)));
+          rows.push(cells.join("\t"));
+        });
+      });
+      return rows.join("\n") || null;
+    }
+
     if (contentType === "text/plain" || contentType === "text/csv") {
       return buffer.toString("utf-8");
     }
@@ -71,7 +98,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-  if (user.role !== "owner") {
+  if (user.role !== "owner" && user.role !== "manager") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -120,7 +147,7 @@ export async function POST(request: NextRequest) {
   if (!attachmentType) {
     return NextResponse.json(
       {
-        error: `Unsupported file type: ${contentType}. Supported: images (PNG, JPEG, GIF, WebP), documents (PDF, DOCX, TXT, CSV), audio (MP3, WAV, WebM, OGG, AAC, M4A)`,
+        error: `Unsupported file type: ${contentType}. Supported: images (PNG, JPEG, GIF, WebP), documents (PDF, DOCX, TXT, CSV, XLSX, XLS), audio (MP3, WAV, WebM, OGG, AAC, M4A)`,
       },
       { status: 415 },
     );

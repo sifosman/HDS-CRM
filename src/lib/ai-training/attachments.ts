@@ -8,6 +8,16 @@ import {
 import type { ContentPart } from "./openrouter";
 
 /**
+ * MIME types that indicate a spreadsheet upload.
+ */
+const SPREADSHEET_MIME_TYPES = new Set([
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+]);
+
+const SPREADSHEET_EXTENSIONS = [".xlsx", ".xls"];
+
+/**
  * Maps an audio MIME type to the short format string OpenRouter expects
  * in the `input_audio` content part.
  */
@@ -166,4 +176,77 @@ export function summarizeAttachmentsForHistory(
     }
   }
   return summaries.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Pricing context injection for spreadsheet uploads
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if any attachment is a spreadsheet (.xlsx/.xls).
+ */
+export function hasSpreadsheetAttachment(
+  attachments: AdvisorAttachment[],
+): boolean {
+  return attachments.some((a) => {
+    if (SPREADSHEET_MIME_TYPES.has(a.contentType)) return true;
+    const ext = a.filename.toLowerCase().match(/\.[^.]+$/)?.[0] ?? "";
+    return SPREADSHEET_EXTENSIONS.includes(ext);
+  });
+}
+
+type CurrentPriceRow = {
+  id: number;
+  description: string | null;
+  price: number | null;
+  dimensions: string | null;
+  category: string | null;
+};
+
+/**
+ * Fetches current pricing from both hds_prices and hds_prices_william tables
+ * and returns a text block that can be injected into the user message so the
+ * AI model can diff the uploaded spreadsheet against current prices.
+ *
+ * Returns null if the fetch fails or no prices are found.
+ */
+export async function fetchCurrentPricingForDiff(): Promise<string | null> {
+  const admin = createAdminClient();
+
+  const [defaultRes, williamRes] = await Promise.all([
+    admin
+      .from("hds_prices")
+      .select("id,description,price,dimensions,category")
+      .order("id", { ascending: true })
+      .limit(500),
+    admin
+      .from("hds_prices_william")
+      .select("id,description,price,dimensions,category")
+      .order("id", { ascending: true })
+      .limit(500),
+  ]);
+
+  const lines: string[] = [];
+
+  if (defaultRes.data && defaultRes.data.length > 0) {
+    lines.push("=== CURRENT PRICES (hds_prices — used by web app and old chatbot) ===");
+    for (const row of defaultRes.data as CurrentPriceRow[]) {
+      lines.push(
+        `ID:${row.id}\t${row.description ?? ""}\tR${row.price ?? 0}\t${row.dimensions ?? ""}\t${row.category ?? ""}`,
+      );
+    }
+  }
+
+  if (williamRes.data && williamRes.data.length > 0) {
+    lines.push("");
+    lines.push("=== CURRENT PRICES (hds_prices_william — used by William WhatsApp bot) ===");
+    for (const row of williamRes.data as CurrentPriceRow[]) {
+      lines.push(
+        `ID:${row.id}\t${row.description ?? ""}\tR${row.price ?? 0}\t${row.dimensions ?? ""}\t${row.category ?? ""}`,
+      );
+    }
+  }
+
+  if (lines.length === 0) return null;
+  return lines.join("\n");
 }

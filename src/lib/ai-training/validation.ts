@@ -70,6 +70,21 @@ export const changeRequestDraftSchema = z.object({
     .default("medium"),
   risks: z.string().trim().max(5000).optional(),
   acceptanceCriteria: z.string().trim().max(5000).optional(),
+  pricingChanges: z
+    .array(
+      z.object({
+        code: z.string().trim().min(1).max(100),
+        description: z.string().trim().max(500).optional(),
+        action: z.enum(["add", "update", "remove"]),
+        oldPrice: z.number().nullable().optional(),
+        newPrice: z.number().nullable().optional(),
+        dimensions: z.string().trim().max(200).optional(),
+        category: z.string().trim().max(100).optional(),
+      }),
+    )
+    .max(500)
+    .optional()
+    .default([]),
 });
 
 export const retryNotificationSchema = z.object({

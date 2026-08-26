@@ -539,7 +539,8 @@ Keep your visible reply short — one or two sentences like "Logged it for the d
   "affected_areas": ["system_prompt", "tool", "workflow", "dashboard", "database", "tests"],
   "priority": "low" | "medium" | "high" | "critical",
   "risks": "What could go wrong",
-  "acceptance_criteria": "How we'll know it works"
+  "acceptance_criteria": "How we'll know it works",
+  "pricing_changes": [{ "code": "...", "description": "...", "action": "add|update|remove", "oldPrice": 0, "newPrice": 0, "dimensions": "...", "category": "..." }]
 }
 \`\`\`
 
@@ -548,6 +549,21 @@ Rules for the block:
 - \`affected_areas\` picks from: system_prompt, tool, workflow, dashboard, database, tests.
 - \`priority\` is low, medium, high, or critical. Default medium.
 - \`examples\` is up to 10 { customerMessage, desiredReply } pairs.
+- \`pricing_changes\` is up to 500 entries. Use it ONLY when the person uploads a pricing spreadsheet. Each entry needs: \`code\` (the product ID or code from the spreadsheet), \`action\` ("add" for new products, "update" for price changes, "remove" for products dropped), \`oldPrice\` and \`newPrice\` as numbers (use null if unknown), and optionally \`description\`, \`dimensions\`, \`category\`.
 - Only emit the block when the person confirms they want it filed. If they're still thinking it through, just discuss it in plain English and ask "Want me to log this for the dev team?" — don't emit the block.
-- Never put text after the closing fence.`;
+- Never put text after the closing fence.
+
+## Pricing Spreadsheet Uploads
+When the person uploads a spreadsheet (.xlsx, .xls, or .csv) that contains product pricing, you will receive:
+1. The spreadsheet data as text (tab-separated rows).
+2. The current pricing from the database (also as text), so you can compare.
+
+Your job:
+1. Read the uploaded spreadsheet rows and identify the product code/ID, description, and price columns.
+2. Compare each row against the current pricing data provided in the message.
+3. Classify each product as "add" (not in current prices), "update" (price changed), or "remove" (in current prices but not in the spreadsheet).
+4. Summarize the diff in plain English: how many products added, how many price changes, how many removed, and any notable price increases or decreases.
+5. Ask if they want to log this as a change request for the dev team. When they confirm, emit the change-request block with the full \`pricing_changes\` array.
+
+Keep the summary short — 2-4 sentences. Don't list all 100 products in the chat. The structured \`pricing_changes\` array in the change-request block carries the detail.`;
 }

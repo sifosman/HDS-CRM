@@ -591,6 +591,24 @@ export type AdvisorChangeRequestPriority =
 
 export type AdvisorNotificationStatus = "pending" | "sent" | "failed";
 
+/**
+ * A single product pricing change entry within a change request.
+ * - action "add":    product is new (no existing row)
+ * - action "update": product exists, price (or other fields) changed
+ * - action "remove": product exists in current prices but not in the upload
+ */
+export type AdvisorPricingChangeAction = "add" | "update" | "remove";
+
+export type AdvisorPricingChange = {
+  code: string;
+  description?: string;
+  action: AdvisorPricingChangeAction;
+  oldPrice?: number | null;
+  newPrice?: number | null;
+  dimensions?: string;
+  category?: string;
+};
+
 export type AdvisorChangeRequest = {
   id: string;
   session_id: string | null;
@@ -609,6 +627,7 @@ export type AdvisorChangeRequest = {
   priority: AdvisorChangeRequestPriority;
   risks: string | null;
   acceptance_criteria: string | null;
+  pricing_changes: AdvisorPricingChange[];
   status: AdvisorChangeRequestStatus;
   implementation_notes: string | null;
   model_id: string | null;
@@ -635,6 +654,7 @@ export type AdvisorChangeRequestDraft = {
   priority?: AdvisorChangeRequestPriority;
   risks?: string;
   acceptance_criteria?: string;
+  pricing_changes?: AdvisorPricingChange[];
 };
 
 export type AdvisorAuditEntityType = "session" | "message" | "change_request";

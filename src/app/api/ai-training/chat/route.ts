@@ -22,6 +22,8 @@ import {
   resolveModelForAttachments,
   buildMultimodalContent,
   summarizeAttachmentsForHistory,
+  hasSpreadsheetAttachment,
+  fetchCurrentPricingForDiff,
 } from "@/lib/ai-training/attachments";
 
 export const runtime = "nodejs";
@@ -129,14 +131,27 @@ export async function POST(request: NextRequest) {
 
   // Replace the last user message with multimodal content (images/audio as
   // base64 content parts, documents as extracted text).
+  // When a spreadsheet is attached, also inject current pricing data so the
+  // AI can diff the uploaded prices against what's in the database.
   if (attachmentList.length > 0 && history.length > 0) {
     const lastIdx = history.length - 1;
     const lastMsg = history[lastIdx];
     if (lastMsg.role === "user" && typeof lastMsg.content === "string") {
       // The last user message text is the original `message` (without the
       // attachment summary that was just added). Rebuild with multimodal.
+      let messageText = message;
+
+      // If a spreadsheet is attached, fetch current pricing and prepend it
+      // so the model can compare uploaded prices to current ones.
+      if (hasSpreadsheetAttachment(attachmentList)) {
+        const currentPricing = await fetchCurrentPricingForDiff();
+        if (currentPricing) {
+          messageText = `${messageText}\n\n--- CURRENT PRICING DATA (for comparison) ---\n${currentPricing}\n--- END CURRENT PRICING DATA ---`;
+        }
+      }
+
       const multimodalContent = await buildMultimodalContent(
-        message,
+        messageText,
         attachmentList,
       );
       history[lastIdx] = {
@@ -244,6 +259,7 @@ export async function POST(request: NextRequest) {
           priority: parsed.draft.priority,
           risks: parsed.draft.risks,
           acceptanceCriteria: parsed.draft.acceptance_criteria,
+          pricingChanges: parsed.draft.pricing_changes,
         });
         if (result.ok) {
           changeRequestCreated = result.data;
