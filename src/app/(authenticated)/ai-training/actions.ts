@@ -17,6 +17,7 @@ import {
   sendChangeRequestNotification,
   updateNotificationStatus,
 } from "@/lib/ai-training/notifications";
+import { logAdvisorEvent } from "@/lib/ai-training/audit";
 import type {
   AdvisorSession,
   AdvisorMessage,
@@ -36,8 +37,8 @@ export async function createSessionAction(
 ): Promise<ActionResult<AdvisorSession>> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const parsed = createSessionSchema.safeParse(input ?? {});
   if (!parsed.success)
@@ -57,6 +58,16 @@ export async function createSessionAction(
   if (error || !data)
     return { ok: false, error: error?.message ?? "Failed to create session" };
 
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: data.id,
+    entityType: "session",
+    entityId: data.id,
+    action: "create",
+    after: { title: data.title, selected_model: data.selected_model },
+  });
+
   revalidatePath("/ai-training");
   return { ok: true, data: data as AdvisorSession };
 }
@@ -67,14 +78,21 @@ export async function renameSessionAction(
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const parsed = renameSessionSchema.safeParse({ sessionId, title });
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("ai_training_sessions")
+    .select("title")
+    .eq("id", sessionId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("ai_training_sessions")
     .update({ title: parsed.data.title })
@@ -82,6 +100,17 @@ export async function renameSessionAction(
     .eq("owner_id", user.id);
 
   if (error) return { ok: false, error: error.message };
+
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId,
+    entityType: "session",
+    entityId: sessionId,
+    action: "rename",
+    before: existing ? { title: existing.title } : undefined,
+    after: { title: parsed.data.title },
+  });
 
   revalidatePath("/ai-training");
   revalidatePath(`/ai-training/${sessionId}`);
@@ -94,14 +123,21 @@ export async function archiveSessionAction(
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const parsed = archiveSessionSchema.safeParse({ sessionId, archived });
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("ai_training_sessions")
+    .select("archived_at")
+    .eq("id", sessionId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("ai_training_sessions")
     .update({ archived_at: archived ? new Date().toISOString() : null })
@@ -109,6 +145,17 @@ export async function archiveSessionAction(
     .eq("owner_id", user.id);
 
   if (error) return { ok: false, error: error.message };
+
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId,
+    entityType: "session",
+    entityId: sessionId,
+    action: archived ? "archive" : "restore",
+    before: existing ? { archived_at: existing.archived_at } : undefined,
+    after: { archived_at: archived ? new Date().toISOString() : null },
+  });
 
   revalidatePath("/ai-training");
   return { ok: true, data: undefined };
@@ -119,10 +166,17 @@ export async function deleteSessionAction(
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("ai_training_sessions")
+    .select("title, selected_model")
+    .eq("id", sessionId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("ai_training_sessions")
     .delete()
@@ -130,6 +184,19 @@ export async function deleteSessionAction(
     .eq("owner_id", user.id);
 
   if (error) return { ok: false, error: error.message };
+
+  // Log before the FK-cascade deletes the session row; session_id is null
+  // here because the session no longer exists (FK is ON DELETE CASCADE).
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    entityType: "session",
+    entityId: sessionId,
+    action: "delete",
+    before: existing
+      ? { title: existing.title, selected_model: existing.selected_model }
+      : undefined,
+  });
 
   revalidatePath("/ai-training");
   return { ok: true, data: undefined };
@@ -141,12 +208,19 @@ export async function updateSessionModelAction(
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
   if (!isValidAdvisorModel(model))
     return { ok: false, error: "Invalid model" };
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("ai_training_sessions")
+    .select("selected_model")
+    .eq("id", sessionId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("ai_training_sessions")
     .update({ selected_model: model })
@@ -154,6 +228,17 @@ export async function updateSessionModelAction(
     .eq("owner_id", user.id);
 
   if (error) return { ok: false, error: error.message };
+
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId,
+    entityType: "session",
+    entityId: sessionId,
+    action: "model_change",
+    before: existing ? { selected_model: existing.selected_model } : undefined,
+    after: { selected_model: model },
+  });
 
   revalidatePath(`/ai-training/${sessionId}`);
   return { ok: true, data: undefined };
@@ -168,8 +253,8 @@ export async function getMessagesAction(
 ): Promise<ActionResult<AdvisorMessage[]>> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -207,8 +292,8 @@ export async function createChangeRequestAction(
 ): Promise<ActionResult<AdvisorChangeRequest>> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const parsed = changeRequestDraftSchema.safeParse({
     sessionId: input.sessionId,
@@ -226,25 +311,72 @@ export async function createChangeRequestAction(
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
-  const d = parsed.data;
+  const result = await createChangeRequestRecord(user, {
+    sessionId: parsed.data.sessionId,
+    sourceMessageId: parsed.data.sourceMessageId,
+    modelId: input.modelId,
+    contextSnapshotId: input.contextSnapshotId,
+    title: parsed.data.title,
+    currentBehavior: parsed.data.currentBehavior,
+    requestedBehavior: parsed.data.requestedBehavior,
+    rationale: parsed.data.rationale,
+    examples: parsed.data.examples,
+    affectedAreas: parsed.data.affectedAreas,
+    priority: parsed.data.priority,
+    risks: parsed.data.risks,
+    acceptanceCriteria: parsed.data.acceptanceCriteria,
+  });
+
+  if (!result.ok) return result;
+
+  revalidatePath("/ai-training");
+  revalidatePath(`/ai-training/${parsed.data.sessionId ?? ""}`);
+  return result;
+}
+
+/**
+ * Shared core that inserts a change request, sends the notification email, and
+ * returns the final row. Used by both the server action (manual creation) and
+ * the chat API route (auto-creation from a parsed ```change-request block).
+ *
+ * `user` is the authenticated owner. Validation is the caller's responsibility.
+ */
+export async function createChangeRequestRecord(
+  user: { id: string; email: string },
+  input: {
+    sessionId?: string;
+    sourceMessageId?: string;
+    modelId?: string;
+    contextSnapshotId?: string;
+    title: string;
+    currentBehavior?: string;
+    requestedBehavior: string;
+    rationale?: string;
+    examples?: Array<{ customerMessage?: string; desiredReply?: string }>;
+    affectedAreas?: string[];
+    priority?: "low" | "medium" | "high" | "critical";
+    risks?: string;
+    acceptanceCriteria?: string;
+  },
+): Promise<ActionResult<AdvisorChangeRequest>> {
   const supabase = await createClient();
 
   // Insert the change request
   const { data: request, error } = await supabase
     .from("ai_training_change_requests")
     .insert({
-      session_id: d.sessionId ?? null,
-      source_message_id: d.sourceMessageId ?? null,
+      session_id: input.sessionId ?? null,
+      source_message_id: input.sourceMessageId ?? null,
       owner_id: user.id,
-      title: d.title,
-      current_behavior: d.currentBehavior ?? null,
-      requested_behavior: d.requestedBehavior,
-      rationale: d.rationale ?? null,
-      examples: d.examples ?? [],
-      affected_areas: d.affectedAreas ?? [],
-      priority: d.priority,
-      risks: d.risks ?? null,
-      acceptance_criteria: d.acceptanceCriteria ?? null,
+      title: input.title,
+      current_behavior: input.currentBehavior ?? null,
+      requested_behavior: input.requestedBehavior,
+      rationale: input.rationale ?? null,
+      examples: input.examples ?? [],
+      affected_areas: input.affectedAreas ?? [],
+      priority: input.priority ?? "medium",
+      risks: input.risks ?? null,
+      acceptance_criteria: input.acceptanceCriteria ?? null,
       model_id: input.modelId ?? null,
       context_snapshot_id: input.contextSnapshotId ?? null,
       status: "pending",
@@ -256,6 +388,23 @@ export async function createChangeRequestAction(
   if (error || !request)
     return { ok: false, error: error?.message ?? "Failed to create change request" };
 
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: input.sessionId,
+    entityType: "change_request",
+    entityId: request.id,
+    action: "create",
+    after: {
+      title: input.title,
+      priority: input.priority ?? "medium",
+      status: "pending",
+      source: input.sourceMessageId ? "chat_auto" : "manual",
+      source_message_id: input.sourceMessageId ?? null,
+      model_id: input.modelId ?? null,
+    },
+  });
+
   // Send notification email (store-first, then notify)
   const notification = await sendChangeRequestNotification(
     request as AdvisorChangeRequest,
@@ -263,15 +412,28 @@ export async function createChangeRequestAction(
   );
   await updateNotificationStatus(request.id, notification);
 
-  // Re-fetch the updated request
+  // Log the notification outcome
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: input.sessionId,
+    entityType: "change_request",
+    entityId: request.id,
+    action:
+      notification.status === "sent" ? "notification_sent" : "notification_failed",
+    metadata: {
+      notification_status: notification.status,
+      error: notification.error ?? null,
+    },
+  });
+
+  // Re-fetch the updated request (notification status may have changed)
   const { data: updated } = await supabase
     .from("ai_training_change_requests")
     .select("*")
     .eq("id", request.id)
     .single();
 
-  revalidatePath("/ai-training");
-  revalidatePath(`/ai-training/${d.sessionId ?? ""}`);
   return { ok: true, data: (updated ?? request) as AdvisorChangeRequest };
 }
 
@@ -280,8 +442,8 @@ export async function retryNotificationAction(
 ): Promise<ActionResult<AdvisorChangeRequest>> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const parsed = retryNotificationSchema.safeParse({ requestId });
   if (!parsed.success)
@@ -304,6 +466,19 @@ export async function retryNotificationAction(
   );
   await updateNotificationStatus(requestId, notification);
 
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: (request as AdvisorChangeRequest).session_id ?? undefined,
+    entityType: "change_request",
+    entityId: requestId,
+    action: "notification_retry",
+    metadata: {
+      notification_status: notification.status,
+      error: notification.error ?? null,
+    },
+  });
+
   const { data: updated } = await supabase
     .from("ai_training_change_requests")
     .select("*")
@@ -321,8 +496,8 @@ export async function updateChangeRequestStatusAction(
 ): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
-  if (user.role !== "owner")
-    return { ok: false, error: "Only owners can use the AI Training Advisor" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI Training Advisor" };
 
   const parsed = updateRequestStatusSchema.safeParse({
     requestId,
@@ -333,6 +508,13 @@ export async function updateChangeRequestStatusAction(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("ai_training_change_requests")
+    .select("status, implementation_notes, session_id")
+    .eq("id", requestId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const update: Record<string, unknown> = { status: parsed.data.status };
   if (parsed.data.implementationNotes !== undefined) {
     update.implementation_notes = parsed.data.implementationNotes;
@@ -346,6 +528,22 @@ export async function updateChangeRequestStatusAction(
 
   if (error) return { ok: false, error: error.message };
 
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: existing?.session_id ?? undefined,
+    entityType: "change_request",
+    entityId: requestId,
+    action: "status_change",
+    before: existing
+      ? { status: existing.status, implementation_notes: existing.implementation_notes }
+      : undefined,
+    after: {
+      status: parsed.data.status,
+      implementation_notes: parsed.data.implementationNotes ?? null,
+    },
+  });
+
   revalidatePath("/ai-training");
   return { ok: true, data: undefined };
 }
@@ -356,7 +554,7 @@ export async function updateChangeRequestStatusAction(
 
 export async function getAdvisorSessions(): Promise<AdvisorSession[]> {
   const user = await getCurrentUser();
-  if (!user || user.role !== "owner") return [];
+  if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -373,7 +571,7 @@ export async function getAdvisorSession(
   sessionId: string,
 ): Promise<AdvisorSession | null> {
   const user = await getCurrentUser();
-  if (!user || user.role !== "owner") return null;
+  if (!user || (user.role !== "owner" && user.role !== "manager")) return null;
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -390,7 +588,7 @@ export async function getAdvisorMessages(
   sessionId: string,
 ): Promise<AdvisorMessage[]> {
   const user = await getCurrentUser();
-  if (!user || user.role !== "owner") return [];
+  if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -407,7 +605,7 @@ export async function getAdvisorChangeRequests(
   sessionId?: string,
 ): Promise<AdvisorChangeRequest[]> {
   const user = await getCurrentUser();
-  if (!user || user.role !== "owner") return [];
+  if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
 
   const supabase = await createClient();
   let query = supabase
@@ -431,6 +629,7 @@ export async function persistUserMessage(
   sessionId: string,
   ownerId: string,
   content: string,
+  attachments?: import("@/lib/types").AdvisorAttachment[],
 ): Promise<AdvisorMessage | null> {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -440,6 +639,7 @@ export async function persistUserMessage(
       owner_id: ownerId,
       role: "user",
       content,
+      attachments: attachments ?? [],
     })
     .select("*")
     .single();
@@ -451,6 +651,21 @@ export async function persistUserMessage(
     .from("ai_training_sessions")
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", sessionId);
+
+  await logAdvisorEvent({
+    ownerId: ownerId,
+    actorId: ownerId,
+    sessionId,
+    entityType: "message",
+    entityId: data.id,
+    action: "send",
+    after: {
+      role: "user",
+      content_length: content.length,
+      attachment_count: attachments?.length ?? 0,
+      attachment_types: attachments?.map((a) => a.type) ?? [],
+    },
+  });
 
   return data as AdvisorMessage;
 }
@@ -496,6 +711,24 @@ export async function persistAssistantMessage(
     .from("ai_training_sessions")
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", sessionId);
+
+  await logAdvisorEvent({
+    ownerId: ownerId,
+    // Assistant messages are generated by the model, not a human actor.
+    // actor_id defaults to ownerId so the row is attributable to the session owner.
+    sessionId,
+    entityType: "message",
+    entityId: data.id,
+    action: "send",
+    after: {
+      role: "assistant",
+      model_id: metadata.modelId ?? null,
+      tokens_input: metadata.tokensInput ?? null,
+      tokens_output: metadata.tokensOutput ?? null,
+      cost_usd: metadata.costUsd ?? null,
+      content_length: content.length,
+    },
+  });
 
   return data as AdvisorMessage;
 }

@@ -7,7 +7,7 @@ import {
 import { TrainingWorkspace } from "@/components/ai-training/training-workspace";
 
 export default async function AiTrainingPage() {
-  const access = await requireRole(["owner"]);
+  const access = await requireRole(["owner", "manager"]);
   if (access.error) redirect("/dashboard?error=access_denied");
 
   const [sessions, changeRequests] = await Promise.all([

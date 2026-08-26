@@ -8,9 +8,15 @@ import { getAdvisorModel } from "./models";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "input_audio"; input_audio: { data: string; format: string } }
+  | { type: "file"; file: { filename: string; file_data: string } };
+
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 };
 
 export type OpenRouterUsage = {

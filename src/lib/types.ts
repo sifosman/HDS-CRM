@@ -507,7 +507,8 @@ export type AdvisorModelId =
   | "anthropic/claude-sonnet-5"
   | "moonshotai/kimi-k3"
   | "deepseek/deepseek-v4-pro-0813"
-  | "qwen/qwen3.8-max";
+  | "qwen/qwen3.8-max"
+  | "google/gemini-3.7-flash";
 
 export type AdvisorSession = {
   id: string;
@@ -523,6 +524,21 @@ export type AdvisorSession = {
 
 export type AdvisorMessageRole = "user" | "assistant" | "system";
 
+export type AdvisorAttachmentType = "image" | "document" | "audio";
+
+export type AdvisorAttachment = {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  storagePath: string;
+  type: AdvisorAttachmentType;
+  /** Extracted text for documents (PDF, docx, txt, csv). */
+  extractedText?: string;
+  /** Audio transcription text, filled after the model processes it. */
+  transcription?: string;
+};
+
 export type AdvisorMessage = {
   id: string;
   session_id: string;
@@ -535,6 +551,7 @@ export type AdvisorMessage = {
   tokens_output: number | null;
   cost_usd: number | null;
   metadata: Record<string, unknown>;
+  attachments: AdvisorAttachment[];
   created_at: string;
 };
 
@@ -618,5 +635,34 @@ export type AdvisorChangeRequestDraft = {
   priority?: AdvisorChangeRequestPriority;
   risks?: string;
   acceptance_criteria?: string;
+};
+
+export type AdvisorAuditEntityType = "session" | "message" | "change_request";
+
+export type AdvisorAuditAction =
+  | "create"
+  | "rename"
+  | "archive"
+  | "restore"
+  | "delete"
+  | "model_change"
+  | "send"
+  | "status_change"
+  | "notification_retry"
+  | "notification_sent"
+  | "notification_failed";
+
+export type AdvisorAuditLog = {
+  id: string;
+  owner_id: string;
+  actor_id: string | null;
+  session_id: string | null;
+  entity_type: AdvisorAuditEntityType;
+  entity_id: string | null;
+  action: AdvisorAuditAction;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 };
 

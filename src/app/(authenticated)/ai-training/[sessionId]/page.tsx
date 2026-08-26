@@ -14,7 +14,7 @@ export default async function AiTrainingSessionPage({
 }: {
   params: Promise<{ sessionId: string }>;
 }) {
-  const access = await requireRole(["owner"]);
+  const access = await requireRole(["owner", "manager"]);
   if (access.error) redirect("/dashboard?error=access_denied");
 
   const { sessionId } = await params;

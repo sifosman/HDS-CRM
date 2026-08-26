@@ -25,6 +25,21 @@ export const chatRequestSchema = z.object({
   sessionId: z.string().uuid(),
   message: z.string().trim().min(1).max(8000),
   model: advisorModelSchema.optional(),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        filename: z.string().trim().min(1).max(255),
+        contentType: z.string().trim().min(1).max(100),
+        size: z.number().int().positive().max(20971520),
+        storagePath: z.string().trim().min(1).max(500),
+        type: z.enum(["image", "document", "audio"]),
+        extractedText: z.string().max(100000).optional(),
+      }),
+    )
+    .max(10)
+    .optional()
+    .default([]),
 });
 
 export const changeRequestDraftSchema = z.object({

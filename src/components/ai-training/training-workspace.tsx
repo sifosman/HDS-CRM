@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Mail, Clock, RefreshCw } from "lucide-react";
+import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Mail, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,8 +30,10 @@ import type {
   AdvisorChangeRequest,
   AdvisorModelId,
   AdvisorChangeRequestPriority,
+  AdvisorAttachment,
 } from "@/lib/types";
 import { getPublicAdvisorModels } from "@/lib/ai-training/models";
+import { stripChangeRequestBlock } from "@/lib/ai-training/change-request-parser";
 import {
   createSessionAction,
   renameSessionAction,
@@ -94,9 +96,13 @@ export function TrainingWorkspace({
   const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<AdvisorAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [modelSwitchNote, setModelSwitchNote] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const streamingTextRef = useRef("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync state when session changes (navigation).
   useEffect(() => {
@@ -184,11 +190,69 @@ export function TrainingWorkspace({
     }
   };
 
+  const handleFileSelect = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !currentSession) return;
+    setError(null);
+    setIsUploading(true);
+
+    for (const file of Array.from(files)) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("sessionId", currentSession.id);
+
+        const response = await fetch("/api/ai-training/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error ?? `Upload failed: ${response.status}`);
+        }
+
+        const { attachment } = await response.json() as { attachment: AdvisorAttachment };
+        setPendingAttachments((prev) => [...prev, attachment]);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? `Could not upload ${file.name}: ${err.message}`
+            : "Upload failed",
+        );
+      }
+    }
+
+    setIsUploading(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const handleSend = async () => {
     if (!currentSession || !input.trim() || isStreaming) return;
     const userMessage = input.trim();
+    const attachmentsToSend = [...pendingAttachments];
     setInput("");
     setError(null);
+    setModelSwitchNote(null);
+    setPendingAttachments([]);
     setIsStreaming(true);
     setStreamingText("");
     streamingTextRef.current = "";
@@ -206,6 +270,7 @@ export function TrainingWorkspace({
       tokens_output: null,
       cost_usd: null,
       metadata: {},
+      attachments: attachmentsToSend,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempUserMsg]);
@@ -220,6 +285,7 @@ export function TrainingWorkspace({
           sessionId: currentSession.id,
           message: userMessage,
           model: currentSession.selected_model,
+          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
         }),
         signal: abortRef.current.signal,
       });
@@ -235,6 +301,7 @@ export function TrainingWorkspace({
       const decoder = new TextDecoder();
       let buffer = "";
       let assistantMessageId: string | null = null;
+      let cleanedFinalText: string | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -255,9 +322,33 @@ export function TrainingWorkspace({
               if (currentEvent === "token") {
                 const nextChunk = (streamingTextRef.current + parsed.token) as string;
                 streamingTextRef.current = nextChunk;
-                setStreamingText(nextChunk);
+                // Hide any in-progress or complete change-request JSON block
+                // from the streamed view; the server strips + files it.
+                setStreamingText(stripChangeRequestBlock(nextChunk));
+              } else if (currentEvent === "meta") {
+                if (parsed.modelSwitched && parsed.modelSwitchReason) {
+                  setModelSwitchNote(parsed.modelSwitchReason);
+                }
               } else if (currentEvent === "done") {
                 assistantMessageId = parsed.assistantMessageId;
+                if (typeof parsed.cleanedText === "string") {
+                  cleanedFinalText = parsed.cleanedText;
+                }
+                if (parsed.changeRequest) {
+                  setChangeRequests((prev) =>
+                    prev.some((cr) => cr.id === parsed.changeRequest.id)
+                      ? prev
+                      : [parsed.changeRequest, ...prev],
+                  );
+                }
+              } else if (currentEvent === "change_request") {
+                if (parsed.changeRequest) {
+                  setChangeRequests((prev) =>
+                    prev.some((cr) => cr.id === parsed.changeRequest.id)
+                      ? prev
+                      : [parsed.changeRequest, ...prev],
+                  );
+                }
               } else if (currentEvent === "error") {
                 throw new Error(parsed.error);
               }
@@ -270,8 +361,9 @@ export function TrainingWorkspace({
         }
       }
 
-      // Add the assistant message using the ref (not stale state)
-      const finalText = streamingTextRef.current;
+      // Add the assistant message. Prefer the server's cleaned text (which has
+      // any change-request JSON block stripped) over the raw streamed text.
+      const finalText = cleanedFinalText ?? streamingTextRef.current;
       if (finalText || assistantMessageId) {
         const tempAssistantMsg: AdvisorMessage = {
           id: assistantMessageId ?? `temp-assistant-${Date.now()}`,
@@ -285,6 +377,7 @@ export function TrainingWorkspace({
           tokens_output: null,
           cost_usd: null,
           metadata: {},
+          attachments: [],
           created_at: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, tempAssistantMsg]);
@@ -308,6 +401,7 @@ export function TrainingWorkspace({
             tokens_output: null,
             cost_usd: null,
             metadata: {},
+            attachments: [],
             created_at: new Date().toISOString(),
           };
           setMessages((prev) => [...prev, tempAssistantMsg]);
@@ -477,6 +571,7 @@ export function TrainingWorkspace({
                     tokens_output: null,
                     cost_usd: null,
                     metadata: {},
+                    attachments: [],
                     created_at: new Date().toISOString(),
                   }}
                   isStreaming
@@ -488,19 +583,62 @@ export function TrainingWorkspace({
 
         {/* Composer */}
         {currentSession && (
-          <div className="border-t px-4 py-3">
+          <div
+            className="border-t px-4 py-3"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
             {error && (
               <div className="mb-2 flex items-center gap-2 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4" />
                 {error}
               </div>
             )}
+            {modelSwitchNote && (
+              <div className="mb-2 flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-md px-3 py-2">
+                <RefreshCw className="h-3 w-3 shrink-0" />
+                {modelSwitchNote}
+              </div>
+            )}
+            {pendingAttachments.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2 max-w-3xl mx-auto">
+                {pendingAttachments.map((att) => (
+                  <AttachmentChip
+                    key={att.id}
+                    attachment={att}
+                    onRemove={() => handleRemoveAttachment(att.id)}
+                  />
+                ))}
+              </div>
+            )}
             <div className="flex items-end gap-2 max-w-3xl mx-auto">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,.docx,audio/mpeg,audio/wav,audio/webm,audio/ogg,audio/aac,audio/m4a,audio/mp4"
+                onChange={(e) => handleFileSelect(e.target.files)}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isStreaming || isUploading}
+                title="Attach image, document, or voice note"
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Paperclip className="h-4 w-4" />
+                )}
+              </Button>
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about the chatbot, suggest a training improvement, or describe a sales scenario..."
+                placeholder="Ask about the chatbot, suggest an improvement, or describe a sales situation..."
                 className="min-h-[44px] max-h-32 resize-none"
                 rows={1}
                 disabled={isStreaming}
@@ -512,7 +650,7 @@ export function TrainingWorkspace({
               ) : (
                 <Button
                   onClick={handleSend}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() && pendingAttachments.length === 0}
                   size="icon"
                 >
                   <Send className="h-4 w-4" />
@@ -520,7 +658,8 @@ export function TrainingWorkspace({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1 text-center">
-              Read-only advisor — no production changes are made automatically.
+              This is a read-only advisor — nothing changes in the live system.
+              You can attach images, documents, or voice notes.
             </p>
           </div>
         )}
@@ -547,7 +686,7 @@ export function TrainingWorkspace({
           <div className="p-2 space-y-2">
             {changeRequests.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
-                No change requests yet. Discuss an improvement with the advisor, then create one.
+                No change requests yet. Talk through an improvement, then log one.
               </p>
             ) : (
               changeRequests.map((req) => (
@@ -624,21 +763,22 @@ function WelcomeView() {
         </div>
         <h2 className="text-2xl font-heading font-bold mb-2">AI Training Advisor</h2>
         <p className="text-muted-foreground mb-6">
-          A private workspace where you can discuss how the WhatsApp AI sales chatbot
-          should respond and close sales. Suggest improvements, draft change requests,
-          and track their status — all without touching production.
+          A private space to talk about how the WhatsApp sales chatbot should
+          handle customers and close deals. Suggest improvements, log them for
+          the dev team, and track progress — nothing changes in the live system.
         </p>
         <div className="text-left bg-muted/50 rounded-lg p-4 space-y-2">
           <p className="text-sm font-medium">You can:</p>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-            <li>Ask how the chatbot currently handles a sales scenario</li>
+            <li>Ask how the chatbot handles a sales situation right now</li>
             <li>Suggest better responses based on your sales experience</li>
-            <li>Create structured change requests for review</li>
-            <li>Switch between five AI models for different perspectives</li>
+            <li>Log a change request for the dev team to review</li>
+            <li>Switch between six AI models for different perspectives</li>
+            <li>Attach images, documents, or voice notes for the AI to read</li>
           </ul>
         </div>
         <p className="text-xs text-muted-foreground mt-4">
-          Click &ldquo;New Chat&rdquo; to start a session.
+          Click &ldquo;New Chat&rdquo; to start.
         </p>
       </div>
     </div>
@@ -650,14 +790,14 @@ function EmptyChatView() {
     <div className="h-full flex items-center justify-center">
       <div className="text-center max-w-lg">
         <p className="text-muted-foreground mb-4">
-          Start by asking a question or describing a sales scenario. For example:
+          Ask a question or describe a sales situation. For example:
         </p>
         <div className="space-y-2 text-left">
           {[
-            "How does the chatbot handle price objections?",
-            "What happens when a customer asks for a discount?",
-            "Suggest a better closing technique for bulk buyers.",
-            "How does the quote generation flow work?",
+            "How does the chatbot handle it when a customer says it's too expensive?",
+            "What does the bot do when someone asks for a discount?",
+            "Give me a better way to close bulk buyers.",
+            "How does the chatbot send a quote to a customer?",
           ].map((example) => (
             <div
               key={example}
@@ -672,6 +812,46 @@ function EmptyChatView() {
   );
 }
 
+function AttachmentIcon({ type, className }: { type: string; className?: string }) {
+  if (type === "image") return <ImageIcon className={className} />;
+  if (type === "audio") return <Mic className={className} />;
+  return <FileText className={className} />;
+}
+
+function AttachmentChip({
+  attachment,
+  onRemove,
+}: {
+  attachment: AdvisorAttachment;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 bg-muted border rounded-md px-2 py-1.5 text-xs">
+      <AttachmentIcon type={attachment.type} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <span className="truncate max-w-[180px]">{attachment.filename}</span>
+      <span className="text-muted-foreground">
+        {Math.round(attachment.size / 1024)} KB
+      </span>
+      <button
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-destructive shrink-0"
+        title="Remove"
+      >
+        <XCircle className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function AttachmentDisplay({ attachment }: { attachment: AdvisorAttachment }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs opacity-90 bg-black/5 rounded px-2 py-1">
+      <AttachmentIcon type={attachment.type} className="h-3 w-3 shrink-0" />
+      <span className="truncate max-w-[200px]">{attachment.filename}</span>
+    </div>
+  );
+}
+
 function MessageBubble({
   message,
   isStreaming,
@@ -680,6 +860,7 @@ function MessageBubble({
   isStreaming?: boolean;
 }) {
   const isUser = message.role === "user";
+  const attachments = message.attachments ?? [];
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
@@ -689,6 +870,13 @@ function MessageBubble({
             : "bg-muted border"
         }`}
       >
+        {attachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {attachments.map((att) => (
+              <AttachmentDisplay key={att.id} attachment={att} />
+            ))}
+          </div>
+        )}
         <div className="whitespace-pre-wrap text-sm leading-relaxed break-words">
           {message.content}
           {isStreaming && (

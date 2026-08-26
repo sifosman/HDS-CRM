@@ -57,12 +57,13 @@ const ACCESS_MATRIX: Record<Role, { allowed: string[]; denied: string[] }> = {
       "/intelligence",
       "/reports",
       "/reports/ai-performance",
+      "/ai-training",
       "/templates",
       "/broadcasts",
       "/settings",
       "/settings/users",
     ],
-    denied: ["/health", "/ai-training"],
+    denied: ["/health"],
   },
   sales: {
     allowed: [
@@ -139,7 +140,7 @@ test.describe("RBAC access control", () => {
       const sidebar = page.locator("[data-slot='sidebar']");
       const sidebarText = await sidebar.textContent();
       expect(sidebarText).not.toContain("System Health");
-      expect(sidebarText).not.toContain("AI Training Advisor");
+      expect(sidebarText).toContain("AI Training Advisor");
       expect(sidebarText).toContain("User Management");
     }
 
