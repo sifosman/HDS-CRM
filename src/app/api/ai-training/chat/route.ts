@@ -15,6 +15,7 @@ import {
   persistAssistantMessage,
   autoGenerateTitle,
   getAdvisorMessages,
+  getAdvisorChangeRequests,
   createChangeRequestRecord,
 } from "@/app/(authenticated)/ai-training/actions";
 import { parseChangeRequestBlock } from "@/lib/ai-training/change-request-parser";
@@ -105,7 +106,24 @@ export async function POST(request: NextRequest) {
   // Assemble sanitized context
   const context = await assembleContext();
   const snapshotId = await getOrCreateSnapshot(context);
-  const systemInstruction = buildSystemInstruction(context);
+  let systemInstruction = buildSystemInstruction(context);
+
+  // Fetch existing change requests (not rejected/implemented) so the AI can
+  // warn the user about duplicates before filing a new one.
+  const existingRequests = await getAdvisorChangeRequests();
+  const activeRequests = existingRequests.filter(
+    (r) => r.status !== "rejected" && r.status !== "implemented",
+  );
+  if (activeRequests.length > 0) {
+    const requestSummary = activeRequests
+      .slice(0, 20)
+      .map((r, i) => {
+        const pricingCount = (r.pricing_changes ?? []).length;
+        return `${i + 1}. [${r.status}] "${r.title}" — ${r.requested_behavior.slice(0, 200)}${pricingCount > 0 ? ` (${pricingCount} pricing changes)` : ""}`;
+      })
+      .join("\n");
+    systemInstruction += `\n\n## Existing Change Requests (already filed — do NOT file duplicates)\nThe following change requests already exist. Before filing a new one, check if the change the user is describing matches any of these. If it does, tell the user it already exists (mention the title and status) and ask if they want to update it instead.\n\n${requestSummary}`;
+  }
 
   // Build the message history for OpenRouter (token-budgeted)
   const history: ChatMessage[] = [{ role: "system", content: systemInstruction }];

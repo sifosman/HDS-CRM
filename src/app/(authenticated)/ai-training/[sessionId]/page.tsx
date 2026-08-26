@@ -24,7 +24,7 @@ export default async function AiTrainingSessionPage({
       getAdvisorSessions(),
       getAdvisorSession(sessionId),
       getAdvisorMessages(sessionId),
-      getAdvisorChangeRequests(sessionId),
+      getAdvisorChangeRequests(),
       assembleContext().catch(() => null),
     ]);
 

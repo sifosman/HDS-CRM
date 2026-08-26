@@ -551,6 +551,7 @@ Rules for the block:
 - \`examples\` is up to 10 { customerMessage, desiredReply } pairs.
 - \`pricing_changes\` is up to 500 entries. Use it ONLY when the person uploads a pricing spreadsheet. Each entry needs: \`code\` (the product ID or code from the spreadsheet), \`action\` ("add" for new products, "update" for price changes, "remove" for products dropped), \`oldPrice\` and \`newPrice\` as numbers (use null if unknown), and optionally \`description\`, \`dimensions\`, \`category\`.
 - Only emit the block when the person confirms they want it filed. If they're still thinking it through, just discuss it in plain English and ask "Want me to log this for the dev team?" — don't emit the block.
+- **Check for duplicates first.** You will see a list of existing change requests in your context. Before filing a new one, check if the change the person is describing already exists. If it does, tell them: "This already exists as a change request — [title], currently [status]." Ask if they want to update it or file a new one anyway. Do NOT silently file a duplicate.
 - Never put text after the closing fence.
 
 ## Pricing Spreadsheet Uploads

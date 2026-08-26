@@ -96,6 +96,7 @@ export function TrainingWorkspace({
   const [titleValue, setTitleValue] = useState(currentSession?.title ?? "");
   const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedChangeRequest, setSelectedChangeRequest] = useState<AdvisorChangeRequest | null>(null);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<AdvisorAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -109,6 +110,8 @@ export function TrainingWorkspace({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages(initialMessages);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setChangeRequests(initialChangeRequests);
     setTitleValue(currentSession?.title ?? "");
     setError(null);
     setStreamingText("");
@@ -694,6 +697,7 @@ export function TrainingWorkspace({
                 <ChangeRequestCard
                   key={req.id}
                   request={req}
+                  onClick={() => setSelectedChangeRequest(req)}
                   onRetry={() => retryNotificationAction(req.id).then((r) => {
                     if (r.ok) {
                       setChangeRequests((prev) =>
@@ -749,6 +753,36 @@ export function TrainingWorkspace({
             setShowChangeRequestDialog(false);
           }}
           onError={(err) => setError(err)}
+        />
+      )}
+
+      {/* Change request detail dialog */}
+      {selectedChangeRequest && (
+        <ChangeRequestDetailDialog
+          request={selectedChangeRequest}
+          onClose={() => setSelectedChangeRequest(null)}
+          onStatusChange={(status) => {
+            updateChangeRequestStatusAction(selectedChangeRequest.id, status).then((r) => {
+              if (r.ok) {
+                setChangeRequests((prev) =>
+                  prev.map((cr) =>
+                    cr.id === selectedChangeRequest.id ? { ...cr, status } : cr,
+                  ),
+                );
+                setSelectedChangeRequest((prev) => prev ? { ...prev, status } : prev);
+              }
+            });
+          }}
+          onRetry={() => {
+            retryNotificationAction(selectedChangeRequest.id).then((r) => {
+              if (r.ok) {
+                setChangeRequests((prev) =>
+                  prev.map((cr) => (cr.id === selectedChangeRequest.id ? r.data : cr)),
+                );
+                setSelectedChangeRequest(r.data);
+              }
+            });
+          }}
         />
       )}
     </div>
@@ -920,10 +954,12 @@ function ThinkingBubble({ modelId }: { modelId: AdvisorModelId | null }) {
 
 function ChangeRequestCard({
   request,
+  onClick,
   onRetry,
   onStatusChange,
 }: {
   request: AdvisorChangeRequest;
+  onClick: () => void;
   onRetry: () => void;
   onStatusChange: (status: AdvisorChangeRequest["status"]) => void;
 }) {
@@ -936,7 +972,7 @@ function ChangeRequestCard({
   const removeCount = pricingChanges.filter((p) => p.action === "remove").length;
 
   return (
-    <Card className="text-xs">
+    <Card className="text-xs cursor-pointer hover:ring-1 hover:ring-primary/30 transition-shadow" onClick={onClick}>
       <CardHeader className="p-3 pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm font-medium leading-tight">
@@ -944,7 +980,7 @@ function ChangeRequestCard({
           </CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="p-3 pt-2 space-y-2">
+      <CardContent className="p-3 pt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-1 flex-wrap">
           <Badge className={`text-[10px] ${PRIORITY_COLORS[request.priority] ?? ""}`}>
             {request.priority}
@@ -1193,6 +1229,200 @@ function ChangeRequestDialog({
             {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Submit &amp; Email
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ChangeRequestDetailDialog({
+  request,
+  onClose,
+  onStatusChange,
+  onRetry,
+}: {
+  request: AdvisorChangeRequest;
+  onClose: () => void;
+  onStatusChange: (status: AdvisorChangeRequest["status"]) => void;
+  onRetry: () => void;
+}) {
+  const pricingChanges = (request.pricing_changes ?? []) as AdvisorPricingChange[];
+  const hasPricing = pricingChanges.length > 0;
+  const addCount = pricingChanges.filter((p) => p.action === "add").length;
+  const updateCount = pricingChanges.filter((p) => p.action === "update").length;
+  const removeCount = pricingChanges.filter((p) => p.action === "remove").length;
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg">{request.title}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Status badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={PRIORITY_COLORS[request.priority] ?? ""}>
+              {request.priority} priority
+            </Badge>
+            <Badge className={STATUS_COLORS[request.status] ?? ""}>
+              {request.status.replace("_", " ")}
+            </Badge>
+            <Badge className={NOTIFICATION_COLORS[request.notification_status] ?? ""}>
+              <Mail className="h-3 w-3 mr-1" />
+              {request.notification_status}
+            </Badge>
+            {request.affected_areas.map((area) => (
+              <Badge key={area} variant="outline">{area}</Badge>
+            ))}
+          </div>
+
+          {/* Requested behavior */}
+          {request.requested_behavior && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Requested Change</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{request.requested_behavior}</p>
+            </div>
+          )}
+
+          {/* Current behavior */}
+          {request.current_behavior && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Current Behavior</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{request.current_behavior}</p>
+            </div>
+          )}
+
+          {/* Rationale */}
+          {request.rationale && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Rationale</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{request.rationale}</p>
+            </div>
+          )}
+
+          {/* Risks */}
+          {request.risks && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Risks</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{request.risks}</p>
+            </div>
+          )}
+
+          {/* Acceptance criteria */}
+          {request.acceptance_criteria && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Acceptance Criteria</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{request.acceptance_criteria}</p>
+            </div>
+          )}
+
+          {/* Implementation notes */}
+          {request.implementation_notes && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Implementation Notes</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{request.implementation_notes}</p>
+            </div>
+          )}
+
+          {/* Examples */}
+          {request.examples && request.examples.length > 0 && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Examples</Label>
+              <div className="mt-1 space-y-2">
+                {request.examples.map((ex, i) => (
+                  <div key={i} className="rounded border p-2 bg-muted/30 text-sm">
+                    {ex.customerMessage && (
+                      <p><span className="text-muted-foreground">Customer:</span> {ex.customerMessage}</p>
+                    )}
+                    {ex.desiredReply && (
+                      <p className="mt-1"><span className="text-muted-foreground">Desired reply:</span> {ex.desiredReply}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pricing changes table */}
+          {hasPricing && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Label className="text-xs text-muted-foreground">Pricing Changes</Label>
+                <Badge variant="outline" className="text-[10px] text-green-600">+{addCount} new</Badge>
+                <Badge variant="outline" className="text-[10px] text-blue-600">~{updateCount} changed</Badge>
+                <Badge variant="outline" className="text-[10px] text-red-600">-{removeCount} removed</Badge>
+              </div>
+              <div className="max-h-64 overflow-y-auto rounded border">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-muted">
+                    <tr>
+                      <th className="text-left p-2 font-medium">Code</th>
+                      <th className="text-left p-2 font-medium">Description</th>
+                      <th className="text-left p-2 font-medium">Action</th>
+                      <th className="text-right p-2 font-medium">Old Price</th>
+                      <th className="text-right p-2 font-medium">New Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pricingChanges.map((p, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="p-2 font-mono">{p.code}</td>
+                        <td className="p-2 truncate max-w-[200px]" title={p.description}>{p.description ?? "—"}</td>
+                        <td className="p-2">
+                          <span className={
+                            p.action === "add" ? "text-green-600" :
+                            p.action === "remove" ? "text-red-600" :
+                            "text-blue-600"
+                          }>
+                            {p.action}
+                          </span>
+                        </td>
+                        <td className="p-2 text-right text-muted-foreground">
+                          {p.oldPrice != null ? `R${p.oldPrice}` : "—"}
+                        </td>
+                        <td className="p-2 text-right font-medium">
+                          {p.newPrice != null ? `R${p.newPrice}` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Metadata */}
+          <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
+            <p>Created: {new Date(request.created_at).toLocaleString()}</p>
+            {request.model_id && <p>Model: {request.model_id}</p>}
+            {request.notified_at && <p>Notified: {new Date(request.notified_at).toLocaleString()}</p>}
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          {request.notification_status === "failed" && (
+            <Button variant="outline" onClick={onRetry}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry email
+            </Button>
+          )}
+          <Select
+            value={request.status}
+            onValueChange={(v) => onStatusChange(v as AdvisorChangeRequest["status"])}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="in_review">In Review</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="implemented">Implemented</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
