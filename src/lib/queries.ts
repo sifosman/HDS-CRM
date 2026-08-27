@@ -84,12 +84,16 @@ export async function getDashboardStats() {
     (q) => new Date(q.created_at) >= weekAgo
   ).length;
 
-  const closedLeads = customers.filter(
-    (c) => c.lead_status === "closed"
+  // Converted leads = handed over to sales (handover) or deal closed.
+  // "handover" means the chatbot successfully converted the lead and passed
+  // them to a human salesperson — counted as converted, consistent with the
+  // ACCEPTED_LEAD_STAGES heuristic used for quote acceptance.
+  const convertedLeads = customers.filter(
+    (c) => c.lead_status === "closed" || c.lead_status === "handover"
   ).length;
   const conversionRate =
     customers.length > 0
-      ? Math.round((closedLeads / customers.length) * 100)
+      ? Math.round((convertedLeads / customers.length) * 100)
       : 0;
 
   // Pipeline stages
@@ -1166,7 +1170,10 @@ export async function getSegmentStats() {
   const stats = segments.map((seg) => {
     const matched = applySegmentFilter(customers, seg.filter_rules);
     const closed = matched.filter(
-      (c) => c.lead_status === "closed" || c.sale_outcome === "won"
+      (c) =>
+        c.lead_status === "closed" ||
+        c.lead_status === "handover" ||
+        c.sale_outcome === "won"
     ).length;
     const lost = matched.filter(
       (c) => c.lead_status === "lost" || c.sale_outcome === "lost"
@@ -1211,7 +1218,10 @@ export async function getCustomerTypeStats() {
   return types.map((type) => {
     const matched = customers.filter((c) => c.customer_type === type);
     const closed = matched.filter(
-      (c) => c.lead_status === "closed" || c.sale_outcome === "won"
+      (c) =>
+        c.lead_status === "closed" ||
+        c.lead_status === "handover" ||
+        c.sale_outcome === "won"
     ).length;
     const conversionRate =
       matched.length > 0

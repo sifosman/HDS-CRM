@@ -244,12 +244,16 @@ export default async function ReportsPage({
     ).length;
     const returningCustomers = Math.max(0, customers.length - newCustomers);
 
-    const closedLeads = customers.filter(
-      (c) => c.lead_status === "closed"
+    // Converted leads = handed over to sales (handover) or deal closed.
+    // "handover" means the chatbot successfully converted the lead and passed
+    // them to a human salesperson — counted as converted, consistent with the
+    // ACCEPTED_LEAD_STAGES heuristic used for quote acceptance.
+    const convertedLeads = customers.filter(
+      (c) => c.lead_status === "closed" || c.lead_status === "handover"
     ).length;
     const conversionRate =
       customers.length > 0
-        ? Math.round((closedLeads / customers.length) * 100)
+        ? Math.round((convertedLeads / customers.length) * 100)
         : 0;
 
     // Customer type distribution (all customers — type doesn't change by window)
@@ -311,7 +315,7 @@ export default async function ReportsPage({
       totalQuoteValue,
       avgQuoteSize,
       conversionRate,
-      closedLeads,
+      convertedLeads,
       newCustomers,
       returningCustomers,
       typeDistribution,
@@ -353,7 +357,7 @@ export default async function ReportsPage({
             title="Conversion Rate"
             value={`${data.conversionRate}%`}
             icon={TrendingUp}
-            description={`${data.closedLeads} closed / ${customers.length} total`}
+            description={`${data.convertedLeads} converted / ${customers.length} total`}
           />
           <KpiCard
             title="New Customers"
@@ -527,7 +531,7 @@ export default async function ReportsPage({
               <TableRow>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Count</TableHead>
-                <TableHead className="text-right">Closed</TableHead>
+                <TableHead className="text-right">Converted</TableHead>
                 <TableHead className="text-right">Conversion</TableHead>
                 <TableHead className="text-right">Quote Value</TableHead>
                 <TableHead>Classification Source</TableHead>
@@ -569,7 +573,7 @@ export default async function ReportsPage({
               <TableRow>
                 <TableHead>Segment</TableHead>
                 <TableHead className="text-right">Recipients</TableHead>
-                <TableHead className="text-right">Closed</TableHead>
+                <TableHead className="text-right">Converted</TableHead>
                 <TableHead className="text-right">Lost</TableHead>
                 <TableHead className="text-right">Conversion</TableHead>
                 <TableHead className="text-right">Quote Value</TableHead>
