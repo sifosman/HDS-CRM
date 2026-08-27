@@ -244,16 +244,12 @@ export default async function ReportsPage({
     ).length;
     const returningCustomers = Math.max(0, customers.length - newCustomers);
 
-    // Converted leads = handed over to sales (handover) or deal closed.
-    // "handover" means the chatbot successfully converted the lead and passed
-    // them to a human salesperson — counted as converted, consistent with the
-    // ACCEPTED_LEAD_STAGES heuristic used for quote acceptance.
-    const convertedLeads = customers.filter(
-      (c) => c.lead_status === "closed" || c.lead_status === "handover"
-    ).length;
+    // Quote conversion rate = accepted quotes / total quotes in window.
+    // Measures what percentage of quotes generated in this period were
+    // accepted by customers (via message keyword or lead stage progression).
     const conversionRate =
-      customers.length > 0
-        ? Math.round((convertedLeads / customers.length) * 100)
+      windowQuotes.length > 0
+        ? Math.round((acceptedQuotesCount / windowQuotes.length) * 100)
         : 0;
 
     // Customer type distribution (all customers — type doesn't change by window)
@@ -315,7 +311,6 @@ export default async function ReportsPage({
       totalQuoteValue,
       avgQuoteSize,
       conversionRate,
-      convertedLeads,
       newCustomers,
       returningCustomers,
       typeDistribution,
@@ -357,7 +352,7 @@ export default async function ReportsPage({
             title="Conversion Rate"
             value={`${data.conversionRate}%`}
             icon={TrendingUp}
-            description={`${data.convertedLeads} converted / ${customers.length} total`}
+            description={`${data.acceptedQuotesCount} accepted / ${data.windowQuotes.length} quotes`}
           />
           <KpiCard
             title="New Customers"

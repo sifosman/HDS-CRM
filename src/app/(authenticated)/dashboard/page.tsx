@@ -54,7 +54,7 @@ export default async function DashboardPage() {
           title="Conversion Rate"
           value={`${stats.conversionRate}%`}
           icon={TrendingUp}
-          description="Handed over / closed leads"
+          description={`${stats.acceptedQuotesCount} accepted / ${stats.totalQuotes} quotes`}
         />
         <KpiCard
           title="Accepted Quotes"
