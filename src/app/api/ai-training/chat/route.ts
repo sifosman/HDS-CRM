@@ -8,7 +8,8 @@ import {
   getOrCreateSnapshot,
   buildSystemInstruction,
 } from "@/lib/ai-training/context";
-import { streamChatCompletion, type ChatMessage } from "@/lib/ai-training/openrouter";
+import { streamChatCompletion, streamChatWithTools, type ChatMessage } from "@/lib/ai-training/openrouter";
+import { customerToolDefinitions, executeCustomerTool } from "@/lib/ai-training/customer-tools";
 import type { AdvisorChangeRequest, AdvisorAttachment, AdvisorModelId } from "@/lib/types";
 import {
   persistUserMessage,
@@ -212,11 +213,12 @@ export async function POST(request: NextRequest) {
         userMessageId: userMessage.id,
       });
 
-      await streamChatCompletion(
+      await streamChatWithTools(
         {
           model: effectiveModel,
           messages: history,
           signal: abortController.signal,
+          tools: customerToolDefinitions,
         },
         {
           onToken: (token) => {
@@ -232,7 +234,13 @@ export async function POST(request: NextRequest) {
             sendEvent("error", { error: error.message });
             controller.close();
           },
+          onToolCall: (toolName, toolArgs) => {
+            // Notify the frontend that a database lookup is happening
+            // so it can show a "Looking up..." indicator
+            sendEvent("tool_call", { tool: toolName, args: toolArgs });
+          },
         },
+        executeCustomerTool,
       );
 
       // Check for an auto-filed change request block emitted by the model.

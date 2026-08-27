@@ -101,6 +101,7 @@ export function TrainingWorkspace({
   const [pendingAttachments, setPendingAttachments] = useState<AdvisorAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [modelSwitchNote, setModelSwitchNote] = useState<string | null>(null);
+  const [toolCallNote, setToolCallNote] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const streamingTextRef = useRef("");
@@ -269,6 +270,7 @@ export function TrainingWorkspace({
     setInput("");
     setError(null);
     setModelSwitchNote(null);
+    setToolCallNote(null);
     setPendingAttachments([]);
     setIsStreaming(true);
     setStreamingText("");
@@ -342,10 +344,21 @@ export function TrainingWorkspace({
                 // Hide any in-progress or complete change-request JSON block
                 // from the streamed view; the server strips + files it.
                 setStreamingText(stripChangeRequestBlock(nextChunk));
+                // Clear the tool call note once the AI starts responding
+                if (toolCallNote) setToolCallNote(null);
               } else if (currentEvent === "meta") {
                 if (parsed.modelSwitched && parsed.modelSwitchReason) {
                   setModelSwitchNote(parsed.modelSwitchReason);
                 }
+              } else if (currentEvent === "tool_call") {
+                // Show a brief "looking up..." indicator when the AI
+                // queries the database for customer data
+                const toolLabels: Record<string, string> = {
+                  search_customers: "Looking up customers...",
+                  get_customer_conversations: "Reading conversation history...",
+                  get_customer_quotes: "Looking up quotes...",
+                };
+                setToolCallNote(toolLabels[parsed.tool] ?? "Looking up data...");
               } else if (currentEvent === "done") {
                 assistantMessageId = parsed.assistantMessageId;
                 if (typeof parsed.cleanedText === "string") {
@@ -429,6 +442,7 @@ export function TrainingWorkspace({
     } finally {
       setIsStreaming(false);
       setStreamingText("");
+      setToolCallNote(null);
       streamingTextRef.current = "";
       abortRef.current = null;
     }
@@ -615,6 +629,12 @@ export function TrainingWorkspace({
               <div className="mb-2 flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-md px-3 py-2">
                 <RefreshCw className="h-3 w-3 shrink-0" />
                 {modelSwitchNote}
+              </div>
+            )}
+            {toolCallNote && (
+              <div className="mb-2 flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-md px-3 py-2">
+                <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                {toolCallNote}
               </div>
             )}
             {pendingAttachments.length > 0 && (
