@@ -22,6 +22,7 @@ import { ReportsDateToggle } from "@/components/reports-date-toggle";
 import {
   getCustomers,
   getChatbotQuotes,
+  getChatbotQuoteAcceptance,
   getBranches,
   getSegmentStats,
   getCustomerTypeStats,
@@ -31,8 +32,8 @@ import {
   CUSTOMER_TYPE_LABELS,
   CUSTOMER_TYPE_COLORS,
 } from "@/lib/constants";
-import { FileText, DollarSign, Users, TrendingUp } from "lucide-react";
-import type { Quote } from "@/lib/types";
+import { FileText, DollarSign, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import type { Quote, QuoteAcceptanceMap } from "@/lib/types";
 
 type RangeKey = "weekly" | "monthly" | "yearly" | "custom";
 
@@ -206,8 +207,11 @@ export default async function ReportsPage({
     getCustomerTypeStats(),
   ]);
 
+  // Derive customer-acceptance for chatbot quotes (keyword + lead-stage heuristic)
+  const acceptance = await getChatbotQuoteAcceptance(chatbotQuotes);
+
   // Helper: compute report data from a quote set, filtered to the selected window
-  function computeReportData(quotes: Quote[]) {
+  function computeReportData(quotes: Quote[], acceptanceMap: QuoteAcceptanceMap) {
     const windowQuotes = quotes.filter((q) => {
       const qd = new Date(q.created_at);
       return qd >= rangeStart && qd <= rangeEnd;
@@ -219,6 +223,17 @@ export default async function ReportsPage({
     );
     const avgQuoteSize =
       windowQuotes.length > 0 ? totalQuoteValue / windowQuotes.length : 0;
+
+    // Customer-accepted quotes within the window (derived from conversation
+    // analysis + lead stage, same heuristic as the dashboard/quotes pages)
+    const acceptedWindowQuotes = windowQuotes.filter(
+      (q) => acceptanceMap[q.id]?.accepted
+    );
+    const acceptedQuotesCount = acceptedWindowQuotes.length;
+    const acceptedQuotesValue = acceptedWindowQuotes.reduce(
+      (sum, q) => sum + Number(q.total || 0),
+      0
+    );
 
     // Customers whose first interaction falls inside the window
     const newCustomers = customers.filter(
@@ -304,10 +319,12 @@ export default async function ReportsPage({
       activityData,
       topProducts,
       totalQuotes: quotes.length,
+      acceptedQuotesCount,
+      acceptedQuotesValue,
     };
   }
 
-  const chatbotData = computeReportData(chatbotQuotes);
+  const chatbotData = computeReportData(chatbotQuotes, acceptance);
 
   function ReportSection({
     data,
@@ -319,7 +336,7 @@ export default async function ReportsPage({
     return (
       <div className="space-y-6">
         {/* Summary KPIs */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <KpiCard
             title="Quotes Generated"
             value={String(data.windowQuotes.length)}
@@ -343,6 +360,12 @@ export default async function ReportsPage({
             value={String(data.newCustomers)}
             icon={Users}
             description={`${data.returningCustomers} returning`}
+          />
+          <KpiCard
+            title="Accepted Quotes"
+            value={String(data.acceptedQuotesCount)}
+            icon={CheckCircle2}
+            description={`${formatCurrency(data.acceptedQuotesValue)} value · ${rangeLabel(validRange)}`}
           />
         </div>
 
