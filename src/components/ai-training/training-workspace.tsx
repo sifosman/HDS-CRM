@@ -107,7 +107,13 @@ export function TrainingWorkspace({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync state when session changes (navigation).
+  // The key prop on TrainingWorkspace in the page components forces a full
+  // remount when the session ID changes, so this effect is a safety net for
+  // cases where the component is NOT remounted (e.g. router.refresh without
+  // a session change, or future changes to the key prop).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSessions(initialSessions);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages(initialMessages);
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -115,6 +121,9 @@ export function TrainingWorkspace({
     setTitleValue(currentSession?.title ?? "");
     setError(null);
     setStreamingText("");
+    setIsCreatingChat(false);
+    // Abort any in-flight stream when the session changes.
+    abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSession?.id]);
 
@@ -132,6 +141,10 @@ export function TrainingWorkspace({
       const result = await createSessionAction({});
       if (result.ok) {
         router.push(`/ai-training/${result.data.id}`);
+        // The key prop on TrainingWorkspace forces a remount on navigation,
+        // which resets isCreatingChat to false. But in case the component
+        // is not remounted, reset it here too.
+        setIsCreatingChat(false);
       } else {
         setError(result.error);
         setIsCreatingChat(false);

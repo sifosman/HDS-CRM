@@ -41,6 +41,7 @@ export default async function AiTrainingSessionPage({
 
   return (
     <TrainingWorkspace
+      key={currentSession.id}
       sessions={sessions}
       currentSession={currentSession}
       messages={messages}
