@@ -60,6 +60,20 @@ export async function getDashboardStats() {
 
   // Chatbot-first metrics (primary)
   const chatbotRevenue = chatbotQuotes.reduce((sum, q) => sum + Number(q.total || 0), 0);
+
+  // Customer-accepted quotes (derived from conversation analysis + lead stage).
+  // Fetch full chatbot quote rows (need id/customer_phone/created_at/source)
+  // and run the acceptance derivation used on the quotes page.
+  const fullChatbotQuotes = await getChatbotQuotes();
+  const acceptance = await getChatbotQuoteAcceptance(fullChatbotQuotes);
+  const acceptedQuotes = fullChatbotQuotes.filter(
+    (q) => acceptance[q.id]?.accepted
+  );
+  const acceptedQuotesCount = acceptedQuotes.length;
+  const acceptedQuotesValue = acceptedQuotes.reduce(
+    (sum, q) => sum + Number(q.total || 0),
+    0
+  );
   const activeLeads = customers.filter(
     (c) => c.lead_status !== "closed" && c.lead_status !== "lost"
   ).length;
@@ -118,6 +132,9 @@ export async function getDashboardStats() {
     pipeline,
     monthlyRevenue,
     recentActivity,
+    // Customer-accepted quotes (derived)
+    acceptedQuotesCount,
+    acceptedQuotesValue,
   };
 }
 

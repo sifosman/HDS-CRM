@@ -1,4 +1,4 @@
-import { DollarSign, Users, FileText, TrendingUp } from "lucide-react";
+import { DollarSign, Users, FileText, TrendingUp, CheckCircle2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           title="Chatbot Revenue"
           value={formatCurrency(stats.totalRevenue)}
@@ -55,6 +55,12 @@ export default async function DashboardPage() {
           value={`${stats.conversionRate}%`}
           icon={TrendingUp}
           description="Closed / total leads"
+        />
+        <KpiCard
+          title="Accepted Quotes"
+          value={String(stats.acceptedQuotesCount)}
+          icon={CheckCircle2}
+          description={`${formatCurrency(stats.acceptedQuotesValue)} total value`}
         />
       </div>
 
