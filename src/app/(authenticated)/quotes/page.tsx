@@ -1,10 +1,9 @@
-import { QuotesTable } from "@/components/quotes-table";
+import { QuotesTabs } from "@/components/quotes-tabs";
 import { getChatbotQuotes, getChatbotQuoteAcceptance } from "@/lib/queries";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default async function QuotesPage() {
   const chatbotQuotes = await getChatbotQuotes();
@@ -20,29 +19,19 @@ export default async function QuotesPage() {
         </p>
       </div>
 
-      {/* Chatbot Quotes */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-heading font-semibold">Chatbot Quotes</h2>
-          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            {chatbotQuotes.length} quotes
-          </Badge>
-          {chatbotQuotes.length > 0 && (
-            <Badge variant="outline" className="border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300">
-              {acceptedCount} customer-accepted
-            </Badge>
-          )}
-        </div>
-        {chatbotQuotes.length > 0 ? (
-          <QuotesTable quotes={chatbotQuotes} acceptance={acceptance} />
-        ) : (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              No chatbot quotes yet. They will appear here once the chatbot generates them.
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {chatbotQuotes.length > 0 ? (
+        <QuotesTabs
+          quotes={chatbotQuotes}
+          acceptance={acceptance}
+          acceptedCount={acceptedCount}
+        />
+      ) : (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No chatbot quotes yet. They will appear here once the chatbot generates them.
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
