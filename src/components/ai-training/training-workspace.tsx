@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Mail, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle } from "lucide-react";
+import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Mail, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle, Target, History, Lightbulb, AlertTriangle, ListChecks, Wrench, Quote, Tag, Calendar, Cpu, MinusCircle, PlusCircle, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1160,91 +1160,133 @@ function ChangeRequestDetailDialog({
   const updateCount = pricingChanges.filter((p) => p.action === "update").length;
   const removeCount = pricingChanges.filter((p) => p.action === "remove").length;
 
+  const createdDate = new Date(request.created_at);
+  const notifiedDate = request.notified_at ? new Date(request.notified_at) : null;
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg">{request.title}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 gap-0">
+        {/* Header band */}
+        <div className="px-6 py-5 border-b bg-gradient-to-br from-muted/50 to-background">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <DialogTitle className="text-xl font-heading font-bold leading-tight pr-8">
+                {request.title}
+              </DialogTitle>
+            </div>
+            {/* Status badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className={`${PRIORITY_COLORS[request.priority] ?? ""} capitalize gap-1`}>
+                <AlertTriangle className="h-3 w-3" />
+                {request.priority} priority
+              </Badge>
+              <Badge className={`${STATUS_COLORS[request.status] ?? ""} capitalize gap-1`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_COLORS[request.status] ?? "bg-gray-400"}`} />
+                {request.status.replace("_", " ")}
+              </Badge>
+              <Badge className={`${NOTIFICATION_COLORS[request.notification_status] ?? ""} capitalize gap-1`}>
+                <Mail className="h-3 w-3" />
+                {request.notification_status}
+              </Badge>
+              {request.affected_areas.map((area) => (
+                <Badge key={area} variant="outline" className="gap-1">
+                  <Tag className="h-3 w-3" />
+                  {area}
+                </Badge>
+              ))}
+            </div>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-4">
-          {/* Status badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={PRIORITY_COLORS[request.priority] ?? ""}>
-              {request.priority} priority
-            </Badge>
-            <Badge className={STATUS_COLORS[request.status] ?? ""}>
-              {request.status.replace("_", " ")}
-            </Badge>
-            <Badge className={NOTIFICATION_COLORS[request.notification_status] ?? ""}>
-              <Mail className="h-3 w-3 mr-1" />
-              {request.notification_status}
-            </Badge>
-            {request.affected_areas.map((area) => (
-              <Badge key={area} variant="outline">{area}</Badge>
-            ))}
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-6 py-5 space-y-5" style={{ maxHeight: "calc(90vh - 180px)" }}>
+          {/* Requested + Current behavior side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {request.requested_behavior && (
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-primary">Requested Change</Label>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.requested_behavior}</p>
+              </div>
+            )}
+            {request.current_behavior && (
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <History className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current Behavior</Label>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{request.current_behavior}</p>
+              </div>
+            )}
           </div>
 
-          {/* Requested behavior */}
-          {request.requested_behavior && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Requested Change</Label>
-              <p className="text-sm mt-1 whitespace-pre-wrap">{request.requested_behavior}</p>
-            </div>
-          )}
+          {/* Rationale + Risks side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {request.rationale && (
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-amber-600">Rationale</Label>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.rationale}</p>
+              </div>
+            )}
+            {request.risks && (
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-red-600">Risks</Label>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.risks}</p>
+              </div>
+            )}
+          </div>
 
-          {/* Current behavior */}
-          {request.current_behavior && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Current Behavior</Label>
-              <p className="text-sm mt-1 whitespace-pre-wrap">{request.current_behavior}</p>
-            </div>
-          )}
-
-          {/* Rationale */}
-          {request.rationale && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Rationale</Label>
-              <p className="text-sm mt-1 whitespace-pre-wrap">{request.rationale}</p>
-            </div>
-          )}
-
-          {/* Risks */}
-          {request.risks && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Risks</Label>
-              <p className="text-sm mt-1 whitespace-pre-wrap">{request.risks}</p>
-            </div>
-          )}
-
-          {/* Acceptance criteria */}
-          {request.acceptance_criteria && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Acceptance Criteria</Label>
-              <p className="text-sm mt-1 whitespace-pre-wrap">{request.acceptance_criteria}</p>
-            </div>
-          )}
-
-          {/* Implementation notes */}
-          {request.implementation_notes && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Implementation Notes</Label>
-              <p className="text-sm mt-1 whitespace-pre-wrap">{request.implementation_notes}</p>
-            </div>
-          )}
+          {/* Acceptance criteria + Implementation notes side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {request.acceptance_criteria && (
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <ListChecks className="h-4 w-4 text-green-600" />
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-green-600">Acceptance Criteria</Label>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.acceptance_criteria}</p>
+              </div>
+            )}
+            {request.implementation_notes && (
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wrench className="h-4 w-4 text-blue-600" />
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-blue-600">Implementation Notes</Label>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.implementation_notes}</p>
+              </div>
+            )}
+          </div>
 
           {/* Examples */}
           {request.examples && request.examples.length > 0 && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Examples</Label>
-              <div className="mt-1 space-y-2">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Quote className="h-4 w-4 text-purple-500" />
+                <Label className="text-xs font-semibold uppercase tracking-wide text-purple-600">Examples</Label>
+              </div>
+              <div className="space-y-3">
                 {request.examples.map((ex, i) => (
-                  <div key={i} className="rounded border p-2 bg-muted/30 text-sm">
+                  <div key={i} className="rounded-md border-l-2 border-l-purple-300 bg-muted/30 p-3 text-sm">
                     {ex.customerMessage && (
-                      <p><span className="text-muted-foreground">Customer:</span> {ex.customerMessage}</p>
+                      <p className="flex gap-2">
+                        <span className="font-medium text-muted-foreground shrink-0">Customer:</span>
+                        <span className="italic">&ldquo;{ex.customerMessage}&rdquo;</span>
+                      </p>
                     )}
                     {ex.desiredReply && (
-                      <p className="mt-1"><span className="text-muted-foreground">Desired reply:</span> {ex.desiredReply}</p>
+                      <p className="mt-2 flex gap-2">
+                        <span className="font-medium text-muted-foreground shrink-0">Desired reply:</span>
+                        <span>{ex.desiredReply}</span>
+                      </p>
                     )}
                   </div>
                 ))}
@@ -1254,42 +1296,63 @@ function ChangeRequestDetailDialog({
 
           {/* Pricing changes table */}
           {hasPricing && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Label className="text-xs text-muted-foreground">Pricing Changes</Label>
-                <Badge variant="outline" className="text-[10px] text-green-600">+{addCount} new</Badge>
-                <Badge variant="outline" className="text-[10px] text-blue-600">~{updateCount} changed</Badge>
-                <Badge variant="outline" className="text-[10px] text-red-600">-{removeCount} removed</Badge>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <Tag className="h-4 w-4 text-primary" />
+                <Label className="text-xs font-semibold uppercase tracking-wide text-primary">Pricing Changes</Label>
+                <div className="flex items-center gap-1.5 ml-auto">
+                  {addCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] gap-1 text-green-600 border-green-200">
+                      <PlusCircle className="h-3 w-3" />
+                      {addCount} new
+                    </Badge>
+                  )}
+                  {updateCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] gap-1 text-blue-600 border-blue-200">
+                      <Edit3 className="h-3 w-3" />
+                      {updateCount} changed
+                    </Badge>
+                  )}
+                  {removeCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] gap-1 text-red-600 border-red-200">
+                      <MinusCircle className="h-3 w-3" />
+                      {removeCount} removed
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div className="max-h-64 overflow-y-auto rounded border">
+              <div className="max-h-72 overflow-y-auto rounded-md border">
                 <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-muted">
+                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                     <tr>
-                      <th className="text-left p-2 font-medium">Code</th>
-                      <th className="text-left p-2 font-medium">Description</th>
-                      <th className="text-left p-2 font-medium">Action</th>
-                      <th className="text-right p-2 font-medium">Old Price</th>
-                      <th className="text-right p-2 font-medium">New Price</th>
+                      <th className="text-left p-2.5 font-semibold">Code</th>
+                      <th className="text-left p-2.5 font-semibold">Description</th>
+                      <th className="text-left p-2.5 font-semibold">Action</th>
+                      <th className="text-right p-2.5 font-semibold">Old Price</th>
+                      <th className="text-right p-2.5 font-semibold">New Price</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pricingChanges.map((p, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="p-2 font-mono">{p.code}</td>
-                        <td className="p-2 truncate max-w-[200px]" title={p.description}>{p.description ?? "—"}</td>
-                        <td className="p-2">
-                          <span className={
+                      <tr key={i} className="border-t hover:bg-muted/30 transition-colors">
+                        <td className="p-2.5 font-mono font-medium">{p.code}</td>
+                        <td className="p-2.5 truncate max-w-[260px]" title={p.description}>{p.description ?? "—"}</td>
+                        <td className="p-2.5">
+                          <span className={`inline-flex items-center gap-1 font-medium ${
                             p.action === "add" ? "text-green-600" :
                             p.action === "remove" ? "text-red-600" :
                             "text-blue-600"
-                          }>
+                          }`}>
+                            {p.action === "add" && <PlusCircle className="h-3 w-3" />}
+                            {p.action === "remove" && <MinusCircle className="h-3 w-3" />}
+                            {p.action === "update" && <Edit3 className="h-3 w-3" />}
                             {p.action}
                           </span>
                         </td>
-                        <td className="p-2 text-right text-muted-foreground">
+                        <td className="p-2.5 text-right text-muted-foreground">
                           {p.oldPrice != null ? `R${p.oldPrice}` : "—"}
                         </td>
-                        <td className="p-2 text-right font-medium">
+                        <td className="p-2.5 text-right font-semibold">
                           {p.newPrice != null ? `R${p.newPrice}` : "—"}
                         </td>
                       </tr>
@@ -1300,37 +1363,53 @@ function ChangeRequestDetailDialog({
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
-            <p>Created: {new Date(request.created_at).toLocaleString()}</p>
-            {request.model_id && <p>Model: {request.model_id}</p>}
-            {request.notified_at && <p>Notified: {new Date(request.notified_at).toLocaleString()}</p>}
+          {/* Metadata footer */}
+          <div className="flex items-center gap-4 flex-wrap text-xs text-muted-foreground border-t pt-4">
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              Created {createdDate.toLocaleString()}
+            </span>
+            {request.model_id && (
+              <span className="inline-flex items-center gap-1.5">
+                <Cpu className="h-3.5 w-3.5" />
+                {request.model_id}
+              </span>
+            )}
+            {notifiedDate && (
+              <span className="inline-flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" />
+                Notified {notifiedDate.toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        {/* Sticky footer */}
+        <DialogFooter className="px-6 py-4 border-t bg-muted/30 gap-2">
           {request.notification_status === "failed" && (
             <Button variant="outline" onClick={onRetry}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry email
             </Button>
           )}
-          <Select
-            value={request.status}
-            onValueChange={(v) => onStatusChange(v as AdvisorChangeRequest["status"])}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_review">In Review</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="implemented">Implemented</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <div className="flex items-center gap-2 ml-auto">
+            <Select
+              value={request.status}
+              onValueChange={(v) => onStatusChange(v as AdvisorChangeRequest["status"])}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_review">In Review</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="implemented">Implemented</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={onClose}>Close</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
