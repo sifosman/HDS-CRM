@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -67,6 +66,21 @@ const NOTIFICATION_COLORS: Record<string, string> = {
   pending: "bg-gray-100 text-gray-600",
   sent: "bg-green-100 text-green-700",
   failed: "bg-red-100 text-red-700",
+};
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  pending: "bg-gray-400",
+  in_review: "bg-blue-500",
+  approved: "bg-green-500",
+  implemented: "bg-purple-500",
+  rejected: "bg-red-500",
+};
+
+const PRIORITY_BORDER_COLORS: Record<string, string> = {
+  low: "border-l-blue-400",
+  medium: "border-l-yellow-400",
+  high: "border-l-orange-400",
+  critical: "border-l-red-500",
 };
 
 type TrainingWorkspaceProps = {
@@ -720,35 +734,17 @@ export function TrainingWorkspace({
           </div>
         </div>
         <ScrollArea className="flex-1">
-          <div className="p-2 space-y-2">
+          <div className="p-1 space-y-0.5">
             {changeRequests.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
                 No change requests yet. Talk through an improvement, then log one.
               </p>
             ) : (
               changeRequests.map((req) => (
-                <ChangeRequestCard
+                <ChangeRequestListItem
                   key={req.id}
                   request={req}
                   onClick={() => setSelectedChangeRequest(req)}
-                  onRetry={() => retryNotificationAction(req.id).then((r) => {
-                    if (r.ok) {
-                      setChangeRequests((prev) =>
-                        prev.map((cr) => (cr.id === req.id ? r.data : cr)),
-                      );
-                    }
-                  })}
-                  onStatusChange={(status) =>
-                    updateChangeRequestStatusAction(req.id, status).then((r) => {
-                      if (r.ok) {
-                        setChangeRequests((prev) =>
-                          prev.map((cr) =>
-                            cr.id === req.id ? { ...cr, status } : cr,
-                          ),
-                        );
-                      }
-                    })
-                  }
                 />
               ))
             )}
@@ -985,157 +981,36 @@ function ThinkingBubble({ modelId }: { modelId: AdvisorModelId | null }) {
   );
 }
 
-function ChangeRequestCard({
+function ChangeRequestListItem({
   request,
   onClick,
-  onRetry,
-  onStatusChange,
 }: {
   request: AdvisorChangeRequest;
   onClick: () => void;
-  onRetry: () => void;
-  onStatusChange: (status: AdvisorChangeRequest["status"]) => void;
 }) {
-  const [showPricing, setShowPricing] = useState(false);
-  const pricingChanges = (request.pricing_changes ?? []) as AdvisorPricingChange[];
-  const hasPricing = pricingChanges.length > 0;
-
-  const addCount = pricingChanges.filter((p) => p.action === "add").length;
-  const updateCount = pricingChanges.filter((p) => p.action === "update").length;
-  const removeCount = pricingChanges.filter((p) => p.action === "remove").length;
-
   return (
-    <Card className="text-xs cursor-pointer hover:ring-1 hover:ring-primary/30 transition-shadow" onClick={onClick}>
-      <CardHeader className="p-3 pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-medium leading-tight">
-            {request.title}
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="p-3 pt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-1 flex-wrap">
-          <Badge className={`text-[10px] ${PRIORITY_COLORS[request.priority] ?? ""}`}>
-            {request.priority}
-          </Badge>
-          <Badge className={`text-[10px] ${STATUS_COLORS[request.status] ?? ""}`}>
-            {request.status.replace("_", " ")}
-          </Badge>
-          <Badge className={`text-[10px] ${NOTIFICATION_COLORS[request.notification_status] ?? ""}`}>
-            <Mail className="h-2.5 w-2.5 mr-0.5" />
-            {request.notification_status}
-          </Badge>
-        </div>
-        <p className="text-muted-foreground line-clamp-2">
-          {request.requested_behavior}
-        </p>
-        {request.affected_areas.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            {request.affected_areas.map((area) => (
-              <Badge key={area} variant="outline" className="text-[10px]">
-                {area}
-              </Badge>
-            ))}
-          </div>
-        )}
-        {hasPricing && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 flex-wrap">
-              <Badge variant="outline" className="text-[10px] text-green-600">
-                +{addCount} new
-              </Badge>
-              <Badge variant="outline" className="text-[10px] text-blue-600">
-                ~{updateCount} changed
-              </Badge>
-              <Badge variant="outline" className="text-[10px] text-red-600">
-                -{removeCount} removed
-              </Badge>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-5 px-1.5 text-[10px]"
-                onClick={() => setShowPricing((v) => !v)}
-              >
-                {showPricing ? "Hide" : "Show"} ({pricingChanges.length})
-              </Button>
-            </div>
-            {showPricing && (
-              <div className="max-h-48 overflow-y-auto rounded border bg-muted/50">
-                <table className="w-full text-[10px]">
-                  <thead className="sticky top-0 bg-muted">
-                    <tr>
-                      <th className="text-left p-1 font-medium">Code</th>
-                      <th className="text-left p-1 font-medium">Action</th>
-                      <th className="text-right p-1 font-medium">Old</th>
-                      <th className="text-right p-1 font-medium">New</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pricingChanges.slice(0, 100).map((p, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="p-1 truncate max-w-[80px]" title={p.description}>
-                          {p.code}
-                        </td>
-                        <td className="p-1">
-                          <span className={
-                            p.action === "add" ? "text-green-600" :
-                            p.action === "remove" ? "text-red-600" :
-                            "text-blue-600"
-                          }>
-                            {p.action}
-                          </span>
-                        </td>
-                        <td className="p-1 text-right text-muted-foreground">
-                          {p.oldPrice != null ? `R${p.oldPrice}` : "—"}
-                        </td>
-                        <td className="p-1 text-right font-medium">
-                          {p.newPrice != null ? `R${p.newPrice}` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                    {pricingChanges.length > 100 && (
-                      <tr className="border-t">
-                        <td colSpan={4} className="p-1 text-center text-muted-foreground">
-                          +{pricingChanges.length - 100} more...
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-        <div className="flex items-center gap-1 pt-1">
-          <Select
-            value={request.status}
-            onValueChange={(v) => onStatusChange(v as AdvisorChangeRequest["status"])}
-          >
-            <SelectTrigger className="h-7 text-xs flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_review">In Review</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="implemented">Implemented</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-          {request.notification_status === "failed" && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={onRetry}
-              title="Retry email"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 pl-2 pr-1.5 py-2 text-left rounded-md border-l-2 hover:bg-accent transition-colors text-xs ${
+        PRIORITY_BORDER_COLORS[request.priority] ?? "border-l-transparent"
+      }`}
+      title={request.title}
+    >
+      <span
+        className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[request.status] ?? "bg-gray-400"}`}
+        title={`Status: ${request.status.replace("_", " ")}`}
+      />
+      <span className="flex-1 truncate font-medium">{request.title}</span>
+      {request.notification_status === "failed" && (
+        <span title="Email notification failed">
+          <AlertCircle className="h-3 w-3 shrink-0 text-red-500" />
+        </span>
+      )}
+      <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+        {request.status.replace("_", " ")}
+      </span>
+    </button>
   );
 }
 
