@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Mail, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle, Target, History, Lightbulb, AlertTriangle, ListChecks, Wrench, Quote, Tag, Calendar, Cpu, MinusCircle, PlusCircle, Edit3 } from "lucide-react";
+import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Mail, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle, Target, History, Lightbulb, AlertTriangle, ListChecks, Wrench, Quote, Tag, Calendar, Cpu, MinusCircle, PlusCircle, Edit3, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,6 +89,8 @@ type TrainingWorkspaceProps = {
   messages: AdvisorMessage[];
   changeRequests: AdvisorChangeRequest[];
   contextInfo: { isStale: boolean; timestamps: Record<string, string> } | null;
+  currentUserId: string;
+  ownerNames: Record<string, string>;
 };
 
 export function TrainingWorkspace({
@@ -97,6 +99,8 @@ export function TrainingWorkspace({
   messages: initialMessages,
   changeRequests: initialChangeRequests,
   contextInfo,
+  currentUserId,
+  ownerNames,
 }: TrainingWorkspaceProps) {
   const router = useRouter();
   const [sessions, setSessions] = useState(initialSessions);
@@ -120,6 +124,11 @@ export function TrainingWorkspace({
   const scrollRef = useRef<HTMLDivElement>(null);
   const streamingTextRef = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Whether the current user can modify the current session. Users can view
+  // any session but only send messages, upload files, rename, archive, delete,
+  // and change the model in sessions they own.
+  const canEdit = currentSession ? currentSession.owner_id === currentUserId : true;
 
   // Sync state when session changes (navigation).
   // The key prop on TrainingWorkspace in the page components forces a full
@@ -494,18 +503,29 @@ export function TrainingWorkspace({
                 No sessions yet. Start a new chat.
               </p>
             ) : (
-              sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className={`group flex items-center gap-2 rounded-md px-2 py-2 text-sm cursor-pointer hover:bg-muted transition-colors ${
-                    currentSession?.id === session.id ? "bg-muted font-medium" : ""
-                  }`}
-                  onClick={() => router.push(`/ai-training/${session.id}`)}
-                >
-                  <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate flex-1">{session.title}</span>
-                </div>
-              ))
+              sessions.map((session) => {
+                const isOwned = session.owner_id === currentUserId;
+                const ownerLabel = ownerNames[session.owner_id];
+                return (
+                  <div
+                    key={session.id}
+                    className={`group flex items-center gap-2 rounded-md px-2 py-2 text-sm cursor-pointer hover:bg-muted transition-colors ${
+                      currentSession?.id === session.id ? "bg-muted font-medium" : ""
+                    }`}
+                    onClick={() => router.push(`/ai-training/${session.id}`)}
+                  >
+                    <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <span className="truncate block">{session.title}</span>
+                      {!isOwned && ownerLabel && (
+                        <span className="text-[10px] text-muted-foreground truncate block">
+                          {ownerLabel}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </ScrollArea>
@@ -526,7 +546,7 @@ export function TrainingWorkspace({
           {currentSession ? (
             <>
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                {editingTitle ? (
+                {editingTitle && canEdit ? (
                   <div className="flex items-center gap-1">
                     <Input
                       value={titleValue}
@@ -544,18 +564,26 @@ export function TrainingWorkspace({
                   </div>
                 ) : (
                   <h2
-                    className="text-lg font-heading font-bold truncate cursor-pointer hover:text-primary flex items-center gap-2"
-                    onClick={() => setEditingTitle(true)}
+                    className={`text-lg font-heading font-bold truncate flex items-center gap-2 ${
+                      canEdit ? "cursor-pointer hover:text-primary" : ""
+                    }`}
+                    onClick={() => canEdit && setEditingTitle(true)}
                   >
                     {currentSession.title}
-                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                    {canEdit && <Pencil className="h-3 w-3 text-muted-foreground" />}
                   </h2>
+                )}
+                {!canEdit && (
+                  <Badge variant="secondary" className="text-xs shrink-0">
+                    Read-only
+                  </Badge>
                 )}
               </div>
 
               <Select
                 value={currentSession.selected_model}
-                onValueChange={(v) => v && handleModelChange(v)}
+                onValueChange={(v) => v && canEdit && handleModelChange(v)}
+                disabled={!canEdit}
               >
                 <SelectTrigger className="w-48 h-8">
                   <SelectValue placeholder="Model" />
@@ -576,12 +604,16 @@ export function TrainingWorkspace({
                 </Badge>
               )}
 
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleArchive} title="Archive">
-                <Archive className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setShowDeleteConfirm(true)} title="Delete">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {canEdit && (
+                <>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleArchive} title="Archive">
+                    <Archive className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setShowDeleteConfirm(true)} title="Delete">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </>
           ) : (
             <h2 className="text-lg font-heading font-bold">AI Training Advisor</h2>
@@ -630,8 +662,8 @@ export function TrainingWorkspace({
         {currentSession && (
           <div
             className="border-t px-4 py-3"
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
+            onDrop={canEdit ? handleDrop : undefined}
+            onDragOver={canEdit ? handleDragOver : undefined}
           >
             {error && (
               <div className="mb-2 flex items-center gap-2 text-sm text-destructive">
@@ -662,56 +694,66 @@ export function TrainingWorkspace({
                 ))}
               </div>
             )}
-            <div className="flex items-end gap-2 max-w-3xl mx-auto">
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,.docx,audio/mpeg,audio/wav,audio/webm,audio/ogg,audio/aac,audio/m4a,audio/mp4"
-                onChange={(e) => handleFileSelect(e.target.files)}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isStreaming || isUploading}
-                title="Attach image, document, or voice note"
-              >
-                {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Paperclip className="h-4 w-4" />
-                )}
-              </Button>
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about the chatbot, suggest an improvement, or describe a sales situation..."
-                className="min-h-[44px] max-h-32 resize-none"
-                rows={1}
-                disabled={isStreaming}
-              />
-              {isStreaming ? (
-                <Button onClick={handleStop} variant="destructive" size="icon">
-                  <Square className="h-4 w-4" />
-                </Button>
-              ) : (
+            {canEdit ? (
+              <div className="flex items-end gap-2 max-w-3xl mx-auto">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,.docx,audio/mpeg,audio/wav,audio/webm,audio/ogg,audio/aac,audio/m4a,audio/mp4"
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                />
                 <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() && pendingAttachments.length === 0}
+                  variant="ghost"
                   size="icon"
+                  className="shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isStreaming || isUploading}
+                  title="Attach image, document, or voice note"
                 >
-                  <Send className="h-4 w-4" />
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-4 w-4" />
+                  )}
                 </Button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1 text-center">
-              This is a read-only advisor — nothing changes in the live system.
-              You can attach images, documents, or voice notes.
-            </p>
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about the chatbot, suggest an improvement, or describe a sales situation..."
+                  className="min-h-[44px] max-h-32 resize-none"
+                  rows={1}
+                  disabled={isStreaming}
+                />
+                {isStreaming ? (
+                  <Button onClick={handleStop} variant="destructive" size="icon">
+                    <Square className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSend}
+                    disabled={!input.trim() && pendingAttachments.length === 0}
+                    size="icon"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="max-w-3xl mx-auto text-center text-sm text-muted-foreground py-2">
+                You are viewing this session in read-only mode. Only{" "}
+                {ownerNames[currentSession.owner_id] ?? "the owner"} can send
+                messages here.
+              </div>
+            )}
+            {canEdit && (
+              <p className="text-xs text-muted-foreground mt-1 text-center">
+                This is a read-only advisor — nothing changes in the live system.
+                You can attach images, documents, or voice notes.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -721,7 +763,7 @@ export function TrainingWorkspace({
         <div className="p-3 border-b">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Change Requests</h3>
-            {currentSession && (
+            {currentSession && canEdit && (
               <Button
                 size="sm"
                 variant="outline"
@@ -744,6 +786,7 @@ export function TrainingWorkspace({
                 <ChangeRequestListItem
                   key={req.id}
                   request={req}
+                  ownerName={ownerNames[req.owner_id]}
                   onClick={() => setSelectedChangeRequest(req)}
                 />
               ))
@@ -789,6 +832,7 @@ export function TrainingWorkspace({
       {selectedChangeRequest && (
         <ChangeRequestDetailDialog
           request={selectedChangeRequest}
+          ownerName={ownerNames[selectedChangeRequest.owner_id]}
           onClose={() => setSelectedChangeRequest(null)}
           onStatusChange={(status) => {
             updateChangeRequestStatusAction(selectedChangeRequest.id, status).then((r) => {
@@ -983,9 +1027,11 @@ function ThinkingBubble({ modelId }: { modelId: AdvisorModelId | null }) {
 
 function ChangeRequestListItem({
   request,
+  ownerName,
   onClick,
 }: {
   request: AdvisorChangeRequest;
+  ownerName?: string;
   onClick: () => void;
 }) {
   return (
@@ -1001,7 +1047,14 @@ function ChangeRequestListItem({
         className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[request.status] ?? "bg-gray-400"}`}
         title={`Status: ${request.status.replace("_", " ")}`}
       />
-      <span className="flex-1 truncate font-medium">{request.title}</span>
+      <div className="flex-1 min-w-0">
+        <span className="truncate block font-medium">{request.title}</span>
+        {ownerName && (
+          <span className="text-[10px] text-muted-foreground truncate block">
+            {ownerName}
+          </span>
+        )}
+      </div>
       {request.notification_status === "failed" && (
         <span title="Email notification failed">
           <AlertCircle className="h-3 w-3 shrink-0 text-red-500" />
@@ -1145,11 +1198,13 @@ function ChangeRequestDialog({
 
 function ChangeRequestDetailDialog({
   request,
+  ownerName,
   onClose,
   onStatusChange,
   onRetry,
 }: {
   request: AdvisorChangeRequest;
+  ownerName?: string;
   onClose: () => void;
   onStatusChange: (status: AdvisorChangeRequest["status"]) => void;
   onRetry: () => void;
@@ -1369,6 +1424,12 @@ function ChangeRequestDetailDialog({
               <Calendar className="h-3.5 w-3.5" />
               Created {createdDate.toLocaleString()}
             </span>
+            {ownerName && (
+              <span className="inline-flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                {ownerName}
+              </span>
+            )}
             {request.model_id && (
               <span className="inline-flex items-center gap-1.5">
                 <Cpu className="h-3.5 w-3.5" />

@@ -261,7 +261,6 @@ export async function getMessagesAction(
     .from("ai_training_messages")
     .select("*")
     .eq("session_id", sessionId)
-    .eq("owner_id", user.id)
     .order("created_at", { ascending: true });
 
   if (error) return { ok: false, error: error.message };
@@ -475,7 +474,6 @@ export async function retryNotificationAction(
     .from("ai_training_change_requests")
     .select("*")
     .eq("id", requestId)
-    .eq("owner_id", user.id)
     .single();
 
   if (error || !request)
@@ -533,7 +531,6 @@ export async function updateChangeRequestStatusAction(
     .from("ai_training_change_requests")
     .select("status, implementation_notes, session_id")
     .eq("id", requestId)
-    .eq("owner_id", user.id)
     .maybeSingle();
 
   const update: Record<string, unknown> = { status: parsed.data.status };
@@ -544,8 +541,7 @@ export async function updateChangeRequestStatusAction(
   const { error } = await supabase
     .from("ai_training_change_requests")
     .update(update)
-    .eq("id", requestId)
-    .eq("owner_id", user.id);
+    .eq("id", requestId);
 
   if (error) return { ok: false, error: error.message };
 
@@ -577,11 +573,12 @@ export async function getAdvisorSessions(): Promise<AdvisorSession[]> {
   const user = await getCurrentUser();
   if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
 
+  // All owners/managers can see every session (not just their own) so the
+  // team has shared visibility into each user's message history.
   const supabase = await createClient();
   const { data } = await supabase
     .from("ai_training_sessions")
     .select("*")
-    .eq("owner_id", user.id)
     .is("archived_at", null)
     .order("last_message_at", { ascending: false, nullsFirst: false });
 
@@ -594,12 +591,12 @@ export async function getAdvisorSession(
   const user = await getCurrentUser();
   if (!user || (user.role !== "owner" && user.role !== "manager")) return null;
 
+  // Any owner/manager can view any session (read-only if not the owner).
   const supabase = await createClient();
   const { data } = await supabase
     .from("ai_training_sessions")
     .select("*")
     .eq("id", sessionId)
-    .eq("owner_id", user.id)
     .maybeSingle();
 
   return data as AdvisorSession | null;
@@ -611,12 +608,12 @@ export async function getAdvisorMessages(
   const user = await getCurrentUser();
   if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
 
+  // Messages are visible to all owners/managers, not just the session owner.
   const supabase = await createClient();
   const { data } = await supabase
     .from("ai_training_messages")
     .select("*")
     .eq("session_id", sessionId)
-    .eq("owner_id", user.id)
     .order("created_at", { ascending: true });
 
   return (data ?? []) as AdvisorMessage[];
@@ -628,11 +625,12 @@ export async function getAdvisorChangeRequests(
   const user = await getCurrentUser();
   if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
 
+  // All change requests are visible to every owner/manager, regardless of
+  // who created them.
   const supabase = await createClient();
   let query = supabase
     .from("ai_training_change_requests")
     .select("*")
-    .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
   if (sessionId) {
@@ -641,6 +639,41 @@ export async function getAdvisorChangeRequests(
 
   const { data } = await query;
   return (data ?? []) as AdvisorChangeRequest[];
+}
+
+/**
+ * Returns a map of user_id → display name for the given user IDs, so the
+ * training workspace can show who owns each session/change request. Falls
+ * back to the auth email if no full_name is set.
+ */
+export async function getAdvisorOwnerNames(
+  userIds: string[],
+): Promise<Record<string, string>> {
+  if (userIds.length === 0) return {};
+
+  const admin = createAdminClient();
+  const { data: roles } = await admin
+    .from("user_roles")
+    .select("user_id, full_name")
+    .in("user_id", userIds);
+
+  const names: Record<string, string> = {};
+  for (const row of roles ?? []) {
+    if (row.full_name) {
+      names[row.user_id] = row.full_name;
+    }
+  }
+
+  // For any IDs without a full_name, fall back to the auth email.
+  const missing = userIds.filter((id) => !names[id]);
+  for (const id of missing) {
+    const { data: authUser } = await admin.auth.admin.getUserById(id);
+    if (authUser?.user?.email) {
+      names[id] = authUser.user.email;
+    }
+  }
+
+  return names;
 }
 
 /**

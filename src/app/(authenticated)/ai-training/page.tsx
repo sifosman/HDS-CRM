@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import {
   getAdvisorSessions,
   getAdvisorChangeRequests,
+  getAdvisorOwnerNames,
 } from "@/app/(authenticated)/ai-training/actions";
 import { TrainingWorkspace } from "@/components/ai-training/training-workspace";
 
@@ -15,6 +16,15 @@ export default async function AiTrainingPage() {
     getAdvisorChangeRequests(),
   ]);
 
+  // Collect all user IDs to display owner names (sessions + change requests).
+  const ownerIds = Array.from(
+    new Set([
+      ...sessions.map((s) => s.owner_id),
+      ...changeRequests.map((r) => r.owner_id),
+    ]),
+  );
+  const ownerNames = await getAdvisorOwnerNames(ownerIds);
+
   return (
     <TrainingWorkspace
       sessions={sessions}
@@ -22,6 +32,8 @@ export default async function AiTrainingPage() {
       messages={[]}
       changeRequests={changeRequests}
       contextInfo={null}
+      currentUserId={access.user.id}
+      ownerNames={ownerNames}
     />
   );
 }
