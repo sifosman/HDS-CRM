@@ -97,4 +97,9 @@ export const updateRequestStatusSchema = z.object({
   implementationNotes: z.string().trim().max(5000).optional(),
 });
 
+export const customerChatRequestSchema = z.object({
+  customerPhone: z.string().trim().min(1).max(30),
+  message: z.string().trim().min(1).max(8000),
+});
+
 export { DEFAULT_ADVISOR_MODEL };

@@ -28,6 +28,7 @@ import type {
   QuoteAcceptanceMap,
   UserWithRole,
   UserRole,
+  Product,
 } from "@/lib/types";
 import { HEALTH_COMPONENT_ORDER, TEST_CATEGORY_ORDER } from "@/lib/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -36,7 +37,7 @@ export async function getDashboardStats() {
   const supabase = await createClient();
 
   const [customersRes, quotesRes, conversationsRes] = await Promise.all([
-    supabase.from("customer_profiles").select("*"),
+    supabase.from("customer_profiles").select("*").or("do_not_contact.is.false,do_not_contact.is.null"),
     supabase.from("quotes").select("total, created_at, status, source"),
     supabase
       .from("ai_conversations")
@@ -144,6 +145,7 @@ export async function getCustomers(): Promise<CustomerProfile[]> {
   const { data, error } = await supabase
     .from("customer_profiles")
     .select("*")
+    .or("do_not_contact.is.false,do_not_contact.is.null")
     .order("last_interaction_at", { ascending: false, nullsFirst: false });
   if (error) throw error;
   return data as CustomerProfile[];
@@ -2363,4 +2365,127 @@ export async function reactivateUser(userId: string): Promise<void> {
     ban_duration: "none",
   });
   if (error) throw error;
+}
+
+// ============================================================================
+// Product Catalog Management
+// ============================================================================
+
+export async function getProducts(): Promise<Product[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return (data || []) as Product[];
+}
+
+// ============================================================================
+// Price-Objection Close Rate Funnel (#9)
+// ============================================================================
+
+export type PriceObjectionFunnel = {
+  totalCustomers: number;
+  objectionsRaised: number;
+  quotesGenerated: number;
+  closeAttempts: number;
+  won: number;
+  lost: number;
+  // Conversion rates between stages
+  objectionRate: number; // objections / total
+  quoteAfterObjectionRate: number; // quotes / objections
+  closeAttemptRate: number; // close attempts / quotes
+  winRate: number; // won / close attempts
+  // Breakdowns
+  byObjectionType: { type: string; count: number }[];
+  byCloseType: { type: string; count: number }[];
+};
+
+export async function getPriceObjectionFunnel(): Promise<PriceObjectionFunnel> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customer_profiles")
+    .select(
+      "id, objection_count, close_attempt_count, last_close_type, sale_outcome, total_quotes, objections, do_not_contact"
+    )
+    .or("do_not_contact.is.false,do_not_contact.is.null");
+  if (error) throw error;
+
+  const customers = (data || []) as Array<{
+    id: string;
+    objection_count: number;
+    close_attempt_count: number;
+    last_close_type: string | null;
+    sale_outcome: string | null;
+    total_quotes: number;
+    objections: string[] | null;
+    do_not_contact: boolean | null;
+  }>;
+
+  const totalCustomers = customers.length;
+  const objectionsRaised = customers.filter(
+    (c) => (c.objection_count || 0) > 0
+  ).length;
+  const quotesGenerated = customers.filter(
+    (c) => (c.total_quotes || 0) > 0
+  ).length;
+  const closeAttempts = customers.filter(
+    (c) => (c.close_attempt_count || 0) > 0
+  ).length;
+  const won = customers.filter((c) => c.sale_outcome === "won").length;
+  const lost = customers.filter((c) => c.sale_outcome === "lost").length;
+
+  // Breakdown by objection type
+  const objectionTypeCounts = new Map<string, number>();
+  for (const c of customers) {
+    if (c.objections && c.objections.length > 0) {
+      for (const o of c.objections) {
+        const key = o || "unknown";
+        objectionTypeCounts.set(key, (objectionTypeCounts.get(key) || 0) + 1);
+      }
+    }
+  }
+  const byObjectionType = Array.from(objectionTypeCounts.entries())
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Breakdown by close type
+  const closeTypeCounts = new Map<string, number>();
+  for (const c of customers) {
+    if (c.last_close_type) {
+      closeTypeCounts.set(
+        c.last_close_type,
+        (closeTypeCounts.get(c.last_close_type) || 0) + 1
+      );
+    }
+  }
+  const byCloseType = Array.from(closeTypeCounts.entries())
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    totalCustomers,
+    objectionsRaised,
+    quotesGenerated,
+    closeAttempts,
+    won,
+    lost,
+    objectionRate:
+      totalCustomers > 0
+        ? Math.round((objectionsRaised / totalCustomers) * 100)
+        : 0,
+    quoteAfterObjectionRate:
+      objectionsRaised > 0
+        ? Math.round((quotesGenerated / objectionsRaised) * 100)
+        : 0,
+    closeAttemptRate:
+      quotesGenerated > 0
+        ? Math.round((closeAttempts / quotesGenerated) * 100)
+        : 0,
+    winRate:
+      closeAttempts > 0 ? Math.round((won / closeAttempts) * 100) : 0,
+    byObjectionType,
+    byCloseType,
+  };
 }

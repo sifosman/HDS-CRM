@@ -518,6 +518,8 @@ export type AdvisorSession = {
   summary: string | null;
   last_message_at: string | null;
   archived_at: string | null;
+  /** When set, this is a shared per-customer session any advisor can use. */
+  customer_phone: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -686,3 +688,37 @@ export type AdvisorAuditLog = {
   created_at: string;
 };
 
+
+export type Product = {
+  woo_id: number;
+  name: string;
+  slug: string | null;
+  type: string | null;
+  permalink: string | null;
+  sku: string | null;
+  short_description: string | null;
+  description: string | null;
+  on_sale: boolean;
+  is_purchasable: boolean;
+  is_in_stock: boolean;
+  price: number;
+  regular_price: number;
+  sale_price: number;
+  currency_code: string | null;
+  currency_symbol: string | null;
+  price_html: string | null;
+  average_rating: number;
+  review_count: number;
+  images: { id: number; src: string; public_url?: string; alt?: string }[] | null;
+  categories: { id: number; name: string; slug?: string }[] | null;
+  tags: { id: number; name: string }[] | null;
+  weight: string | null;
+  dimensions: Record<string, unknown> | null;
+  image_storage_paths: string[] | null;
+  hds_price_id: number | null;
+  is_manufactured: boolean;
+  manufacturer: string | null;
+  discontinued: boolean;
+  created_at: string;
+  updated_at: string;
+};

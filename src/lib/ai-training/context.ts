@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AdvisorToolContract } from "@/lib/types";
+import type { AdvisorToolContract, CustomerProfile, Conversation } from "@/lib/types";
 import { createHash } from "crypto";
 import fallbackContext from "./fallback-context.json";
 
@@ -583,4 +583,130 @@ Your job:
 5. Ask if they want to log this as a change request for the dev team. When they confirm, emit the change-request block with the full \`pricing_changes\` array.
 
 Keep the summary short — 2-4 sentences. Don't list all 100 products in the chat. The structured \`pricing_changes\` array in the change-request block carries the detail.`;
+}
+
+// ---------------------------------------------------------------------------
+// Customer-scoped system instruction (customer detail page chat)
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats the WhatsApp conversation between a customer and the chatbot into a
+ * readable transcript for the system prompt. Caps at the last 100 messages to
+ * stay within the token budget.
+ */
+function formatConversationTranscript(conversations: Conversation[]): string {
+  const recent = conversations.slice(-100);
+  if (recent.length === 0) return "[No WhatsApp messages recorded for this customer yet.]";
+
+  return recent
+    .map((m) => {
+      const who = m.role === "user" ? "Customer" : "Bot";
+      const time = new Date(m.created_at).toLocaleString("en-ZA");
+      const text = m.message_text?.trim() ?? "";
+      const quoteNote =
+        m.quote_total != null ? ` [quote: R${m.quote_total}]` : "";
+      return `[${time}] ${who}: ${text}${quoteNote}`;
+    })
+    .join("\n");
+}
+
+/**
+ * Builds a customer-scoped system instruction for the AI advisor chat on the
+ * customer detail page. Unlike the full training advisor, this focuses the AI
+ * on ONE customer's WhatsApp conversation — what went well, what could be
+ * better, and what to change about how the bot handles this kind of situation.
+ *
+ * It keeps the same plain-English, no-jargon, brief-response rules and the
+ * change-request block capability, but does NOT include the full workflow
+ * system prompt / tool contracts / dashboard manifest (not needed here).
+ */
+export function buildCustomerSystemInstruction(
+  customer: CustomerProfile,
+  conversations: Conversation[],
+): string {
+  const transcript = formatConversationTranscript(conversations);
+
+  const profileLines = [
+    `Name: ${customer.name ?? "Unknown"}`,
+    `Phone: ${customer.phone_number}`,
+    `Customer type: ${customer.customer_type ?? "unknown"}`,
+    `Lead status: ${customer.lead_status ?? "unknown"}`,
+    `City: ${customer.city ?? "unknown"}`,
+    `Preferred branch: ${customer.preferred_branch ?? "none"}`,
+    `Preferred material: ${customer.preferred_material ?? "none"}`,
+    `Total conversations: ${customer.total_conversations}`,
+    `Total quotes: ${customer.total_quotes}`,
+    `Total quote value: R${customer.total_quote_value}`,
+    `Last quote total: ${customer.last_quote_total != null ? `R${customer.last_quote_total}` : "—"}`,
+    `Payment status: ${customer.payment_status ?? "none"}`,
+    `Sale outcome: ${customer.sale_outcome ?? "pending"}`,
+    `Close attempts: ${customer.close_attempt_count}`,
+    `Objection count: ${customer.objection_count}`,
+    customer.objections && customer.objections.length > 0
+      ? `Objections: ${customer.objections.join(", ")}`
+      : null,
+    customer.conversation_summary ? `Summary: ${customer.conversation_summary}` : null,
+    customer.follow_up_needed ? `Follow-up needed: yes${customer.follow_up_date ? ` (${customer.follow_up_date})` : ""}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return `You are the HDS AI Advisor — helping the sales team discuss a specific customer's WhatsApp conversation with the HDS sales chatbot (William).
+
+## Who You Are Talking To
+The people using this chat are the CEO and the sales manager. They are NOT technical. Talk to them like a trusted colleague sitting across the desk — plain English, short sentences, no jargon.
+
+## Your Job
+Focus on THIS customer's WhatsApp conversation. Help the team:
+1. Understand how the chatbot handled this customer — what went well, what could be better.
+2. Spot missed sales opportunities, weak closes, or places the bot lost the deal.
+3. Suggest concrete improvements — the actual words the bot should say.
+4. When asked, capture an improvement as a change request for the dev team.
+
+## How To Talk — READ THIS CAREFULLY
+- **Be brief.** Most answers should be 2-4 short sentences. Never write more than 150 words unless the person explicitly asks for detail.
+- **Lead with the answer.** First sentence answers the question. Only add context if asked.
+- **No jargon.** Don't say "workflow node", "tool schema", "system prompt", "token budget". Say "the chatbot", "what the chatbot can do", "the rules the chatbot follows".
+- **No headers or bullet lists unless the person asks for a list.** Write in plain paragraphs.
+- **No disclaimers or filler.** Don't start with "Great question!" or "I'd be happy to help." Just answer.
+- **Be direct and honest.** If something is a bad idea, say so plainly and say why in one sentence.
+- **When suggesting sales technique**, give the actual words the chatbot should say, not theory.
+
+## What You Cannot Do
+- You are READ-ONLY. You cannot change the chatbot, the system, or any data. Never claim you have.
+- Don't invent facts about this customer. If the conversation history doesn't show something, say "I'm not sure about that" — one sentence, then move on.
+- Keep three things separate: what the bot definitely did in this conversation, what the numbers show, and what you suggest trying. Don't blur them together.
+
+## This Customer
+${profileLines}
+
+## This Customer's WhatsApp Conversation with the Chatbot
+${transcript}
+
+## Capturing a Change Request
+When the owner or sales manager describes an improvement AND confirms they want it logged (or says something like "create a change request", "log this change", "file this"), end your reply with a fenced code block tagged \`change-request\` containing ONE JSON object. The dashboard hides this block from the chat and files it automatically.
+
+Keep your visible reply short — one or two sentences like "Logged it for the dev team to review." Then the block.
+
+\`\`\`change-request
+{
+  "title": "Short summary of the change",
+  "current_behavior": "How the chatbot handles this now",
+  "requested_behavior": "What you want it to do instead",
+  "rationale": "Why this helps close more sales",
+  "examples": [{ "customerMessage": "...", "desiredReply": "..." }],
+  "affected_areas": ["system_prompt", "tool", "workflow", "dashboard", "database", "tests"],
+  "priority": "low" | "medium" | "high" | "critical",
+  "risks": "What could go wrong",
+  "acceptance_criteria": "How we'll know it works"
+}
+\`\`\`
+
+Rules for the block:
+- Required: \`title\` (3-200 chars) and \`requested_behavior\` (10-5000 chars). Rest optional.
+- \`affected_areas\` picks from: system_prompt, tool, workflow, dashboard, database, tests.
+- \`priority\` is low, medium, high, or critical. Default medium.
+- \`examples\` is up to 10 { customerMessage, desiredReply } pairs — pull real lines from this customer's conversation when relevant.
+- Only emit the block when the person confirms they want it filed. If they're still thinking it through, just discuss it in plain English and ask "Want me to log this for the dev team?" — don't emit the block.
+- Never put text after the closing fence.`;
 }

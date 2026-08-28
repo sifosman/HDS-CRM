@@ -676,6 +676,99 @@ export async function getAdvisorOwnerNames(
   return names;
 }
 
+// ---------------------------------------------------------------------------
+// Customer-scoped shared sessions
+// ---------------------------------------------------------------------------
+
+/**
+ * Finds or creates the shared AI advisor session for a specific customer
+ * (keyed by phone number). The first owner/manager to open the customer
+ * detail page creates the session; subsequent visitors reuse it. The session
+ * `owner_id` is the creator, but all advisors can read and write because
+ * `customer_phone` is set (shared-session RLS policies).
+ */
+export async function getOrCreateCustomerSessionAction(
+  customerPhone: string,
+  customerName: string | null,
+): Promise<ActionResult<AdvisorSession>> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can use the AI advisor" };
+
+  const normalized = customerPhone.replace(/^\+/, "");
+  const supabase = await createClient();
+
+  // Look for an existing non-archived session linked to this customer.
+  const { data: existing } = await supabase
+    .from("ai_training_sessions")
+    .select("*")
+    .eq("customer_phone", normalized)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  if (existing) return { ok: true, data: existing as AdvisorSession };
+
+  // None yet — create one. Title is the customer's name (or phone) so it's
+  // identifiable in the AI Training Advisor session list.
+  const title = customerName?.trim() || normalized;
+  const { data, error } = await supabase
+    .from("ai_training_sessions")
+    .insert({
+      owner_id: user.id,
+      title,
+      selected_model: DEFAULT_ADVISOR_MODEL,
+      customer_phone: normalized,
+    })
+    .select("*")
+    .single();
+
+  if (error || !data)
+    return { ok: false, error: error?.message ?? "Failed to create session" };
+
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: data.id,
+    entityType: "session",
+    entityId: data.id,
+    action: "create",
+    after: { title: data.title, customer_phone: normalized },
+  });
+
+  return { ok: true, data: data as AdvisorSession };
+}
+
+/**
+ * Fetches change requests for sessions linked to a specific customer phone.
+ */
+export async function getCustomerChangeRequests(
+  customerPhone: string,
+): Promise<AdvisorChangeRequest[]> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "owner" && user.role !== "manager")) return [];
+
+  const normalized = customerPhone.replace(/^\+/, "");
+  const admin = createAdminClient();
+
+  // Find session ids linked to this customer, then fetch their change requests.
+  const { data: sessions } = await admin
+    .from("ai_training_sessions")
+    .select("id")
+    .eq("customer_phone", normalized);
+
+  const sessionIds = (sessions ?? []).map((s) => s.id);
+  if (sessionIds.length === 0) return [];
+
+  const { data } = await admin
+    .from("ai_training_change_requests")
+    .select("*")
+    .in("session_id", sessionIds)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []) as AdvisorChangeRequest[];
+}
+
 /**
  * Persists a user message and returns it. Used by the chat API route.
  */

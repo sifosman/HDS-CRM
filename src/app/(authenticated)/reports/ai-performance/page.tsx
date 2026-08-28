@@ -24,6 +24,7 @@ import {
   CategoryPassRateChart,
   LatencyDistributionChart,
   QualityTrendChart,
+  PriceObjectionFunnelChart,
 } from "@/components/charts";
 import {
   getAiPerformanceScore,
@@ -37,6 +38,7 @@ import {
   getRecentConversationSummaries,
   getAiMonitorAlerts,
   getAiQualityTrend,
+  getPriceObjectionFunnel,
 } from "@/lib/queries";
 import {
   TEST_CATEGORY_LABELS,
@@ -57,6 +59,7 @@ import {
   Clock,
   MessageSquare,
   TrendingUp,
+  TrendingDown,
   Target,
   AlertTriangle,
   Activity,
@@ -64,6 +67,8 @@ import {
   Eye,
   Lightbulb,
   Wrench,
+  Filter,
+  FileText,
 } from "lucide-react";
 
 const GRADE_COLORS: Record<string, string> = {
@@ -97,6 +102,7 @@ export default async function AiReportsPage() {
     conversationSummaries,
     monitorAlerts,
     qualityTrend,
+    objectionFunnel,
   ] = await Promise.all([
     getAiPerformanceScore(),
     getAiTestRunSummaries(15),
@@ -109,6 +115,7 @@ export default async function AiReportsPage() {
     getRecentConversationSummaries(20),
     getAiMonitorAlerts(30),
     getAiQualityTrend(30),
+    getPriceObjectionFunnel(),
   ]);
 
   const hasTestData = score.hasTestData;
@@ -300,6 +307,117 @@ export default async function AiReportsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Price-Objection Close Rate Funnel */}
+      <div>
+        <h2 className="text-lg font-heading font-semibold mb-3 flex items-center gap-2">
+          <TrendingDown className="h-5 w-5" />
+          Price-Objection Close Rate Funnel
+          <span className="text-sm font-normal text-muted-foreground">
+            (customer_profiles — do_not_contact excluded)
+          </span>
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+          <KpiCard
+            title="Objection Rate"
+            value={`${objectionFunnel.objectionRate}%`}
+            icon={AlertTriangle}
+            description={`${objectionFunnel.objectionsRaised} of ${objectionFunnel.totalCustomers} customers raised objections`}
+          />
+          <KpiCard
+            title="Quote After Objection"
+            value={`${objectionFunnel.quoteAfterObjectionRate}%`}
+            icon={FileText}
+            description={`${objectionFunnel.quotesGenerated} quoted after objections`}
+          />
+          <KpiCard
+            title="Close Attempt Rate"
+            value={`${objectionFunnel.closeAttemptRate}%`}
+            icon={Target}
+            description={`${objectionFunnel.closeAttempts} close attempts from quotes`}
+          />
+          <KpiCard
+            title="Win Rate"
+            value={`${objectionFunnel.winRate}%`}
+            icon={CheckCircle2}
+            description={`${objectionFunnel.won} won · ${objectionFunnel.lost} lost`}
+          />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Conversion Funnel</CardTitle>
+              <CardDescription>
+                Customers progressing through each sales stage
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PriceObjectionFunnelChart
+                data={[
+                  {
+                    stage: "Total Customers",
+                    count: objectionFunnel.totalCustomers,
+                  },
+                  {
+                    stage: "Objections Raised",
+                    count: objectionFunnel.objectionsRaised,
+                    rate: objectionFunnel.objectionRate,
+                  },
+                  {
+                    stage: "Quotes Generated",
+                    count: objectionFunnel.quotesGenerated,
+                    rate: objectionFunnel.quoteAfterObjectionRate,
+                  },
+                  {
+                    stage: "Close Attempts",
+                    count: objectionFunnel.closeAttempts,
+                    rate: objectionFunnel.closeAttemptRate,
+                  },
+                  {
+                    stage: "Won",
+                    count: objectionFunnel.won,
+                    rate: objectionFunnel.winRate,
+                  },
+                ]}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Objection Type Breakdown</CardTitle>
+              <CardDescription>
+                Most common objections raised by customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {objectionFunnel.byObjectionType.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No objection data available
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Objection Type</TableHead>
+                      <TableHead className="text-right">Count</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {objectionFunnel.byObjectionType.slice(0, 10).map((o) => (
+                      <TableRow key={o.type}>
+                        <TableCell className="font-medium capitalize">
+                          {o.type}
+                        </TableCell>
+                        <TableCell className="text-right">{o.count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Test Suite Results */}
       <div>

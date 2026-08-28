@@ -420,3 +420,45 @@ export function QualityTrendChart({
     </ResponsiveContainer>
   );
 }
+
+export function PriceObjectionFunnelChart({
+  data,
+}: {
+  data: { stage: string; count: number; rate?: number }[];
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} layout="vertical">
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <XAxis type="number" className="text-xs" />
+        <YAxis
+          type="category"
+          dataKey="stage"
+          className="text-xs"
+          width={140}
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "var(--color-popover)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "8px",
+          }}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          formatter={(v: any, _name: any, props: any) => {
+            const rate = props?.payload?.rate;
+            const count = Number(v);
+            return [
+              `${count} customer${count === 1 ? "" : "s"}${rate !== undefined ? ` (${rate}%)` : ""}`,
+              "Count",
+            ];
+          }}
+        />
+        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+          {data.map((_, i) => (
+            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}

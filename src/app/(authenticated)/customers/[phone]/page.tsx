@@ -18,13 +18,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConversationLog } from "@/components/conversation-log";
-import { SalesNotesEditor } from "@/components/sales-notes-editor";
+import { CustomerAdvisorChat } from "@/components/customer-advisor-chat";
 import { CustomerTypeEditor } from "@/components/customer-type-editor";
+import { getCurrentUser } from "@/lib/auth";
 import {
   getCustomerByPhone,
   getConversationsByPhone,
   getQuotesByPhone,
 } from "@/lib/queries";
+import {
+  getOrCreateCustomerSessionAction,
+  getAdvisorMessages,
+  getCustomerChangeRequests,
+  getAdvisorOwnerNames,
+} from "@/app/(authenticated)/ai-training/actions";
 import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
@@ -51,14 +58,52 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
-  const [conversations, quotes] = await Promise.all([
+  const [conversations, quotes, currentUser] = await Promise.all([
     getConversationsByPhone(decodedPhone),
     getQuotesByPhone(decodedPhone),
+    getCurrentUser(),
   ]);
 
   const currentStageIndex = PIPELINE_STAGES.indexOf(
     (customer.lead_status as (typeof PIPELINE_STAGES)[number]) || "new"
   );
+
+  // The AI Advisor Chat is only available to owners and managers. Sales users
+  // see the rest of the customer detail page without the chat card.
+  const isAdvisor =
+    currentUser?.role === "owner" || currentUser?.role === "manager";
+
+  let advisorMessages: Awaited<ReturnType<typeof getAdvisorMessages>> = [];
+  let advisorChangeRequests: Awaited<
+    ReturnType<typeof getCustomerChangeRequests>
+  > = [];
+  let ownerNames: Record<string, string> = {};
+  let advisorSessionOk = true;
+
+  if (isAdvisor && currentUser) {
+    const sessionResult = await getOrCreateCustomerSessionAction(
+      decodedPhone,
+      customer.name,
+    );
+    if (sessionResult.ok) {
+      const [msgs, reqs] = await Promise.all([
+        getAdvisorMessages(sessionResult.data.id),
+        getCustomerChangeRequests(decodedPhone),
+      ]);
+      advisorMessages = msgs;
+      advisorChangeRequests = reqs;
+
+      const ownerIds = Array.from(
+        new Set([
+          ...msgs.map((m) => m.owner_id),
+          ...reqs.map((r) => r.owner_id),
+        ]),
+      );
+      ownerNames = await getAdvisorOwnerNames(ownerIds);
+    } else {
+      advisorSessionOk = false;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -271,18 +316,30 @@ export default async function CustomerDetailPage({
         </CardContent>
       </Card>
 
-      {/* Sales Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SalesNotesEditor
-            phone={customer.phone_number}
-            initialNotes={customer.sales_notes}
-          />
-        </CardContent>
-      </Card>
+      {/* AI Advisor Chat (owners & managers only) */}
+      {isAdvisor && currentUser && (
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Advisor Chat</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {advisorSessionOk ? (
+              <CustomerAdvisorChat
+                customerPhone={customer.phone_number}
+                customerName={customer.name}
+                initialMessages={advisorMessages}
+                initialChangeRequests={advisorChangeRequests}
+                currentUserId={currentUser.id}
+                ownerNames={ownerNames}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Could not load the AI advisor chat. Please try again later.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
