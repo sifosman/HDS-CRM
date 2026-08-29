@@ -540,10 +540,35 @@ ${JSON.stringify(context.dashboardManifest, null, 2)}
 ### Current performance numbers (no customer details)
 ${aggregateSummary}
 
-## Capturing a Change Request
-When the owner or sales manager describes an improvement AND confirms they want it logged (or says something like "create a change request", "send for review", "log this change", "file this"), end your reply with a fenced code block tagged \`change-request\` containing ONE JSON object. The dashboard hides this block from the chat and files it automatically.
+## Capturing a Change Request — READ THIS CAREFULLY
+You MUST proactively file change requests when the owner or sales manager gives a DIRECTIVE about how the chatbot should behave. This is your most important job. Do not wait for them to say "create a change request" — that almost never happens. They speak in plain business language.
 
-Keep your visible reply short — one or two sentences like "Logged it for the dev team to review." Then the block.
+### When to auto-file (emit the block immediately, no asking)
+File a change request right away — without asking permission — when the person says things like:
+- "we can't be offering X to the customer" / "we shouldn't do X" / "don't let the bot say X"
+- "the bot needs to do X" / "the bot should do X" / "AI needs to learn to X"
+- "when the customer asks for X, the bot must do Y"
+- "stop doing X" / "never do X" / "always do X"
+- "we want to push X instead of Y" / "don't recommend X, recommend Y"
+- Any instruction that describes how the bot SHOULD or SHOULD NOT behave, even if phrased casually
+
+These are directives, not questions. The owner is telling you how they want the bot to change. File them immediately.
+
+### When to ask first (rare)
+Only ask "Want me to log this for the dev team?" when the person is clearly still thinking out loud or exploring an idea — e.g. "what if the bot did X?" or "I'm wondering whether we should X" or "do you think it would help if X?". If they state a preference or instruction, file it.
+
+### When NOT to file
+- The person is asking a question about how the bot currently works ("why did the bot say X?")
+- The person is asking you to analyze a conversation ("what went wrong here?")
+- The person is asking for your opinion ("what do you think we should do?")
+- The person is just venting or describing a problem without suggesting a direction
+
+In these cases, answer the question. If their message IMPLIES a clear improvement direction even though they didn't state it directly, suggest it in plain English and file it — but keep your visible reply short.
+
+### How to file
+End your reply with a fenced code block tagged \`change-request\` containing ONE JSON object. The dashboard hides this block from the chat and files it automatically.
+
+Keep your visible reply short — one or two sentences like "Logged it — the bot will stop offering clearance colours online and direct customers to the store instead." Then the block.
 
 \`\`\`change-request
 {
@@ -563,12 +588,12 @@ Keep your visible reply short — one or two sentences like "Logged it for the d
 Rules for the block:
 - Required: \`title\` (3-200 chars) and \`requested_behavior\` (10-5000 chars). Rest optional.
 - \`affected_areas\` picks from: system_prompt, tool, workflow, dashboard, database, tests.
-- \`priority\` is low, medium, high, or critical. Default medium.
+- \`priority\` is low, medium, high, or critical. Default medium. Use high if the owner sounds frustrated or says "we can't" / "we shouldn't" / "stop" — that signals urgency.
 - \`examples\` is up to 10 { customerMessage, desiredReply } pairs.
 - \`pricing_changes\` is up to 500 entries. Use it ONLY when the person uploads a pricing spreadsheet. Each entry needs: \`code\` (the product ID or code from the spreadsheet), \`action\` ("add" for new products, "update" for price changes, "remove" for products dropped), \`oldPrice\` and \`newPrice\` as numbers (use null if unknown), and optionally \`description\`, \`dimensions\`, \`category\`.
-- Only emit the block when the person confirms they want it filed. If they're still thinking it through, just discuss it in plain English and ask "Want me to log this for the dev team?" — don't emit the block.
 - **Check for duplicates first.** You will see a list of existing change requests in your context. Before filing a new one, check if the change the person is describing already exists. If it does, tell them: "This already exists as a change request — [title], currently [status]." Ask if they want to update it or file a new one anyway. Do NOT silently file a duplicate.
 - Never put text after the closing fence.
+- When in doubt about whether to file, FILE IT. It is far better to file a change request the team reviews and dismisses than to miss an improvement the owner wanted. The owner will tell you if they didn't want it filed.
 
 ## Pricing Spreadsheet Uploads
 When the person uploads a spreadsheet (.xlsx, .xls, or .csv) that contains product pricing, you will receive:
@@ -683,10 +708,35 @@ ${profileLines}
 ## This Customer's WhatsApp Conversation with the Chatbot
 ${transcript}
 
-## Capturing a Change Request
-When the owner or sales manager describes an improvement AND confirms they want it logged (or says something like "create a change request", "log this change", "file this"), end your reply with a fenced code block tagged \`change-request\` containing ONE JSON object. The dashboard hides this block from the chat and files it automatically.
+## Capturing a Change Request — READ THIS CAREFULLY
+You MUST proactively file change requests when the owner or sales manager gives a DIRECTIVE about how the chatbot should behave. This is your most important job. Do not wait for them to say "create a change request" — that almost never happens. They speak in plain business language.
 
-Keep your visible reply short — one or two sentences like "Logged it for the dev team to review." Then the block.
+### When to auto-file (emit the block immediately, no asking)
+File a change request right away — without asking permission — when the person says things like:
+- "we can't be offering X to the customer" / "we shouldn't do X" / "don't let the bot say X"
+- "the bot needs to do X" / "the bot should do X" / "AI needs to learn to X"
+- "when the customer asks for X, the bot must do Y"
+- "stop doing X" / "never do X" / "always do X"
+- "we want to push X instead of Y" / "don't recommend X, recommend Y"
+- Any instruction that describes how the bot SHOULD or SHOULD NOT behave, even if phrased casually
+
+These are directives, not questions. The owner is telling you how they want the bot to change. File them immediately.
+
+### When to ask first (rare)
+Only ask "Want me to log this for the dev team?" when the person is clearly still thinking out loud or exploring an idea — e.g. "what if the bot did X?" or "I'm wondering whether we should X" or "do you think it would help if X?". If they state a preference or instruction, file it.
+
+### When NOT to file
+- The person is asking a question about how the bot currently works ("why did the bot say X?")
+- The person is asking you to analyze a conversation ("what went wrong here?")
+- The person is asking for your opinion ("what do you think we should do?")
+- The person is just venting or describing a problem without suggesting a direction
+
+In these cases, answer the question. If their message IMPLIES a clear improvement direction even though they didn't state it directly, suggest it in plain English and file it — but keep your visible reply short.
+
+### How to file
+End your reply with a fenced code block tagged \`change-request\` containing ONE JSON object. The dashboard hides this block from the chat and files it automatically.
+
+Keep your visible reply short — one or two sentences like "Logged it — the bot will stop offering clearance colours online and direct customers to the store instead." Then the block.
 
 \`\`\`change-request
 {
@@ -705,8 +755,8 @@ Keep your visible reply short — one or two sentences like "Logged it for the d
 Rules for the block:
 - Required: \`title\` (3-200 chars) and \`requested_behavior\` (10-5000 chars). Rest optional.
 - \`affected_areas\` picks from: system_prompt, tool, workflow, dashboard, database, tests.
-- \`priority\` is low, medium, high, or critical. Default medium.
+- \`priority\` is low, medium, high, or critical. Default medium. Use high if the owner sounds frustrated or says "we can't" / "we shouldn't" / "stop" — that signals urgency.
 - \`examples\` is up to 10 { customerMessage, desiredReply } pairs — pull real lines from this customer's conversation when relevant.
-- Only emit the block when the person confirms they want it filed. If they're still thinking it through, just discuss it in plain English and ask "Want me to log this for the dev team?" — don't emit the block.
-- Never put text after the closing fence.`;
+- Never put text after the closing fence.
+- When in doubt about whether to file, FILE IT. It is far better to file a change request the team reviews and dismisses than to miss an improvement the owner wanted. The owner will tell you if they didn't want it filed.`;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle } from "lucide-react";
+import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import type {
   AdvisorSession,
   AdvisorMessage,
@@ -89,6 +94,7 @@ export function TrainingWorkspace({
   const [isUploading, setIsUploading] = useState(false);
   const [modelSwitchNote, setModelSwitchNote] = useState<string | null>(null);
   const [toolCallNote, setToolCallNote] = useState<string | null>(null);
+  const [completedOpen, setCompletedOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const streamingTextRef = useRef("");
@@ -98,6 +104,15 @@ export function TrainingWorkspace({
   // any session but only send messages, upload files, rename, archive, delete,
   // and change the model in sessions they own.
   const canEdit = currentSession ? currentSession.owner_id === currentUserId : true;
+
+  // Split change requests into active (pending/in_review/approved) and
+  // completed (implemented/rejected) for the sidebar tabs.
+  const activeRequests = changeRequests.filter(
+    (r) => r.status !== "implemented" && r.status !== "rejected",
+  );
+  const completedRequests = changeRequests.filter(
+    (r) => r.status === "implemented" || r.status === "rejected",
+  );
 
   // Sync state when session changes (navigation).
   // The key prop on TrainingWorkspace in the page components forces a full
@@ -751,14 +766,58 @@ export function TrainingWorkspace({
                 No change requests yet. Talk through an improvement, then log one.
               </p>
             ) : (
-              changeRequests.map((req) => (
-                <ChangeRequestListItem
-                  key={req.id}
-                  request={req}
-                  ownerName={ownerNames[req.owner_id]}
-                  onClick={() => setSelectedChangeRequest(req)}
-                />
-              ))
+              <>
+                {/* Active change requests */}
+                {activeRequests.map((req) => (
+                  <ChangeRequestListItem
+                    key={req.id}
+                    request={req}
+                    ownerName={ownerNames[req.owner_id]}
+                    onClick={() => setSelectedChangeRequest(req)}
+                  />
+                ))}
+
+                {/* Completed change requests — collapsible dropdown */}
+                {completedRequests.length > 0 && (
+                  <Collapsible
+                    open={completedOpen}
+                    onOpenChange={setCompletedOpen}
+                    className="pt-2"
+                  >
+                    <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors">
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${
+                          completedOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-purple-500" />
+                      <span>Completed</span>
+                      <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold">
+                        {completedRequests.length}
+                      </span>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-1 space-y-0.5">
+                        {completedRequests.map((req) => (
+                          <ChangeRequestListItem
+                            key={req.id}
+                            request={req}
+                            ownerName={ownerNames[req.owner_id]}
+                            onClick={() => setSelectedChangeRequest(req)}
+                          />
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* Show a message if all requests are completed */}
+                {activeRequests.length === 0 && completedRequests.length > 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    All change requests completed.
+                  </p>
+                )}
+              </>
             )}
           </div>
         </ScrollArea>
