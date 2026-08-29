@@ -109,7 +109,7 @@ export function ChangeRequestDetailDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 gap-0">
+      <DialogContent className="sm:max-w-5xl max-w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden p-0 gap-0">
         {/* Header band */}
         <div className="px-6 py-5 border-b bg-gradient-to-br from-muted/50 to-background">
           <DialogHeader className="space-y-3">
