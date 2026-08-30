@@ -93,10 +93,6 @@ export function WilliamPricingManager({ prices }: { prices: WilliamPrice[] }) {
     return sorted;
   }, [prices, search, categoryFilter, sortKey]);
 
-  // Stats
-  const totalValue = prices.reduce((sum, p) => sum + Number(p.price || 0), 0);
-  const avgValue = prices.length > 0 ? totalValue / prices.length : 0;
-
   const startEdit = (p: WilliamPrice) => {
     setEditingId(p.ID);
     setEditValue(String(p.price ?? 0));
@@ -134,45 +130,6 @@ export function WilliamPricingManager({ prices }: { prices: WilliamPrice[] }) {
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Tag className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <div className="text-2xl font-bold">{prices.length}</div>
-                <div className="text-xs text-muted-foreground">Total Products</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(avgValue)}
-                </div>
-                <div className="text-xs text-muted-foreground">Average Price</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(totalValue)}
-                </div>
-                <div className="text-xs text-muted-foreground">Catalog Value</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
