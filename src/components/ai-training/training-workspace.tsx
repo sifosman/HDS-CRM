@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Loader2, Square, Plus, MessageSquare, Archive, Trash2, Pencil, Check, X, AlertCircle, Clock, RefreshCw, Paperclip, ImageIcon, FileText, Mic, XCircle, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,44 @@ import {
 
 const MODELS = getPublicAdvisorModels();
 
+/** Returns the local YYYY-MM-DD date key for a session's activity timestamp. */
+function sessionDayKey(session: AdvisorSession): string {
+  const ts = session.last_message_at ?? session.created_at;
+  // Use local date so "Today" matches what the user sees on their clock.
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+/** Human-friendly label for a YYYY-MM-DD date key, relative to today. */
+function dayLabel(key: string): string {
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(today.getDate()).padStart(2, "0")}`;
+  if (key === todayKey) return "Today";
+
+  const yest = new Date(today);
+  yest.setDate(yest.getDate() - 1);
+  const yestKey = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(yest.getDate()).padStart(2, "0")}`;
+  if (key === yestKey) return "Yesterday";
+
+  const [y, m, d] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const sameYear = date.getFullYear() === today.getFullYear();
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
 type TrainingWorkspaceProps = {
   sessions: AdvisorSession[];
   currentSession: AdvisorSession | null;
@@ -95,6 +133,16 @@ export function TrainingWorkspace({
   const [modelSwitchNote, setModelSwitchNote] = useState<string | null>(null);
   const [toolCallNote, setToolCallNote] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
+  // Tracks which day-group dropdowns are expanded in the session rail.
+  // Today's group is open by default; older days start collapsed.
+  const [openDays, setOpenDays] = useState<Record<string, boolean>>(() => {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(today.getDate()).padStart(2, "0")}`;
+    return { [todayKey]: true };
+  });
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const streamingTextRef = useRef("");
@@ -113,6 +161,25 @@ export function TrainingWorkspace({
   const completedRequests = changeRequests.filter(
     (r) => r.status === "implemented" || r.status === "rejected",
   );
+
+  // Group sessions by local day, preserving the most-recent-first order from
+  // the server (sessions are sorted by last_message_at desc). Each group is
+  // rendered as a collapsible dropdown so the rail stays compact.
+  const sessionGroups = useMemo(() => {
+    const groups: { key: string; label: string; sessions: AdvisorSession[] }[] = [];
+    const index = new Map<string, number>();
+    for (const session of sessions) {
+      const key = sessionDayKey(session);
+      let i = index.get(key);
+      if (i === undefined) {
+        i = groups.length;
+        index.set(key, i);
+        groups.push({ key, label: dayLabel(key), sessions: [] });
+      }
+      groups[i].sessions.push(session);
+    }
+    return groups;
+  }, [sessions]);
 
   // Sync state when session changes (navigation).
   // The key prop on TrainingWorkspace in the page components forces a full
@@ -134,6 +201,15 @@ export function TrainingWorkspace({
     abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSession?.id]);
+
+  // Auto-expand the day group containing the currently-selected session so the
+  // active chat is always visible in the rail, even if it's from an older day.
+  useEffect(() => {
+    if (!currentSession) return;
+    const key = sessionDayKey(currentSession);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpenDays((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+  }, [currentSession]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -487,27 +563,58 @@ export function TrainingWorkspace({
                 No sessions yet. Start a new chat.
               </p>
             ) : (
-              sessions.map((session) => {
-                const isOwned = session.owner_id === currentUserId;
-                const ownerLabel = ownerNames[session.owner_id];
+              sessionGroups.map((group) => {
+                const isOpen = openDays[group.key] ?? false;
                 return (
-                  <div
-                    key={session.id}
-                    className={`group flex items-center gap-2 rounded-md px-2 py-2 text-sm cursor-pointer hover:bg-muted transition-colors ${
-                      currentSession?.id === session.id ? "bg-muted font-medium" : ""
-                    }`}
-                    onClick={() => router.push(`/ai-training/${session.id}`)}
+                  <Collapsible
+                    key={group.key}
+                    open={isOpen}
+                    onOpenChange={(o) =>
+                      setOpenDays((prev) => ({ ...prev, [group.key]: o }))
+                    }
+                    className="space-y-0.5"
                   >
-                    <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <span className="truncate block">{session.title}</span>
-                      {!isOwned && ownerLabel && (
-                        <span className="text-[10px] text-muted-foreground truncate block">
-                          {ownerLabel}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors">
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${
+                          isOpen ? "rotate-180" : "rotate-[-90deg]"
+                        }`}
+                      />
+                      <span>{group.label}</span>
+                      <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold">
+                        {group.sessions.length}
+                      </span>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-1 space-y-1">
+                        {group.sessions.map((session) => {
+                          const isOwned = session.owner_id === currentUserId;
+                          const ownerLabel = ownerNames[session.owner_id];
+                          return (
+                            <div
+                              key={session.id}
+                              className={`group flex items-center gap-2 rounded-md px-2 py-2 text-sm cursor-pointer hover:bg-muted transition-colors ${
+                                currentSession?.id === session.id
+                                  ? "bg-muted font-medium"
+                                  : ""
+                              }`}
+                              onClick={() => router.push(`/ai-training/${session.id}`)}
+                            >
+                              <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <div className="flex-1 min-w-0">
+                                <span className="truncate block">{session.title}</span>
+                                {!isOwned && ownerLabel && (
+                                  <span className="text-[10px] text-muted-foreground truncate block">
+                                    {ownerLabel}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })
             )}
