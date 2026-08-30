@@ -354,7 +354,6 @@ const generateQuote = async (req, res) => {
                     'mel chip pearl grey text 9x6x16 df',
                     'mel chip premium white txt 9x6x16 df',
                     'mel chip storm grey peen 9x6x16 df pg',
-                    'mel chip value white 9x6x16 df',
                     // MEL MDF
                     'mel mdf platinum white 9x6x16 df',
                     'mel mdf platinum white 9x6x3 sf 202',
@@ -1047,12 +1046,16 @@ const assignBranch = async (req, res) => {
                 customerPhone = q.customer_phone || undefined;
                 projectName = q.project_name || undefined;
                 quotePdfUrl = q.pdf_url || q.quote_pdf_url || undefined;
-                cutlistPdfUrl = q.cutlist_pdf_url || undefined;
-                // Fallback: construct quote PDF URL from filename if not stored
-                if (!quotePdfUrl && q.filename) {
+                cutlistPdfUrl = q.cutlist_url || q.cutlist_pdf_url || undefined;
+                // Fallback: construct PDF URLs from filename if not stored
+                if (q.filename) {
                     const supabaseUrl = process.env.SUPABASE_URL || '';
                     if (supabaseUrl) {
-                        quotePdfUrl = `${supabaseUrl}/storage/v1/object/public/hdsquotes/${q.filename}`;
+                        const fileUrl = `${supabaseUrl}/storage/v1/object/public/hdsquotes/${q.filename}`;
+                        if (!quotePdfUrl)
+                            quotePdfUrl = fileUrl;
+                        if (!cutlistPdfUrl)
+                            cutlistPdfUrl = fileUrl;
                     }
                 }
             }
