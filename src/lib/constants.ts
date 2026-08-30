@@ -63,6 +63,36 @@ export const CLASSIFICATION_SOURCE_LABELS: Record<string, string> = {
   unknown: "—",
 };
 
+export const TRADE_TYPE_LABELS: Record<string, string> = {
+  carpenter: "Carpenter",
+  installer: "Installer",
+  joiner: "Joiner",
+  cabinet_maker: "Cabinet Maker",
+  fitter: "Fitter",
+};
+
+export const TRADE_TYPE_COLORS: Record<string, string> = {
+  carpenter: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  installer: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
+  joiner: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+  cabinet_maker: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  fitter: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
+};
+
+export const SURVEY_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  sent: "Sent",
+  completed: "Completed",
+  no_response: "No Response",
+};
+
+export const SURVEY_STATUS_COLORS: Record<string, string> = {
+  pending: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  sent: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  completed: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  no_response: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+};
+
 export const INTELLIGENCE_CATEGORY_LABELS: Record<string, string> = {
   competitor: "Competitor Mentions",
   pricing: "Pricing Insights",

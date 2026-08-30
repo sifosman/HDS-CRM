@@ -25,6 +25,8 @@ function getPageTitle(pathname: string): string {
     reports: "Reports",
     settings: "Settings",
     "william-pricing": "Product Pricing",
+    carpenters: "Carpenters",
+    "follow-up-surveys": "Follow-up Surveys",
   };
   return map[segments[0]] || segments[0];
 }
