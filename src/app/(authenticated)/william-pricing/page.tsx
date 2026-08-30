@@ -14,7 +14,7 @@ export default async function WilliamPricingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-heading font-bold">William Pricing</h1>
+        <h1 className="text-2xl font-heading font-bold">Product Pricing</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Product pricing used by the William WhatsApp bot. Prices edited here
           take effect immediately in William&apos;s quotes.

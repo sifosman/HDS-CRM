@@ -68,7 +68,7 @@ const allNavItems: NavItem[] = [
   { title: "System Health", href: "/health", icon: HeartPulse, roles: ["owner"] },
   { title: "AI Training Advisor", href: "/ai-training", icon: GraduationCap, roles: ["owner", "manager"] },
   { title: "Product Catalog", href: "/catalog", icon: Package, roles: ["owner", "manager"] },
-  { title: "William Pricing", href: "/william-pricing", icon: Tag, roles: ["owner", "manager"] },
+  { title: "Product Pricing", href: "/william-pricing", icon: Tag, roles: ["owner", "manager"] },
   { title: "Templates", href: "/templates", icon: MessageSquare, roles: ["owner", "manager"] },
   { title: "Broadcasts", href: "/broadcasts", icon: Megaphone, roles: ["owner", "manager"] },
   { title: "Settings", href: "/settings", icon: Settings, roles: ["owner", "manager", "sales"] },
