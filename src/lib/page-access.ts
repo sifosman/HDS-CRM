@@ -18,6 +18,7 @@ export const PAGE_ACCESS: { path: string; roles: UserRole[] }[] = [
   { path: "/broadcasts", roles: ["owner", "manager"] },
   { path: "/health", roles: ["owner"] },
   { path: "/catalog", roles: ["owner", "manager"] },
+  { path: "/william-pricing", roles: ["owner", "manager"] },
   { path: "/ai-training", roles: ["owner", "manager"] },
   { path: "/settings/users", roles: ["owner", "manager"] },
   // /settings (profile) is accessible to all roles — no entry needed.

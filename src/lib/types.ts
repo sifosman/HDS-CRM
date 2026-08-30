@@ -49,6 +49,8 @@ export type CustomerProfile = {
   do_not_contact: boolean;
   do_not_contact_reason: string | null;
   do_not_contact_at: string | null;
+  is_new_customer: boolean;
+  trade_type: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -170,6 +172,18 @@ export type HdsPrice = {
   face_type: string | null;
   manufacturer: string | null;
   grade: string | null;
+};
+
+export type WilliamPrice = {
+  ID: number;
+  description: string | null;
+  price: number | null;
+  dimensions: string | null;
+  category: string | null;
+  code: string | null;
+  material_type: string | null;
+  ai_description: string | null;
+  created_at: string | null;
 };
 
 export type IntelligenceReport = {
@@ -719,6 +733,48 @@ export type Product = {
   is_manufactured: boolean;
   manufacturer: string | null;
   discontinued: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// ---------------------------------------------------------------------------
+// Phase 4: Carpenter Database & Follow-up Surveys
+// ---------------------------------------------------------------------------
+
+export type Carpenter = {
+  id: string;
+  phone_number: string;
+  name: string | null;
+  trade_type: string;
+  branch: string | null;
+  rating: number;
+  referral_count: number;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FollowUpSurveyStatus =
+  | "pending"
+  | "sent"
+  | "completed"
+  | "no_response";
+
+export type FollowUpSurvey = {
+  id: string;
+  customer_phone: string;
+  quote_id: string | null;
+  branch: string | null;
+  purchase_made: boolean | null;
+  store_service_rating: number | null;
+  salesperson_name: string | null;
+  salesperson_rating: number | null;
+  bot_rating: number | null;
+  customer_feedback: string | null;
+  survey_status: FollowUpSurveyStatus;
+  sent_at: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 };

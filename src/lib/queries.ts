@@ -6,6 +6,7 @@ import type {
   Branch,
   BankingDetail,
   HdsPrice,
+  WilliamPrice,
   Invoice,
   IntelligenceReport,
   HealthCheck,
@@ -29,6 +30,8 @@ import type {
   UserWithRole,
   UserRole,
   Product,
+  Carpenter,
+  FollowUpSurvey,
 } from "@/lib/types";
 import { HEALTH_COMPONENT_ORDER, TEST_CATEGORY_ORDER } from "@/lib/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -604,6 +607,16 @@ export async function getPrices(): Promise<HdsPrice[]> {
     .order("description", { ascending: true });
   if (error) throw error;
   return data as HdsPrice[];
+}
+
+export async function getWilliamPrices(): Promise<WilliamPrice[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hds_prices_william")
+    .select("*")
+    .order("description", { ascending: true });
+  if (error) throw error;
+  return (data || []) as WilliamPrice[];
 }
 
 export async function getInvoices(): Promise<Invoice[]> {
@@ -2487,5 +2500,123 @@ export async function getPriceObjectionFunnel(): Promise<PriceObjectionFunnel> {
       closeAttempts > 0 ? Math.round((won / closeAttempts) * 100) : 0,
     byObjectionType,
     byCloseType,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: Carpenter Database & Follow-up Surveys
+// ---------------------------------------------------------------------------
+
+export async function getCarpenters() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("carpenter_database")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("getCarpenters error:", error.message);
+    return [];
+  }
+  return (data || []) as Carpenter[];
+}
+
+export async function getFollowUpSurveys() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("follow_up_surveys")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("getFollowUpSurveys error:", error.message);
+    return [];
+  }
+  return (data || []) as FollowUpSurvey[];
+}
+
+export type FollowUpSurveyStats = {
+  total: number;
+  sent: number;
+  completed: number;
+  pending: number;
+  noResponse: number;
+  completionRate: number;
+  avgStoreServiceRating: number | null;
+  avgBotRating: number | null;
+  avgSalespersonRating: number | null;
+  purchaseMadeCount: number;
+  purchaseRate: number;
+  topSalespeople: { name: string; avgRating: number; count: number }[];
+  byBranch: { branch: string; avgRating: number; count: number }[];
+};
+
+export async function getFollowUpSurveyStats(): Promise<FollowUpSurveyStats> {
+  const surveys = await getFollowUpSurveys();
+  const total = surveys.length;
+  const sent = surveys.filter((s) => s.survey_status === "sent").length;
+  const completed = surveys.filter((s) => s.survey_status === "completed").length;
+  const pending = surveys.filter((s) => s.survey_status === "pending").length;
+  const noResponse = surveys.filter((s) => s.survey_status === "no_response").length;
+
+  const completedSurveys = surveys.filter((s) => s.survey_status === "completed");
+  const ratings = (arr: number[]) =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+  const storeRatings = completedSurveys
+    .map((s) => s.store_service_rating)
+    .filter((r): r is number => r !== null);
+  const botRatings = completedSurveys
+    .map((s) => s.bot_rating)
+    .filter((r): r is number => r !== null);
+  const salespersonRatings = completedSurveys
+    .map((s) => s.salesperson_rating)
+    .filter((r): r is number => r !== null);
+
+  const purchaseMade = completedSurveys.filter((s) => s.purchase_made === true);
+
+  // Top salespeople by average rating
+  const salespersonMap = new Map<string, { total: number; count: number }>();
+  for (const s of completedSurveys) {
+    if (s.salesperson_name && s.salesperson_rating) {
+      const existing = salespersonMap.get(s.salesperson_name) || { total: 0, count: 0 };
+      salespersonMap.set(s.salesperson_name, {
+        total: existing.total + s.salesperson_rating,
+        count: existing.count + 1,
+      });
+    }
+  }
+  const topSalespeople = Array.from(salespersonMap.entries())
+    .map(([name, v]) => ({ name, avgRating: v.total / v.count, count: v.count }))
+    .sort((a, b) => b.avgRating - a.avgRating)
+    .slice(0, 10);
+
+  // By branch
+  const branchMap = new Map<string, { total: number; count: number }>();
+  for (const s of completedSurveys) {
+    if (s.branch && s.store_service_rating) {
+      const existing = branchMap.get(s.branch) || { total: 0, count: 0 };
+      branchMap.set(s.branch, {
+        total: existing.total + s.store_service_rating,
+        count: existing.count + 1,
+      });
+    }
+  }
+  const byBranch = Array.from(branchMap.entries())
+    .map(([branch, v]) => ({ branch, avgRating: v.total / v.count, count: v.count }))
+    .sort((a, b) => b.avgRating - a.avgRating);
+
+  return {
+    total,
+    sent,
+    completed,
+    pending,
+    noResponse,
+    completionRate: sent + completed > 0 ? Math.round((completed / (sent + completed)) * 100) : 0,
+    avgStoreServiceRating: ratings(storeRatings),
+    avgBotRating: ratings(botRatings),
+    avgSalespersonRating: ratings(salespersonRatings),
+    purchaseMadeCount: purchaseMade.length,
+    purchaseRate: completedSurveys.length > 0 ? Math.round((purchaseMade.length / completedSurveys.length) * 100) : 0,
+    topSalespeople,
+    byBranch,
   };
 }
