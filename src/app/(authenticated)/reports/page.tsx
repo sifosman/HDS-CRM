@@ -35,7 +35,7 @@ import {
 import { FileText, DollarSign, Users, TrendingUp, CheckCircle2 } from "lucide-react";
 import type { Quote, QuoteAcceptanceMap } from "@/lib/types";
 
-type RangeKey = "weekly" | "monthly" | "yearly" | "custom";
+type RangeKey = "weekly" | "monthly" | "yearly" | "all" | "custom";
 
 /**
  * Compute the [start, end] window for the selected range.
@@ -58,6 +58,14 @@ function computeRange(
   if (range === "yearly") {
     const start = new Date(now.getFullYear(), 0, 1);
     const end = new Date(now.getFullYear(), 11, 31);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (range === "all") {
+    // All time: from the beginning of 2020 to now (covers all historical data)
+    const start = new Date(2020, 0, 1);
+    const end = new Date(now);
     end.setHours(23, 59, 59, 999);
     return { start, end };
   }
@@ -174,6 +182,8 @@ function rangeLabel(range: RangeKey): string {
       return "This month";
     case "yearly":
       return "This year";
+    case "all":
+      return "All time";
     case "custom":
       return "Custom range";
   }
@@ -188,10 +198,10 @@ export default async function ReportsPage({
   if (access.error) redirect("/dashboard?error=access_denied");
 
   const sp = await searchParams;
-  const range = (sp.range as RangeKey) || "weekly";
-  const validRange: RangeKey = ["weekly", "monthly", "yearly", "custom"].includes(range)
+  const range = (sp.range as RangeKey) || "monthly";
+  const validRange: RangeKey = ["weekly", "monthly", "yearly", "all", "custom"].includes(range)
     ? range
-    : "weekly";
+    : "monthly";
 
   const { start: rangeStart, end: rangeEnd } = computeRange(
     validRange,

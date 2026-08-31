@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CalendarRange } from "lucide-react";
 
-type RangeKey = "weekly" | "monthly" | "yearly" | "custom";
+type RangeKey = "weekly" | "monthly" | "yearly" | "all" | "custom";
 
 const RANGE_LABELS: Record<RangeKey, string> = {
   weekly: "Weekly",
   monthly: "Monthly",
   yearly: "Yearly",
+  all: "All Time",
   custom: "Custom",
 };
 
@@ -45,7 +46,7 @@ export function ReportsDateToggle() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const rangeParam = (searchParams.get("range") as RangeKey | null) || "weekly";
+  const rangeParam = (searchParams.get("range") as RangeKey | null) || "monthly";
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
 
@@ -104,6 +105,11 @@ export function ReportsDateToggle() {
     {
       label: "Last 90 days",
       from: new Date(Date.now() - 89 * 86400000).toISOString().slice(0, 10),
+      to: todayISO(),
+    },
+    {
+      label: "All time",
+      from: "2020-01-01",
       to: todayISO(),
     },
   ];
