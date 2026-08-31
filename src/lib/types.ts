@@ -49,6 +49,9 @@ export type CustomerProfile = {
   do_not_contact: boolean;
   do_not_contact_reason: string | null;
   do_not_contact_at: string | null;
+  is_blocked: boolean;
+  blocked_reason: string | null;
+  blocked_at: string | null;
   is_new_customer: boolean;
   trade_type: string | null;
   created_at: string;

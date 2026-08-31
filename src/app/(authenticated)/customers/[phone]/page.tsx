@@ -20,6 +20,7 @@ import {
 import { ConversationLog } from "@/components/conversation-log";
 import { CustomerAdvisorChat } from "@/components/customer-advisor-chat";
 import { CustomerTypeEditor } from "@/components/customer-type-editor";
+import { CustomerBlockToggle } from "@/components/customer-block-toggle";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getCustomerByPhone,
@@ -48,11 +49,15 @@ import {
 
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ phone: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { phone } = await params;
+  const { from } = await searchParams;
   const decodedPhone = decodeURIComponent(phone);
+  const backHref = from ? decodeURIComponent(from) : "";
   const customer = await getCustomerByPhone(decodedPhone);
 
   if (!customer) {
@@ -114,15 +119,30 @@ export default async function CustomerDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/customers">
+        <Link
+          href={
+            backHref
+              ? `/customers?${backHref}`
+              : "/customers"
+          }
+        >
           <Button variant="ghost" size="sm" className="mb-2">
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Customers
           </Button>
         </Link>
-        <h1 className="text-2xl font-heading font-bold">
-          {customer.name || "Unknown Customer"}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-heading font-bold">
+            {customer.name || "Unknown Customer"}
+          </h1>
+          {isAdvisor && (
+            <CustomerBlockToggle
+              phone={customer.phone_number}
+              initialBlocked={customer.is_blocked}
+              initialReason={customer.blocked_reason}
+            />
+          )}
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           {formatPhone(customer.phone_number)}
         </p>
