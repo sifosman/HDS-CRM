@@ -319,8 +319,22 @@ export default async function ReportsPage({
     });
     const quotesByLocation = Object.entries(locationMap)
       .map(([location, stats]) => ({ location, ...stats }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 15);
+      .sort((a, b) => {
+        // Sort "Unknown" to the bottom, then by value descending
+        if (a.location === "Unknown" && b.location !== "Unknown") return 1;
+        if (a.location !== "Unknown" && b.location === "Unknown") return -1;
+        return b.value - a.value;
+      });
+
+    // Location coverage stats
+    const totalWindowQuotes = windowQuotes.length;
+    const quotesWithLocation = quotesByLocation
+      .filter((l) => l.location !== "Unknown")
+      .reduce((sum, l) => sum + l.count, 0);
+    const locationCoverage =
+      totalWindowQuotes > 0
+        ? Math.round((quotesWithLocation / totalWindowQuotes) * 100)
+        : 0;
 
     // Activity buckets (granularity adapts to span)
     const buckets = buildActivityBuckets(rangeStart, rangeEnd);
@@ -362,6 +376,7 @@ export default async function ReportsPage({
       typeDistribution,
       branchSales,
       quotesByLocation,
+      locationCoverage,
       activityData,
       topProducts,
       totalQuotes: quotes.length,
@@ -506,14 +521,25 @@ export default async function ReportsPage({
               Towns and areas where customers are based ({rangeLabel(validRange).toLowerCase()})
               {" — "}use this to identify demand areas for new branches or stock allocation
             </p>
+            {data.quotesByLocation.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Location data coverage: {data.locationCoverage}% of quotes in this period
+                {data.locationCoverage < 80 && " — ask William to confirm customer locations during chats"}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
-            {data.quotesByLocation.length === 0 ||
-            (data.quotesByLocation.length === 1 &&
-              data.quotesByLocation[0].location === "Unknown") ? (
+            {data.quotesByLocation.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No location data available yet. Locations are captured when
-                customers tell William their area during chat.
+                No quotes in the selected date range. Try switching to "Monthly"
+                or "All Time" to see more data.
+              </p>
+            ) : data.quotesByLocation.length === 1 &&
+              data.quotesByLocation[0].location === "Unknown" ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No customer locations captured yet for this period. Locations
+                are extracted when customers mention their area during WhatsApp
+                chats with William.
               </p>
             ) : (
               <Table>
@@ -527,8 +553,19 @@ export default async function ReportsPage({
                 </TableHeader>
                 <TableBody>
                   {data.quotesByLocation.map((loc) => (
-                    <TableRow key={loc.location}>
-                      <TableCell className="font-medium">{loc.location}</TableCell>
+                    <TableRow
+                      key={loc.location}
+                      className={loc.location === "Unknown" ? "border-t-2" : ""}
+                    >
+                      <TableCell className="font-medium">
+                        {loc.location === "Unknown" ? (
+                          <span className="text-muted-foreground italic">
+                            Unknown location (no customer area captured)
+                          </span>
+                        ) : (
+                          loc.location
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">{loc.count}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(loc.value)}
