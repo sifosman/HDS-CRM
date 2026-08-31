@@ -261,9 +261,12 @@ export default async function ReportsPage({
     );
 
     // Sales by branch (within the window)
+    // Strip the "HDS " prefix for cleaner chart labels (e.g. "HDS Alberton" → "Alberton")
+    const cleanBranchName = (name: string | null) =>
+      name?.replace(/^HDS\s+/i, "").trim() || "Unknown";
     const branchSales = branches
       .map((b) => ({
-        branch: b.trading_as?.split(" ")[0] || `#${b.id}`,
+        branch: cleanBranchName(b.trading_as),
         value: windowQuotes
           .filter(
             (q) =>
@@ -273,6 +276,39 @@ export default async function ReportsPage({
           .reduce((sum, q) => sum + Number(q.total || 0), 0),
       }))
       .filter((b) => b.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 15);
+
+    // Quotes by customer location (town/city) within the window
+    // Uses customer_profiles.city, which is backfilled from conversation messages
+    // where customers tell William their location.
+    // Phone numbers are normalised by stripping a leading "+" so that
+    // "+27123456789" (quotes.customer_phone) and "27123456789"
+    // (customer_profiles.phone_number) match.
+    const customerByPhone = new Map<string, typeof customers[number]>();
+    for (const c of customers) {
+      if (c.phone_number) {
+        customerByPhone.set(c.phone_number.replace(/^\+/, ""), c);
+      }
+    }
+    const locationMap: Record<string, { count: number; value: number }> = {};
+    windowQuotes.forEach((q) => {
+      if (!q.customer_phone) {
+        const city = "Unknown";
+        if (!locationMap[city]) locationMap[city] = { count: 0, value: 0 };
+        locationMap[city].count++;
+        locationMap[city].value += Number(q.total || 0);
+        return;
+      }
+      const normalizedPhone = q.customer_phone.replace(/^\+/, "");
+      const customer = customerByPhone.get(normalizedPhone);
+      const city = customer?.city?.trim() || "Unknown";
+      if (!locationMap[city]) locationMap[city] = { count: 0, value: 0 };
+      locationMap[city].count++;
+      locationMap[city].value += Number(q.total || 0);
+    });
+    const quotesByLocation = Object.entries(locationMap)
+      .map(([location, stats]) => ({ location, ...stats }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 15);
 
@@ -315,6 +351,7 @@ export default async function ReportsPage({
       returningCustomers,
       typeDistribution,
       branchSales,
+      quotesByLocation,
       activityData,
       topProducts,
       totalQuotes: quotes.length,
@@ -450,6 +487,52 @@ export default async function ReportsPage({
             </CardContent>
           </Card>
         )}
+
+        {/* Quotes by Location — town/city where quotes are coming from */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quotes by Location</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Towns and areas where customers are based ({rangeLabel(validRange).toLowerCase()})
+              {" — "}use this to identify demand areas for new branches or stock allocation
+            </p>
+          </CardHeader>
+          <CardContent>
+            {data.quotesByLocation.length === 0 ||
+            (data.quotesByLocation.length === 1 &&
+              data.quotesByLocation[0].location === "Unknown") ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No location data available yet. Locations are captured when
+                customers tell William their area during chat.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="text-right">Quotes</TableHead>
+                    <TableHead className="text-right">Total Value</TableHead>
+                    <TableHead className="text-right">Avg Quote</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.quotesByLocation.map((loc) => (
+                    <TableRow key={loc.location}>
+                      <TableCell className="font-medium">{loc.location}</TableCell>
+                      <TableCell className="text-right">{loc.count}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(loc.value)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(loc.count > 0 ? loc.value / loc.count : 0)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Top Products */}
         <Card>
