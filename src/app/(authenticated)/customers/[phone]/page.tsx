@@ -59,10 +59,15 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
-  const [conversations, quotes, currentUser] = await Promise.all([
-    getConversationsByPhone(decodedPhone),
+  const currentUser = await getCurrentUser();
+
+  const [conversations, quotes] = await Promise.all([
+    // Skip the (potentially large) conversation fetch for users who are not
+    // permitted to view WhatsApp chat history.
+    currentUser?.canViewConversations === false
+      ? Promise.resolve([])
+      : getConversationsByPhone(decodedPhone),
     getQuotesByPhone(decodedPhone),
-    getCurrentUser(),
   ]);
 
   const currentStageIndex = PIPELINE_STAGES.indexOf(
@@ -323,7 +328,14 @@ export default async function CustomerDetailPage({
           <CardTitle>WhatsApp Conversation ({conversations.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <ConversationLog conversations={conversations} />
+          {currentUser?.canViewConversations === false ? (
+            <p className="text-sm text-muted-foreground">
+              You do not have permission to view this customer&apos;s chat
+              history. Contact an administrator if you believe this is an error.
+            </p>
+          ) : (
+            <ConversationLog conversations={conversations} />
+          )}
         </CardContent>
       </Card>
 

@@ -27,6 +27,7 @@ export type CurrentUser = {
   role: UserRole;
   fullName: string | null;
   branchId: number | null;
+  canViewConversations: boolean;
 };
 
 /**
@@ -43,7 +44,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: roleRow } = await supabase
     .from("user_roles")
-    .select("role, full_name, branch_id")
+    .select("role, full_name, branch_id, can_view_conversations")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -57,6 +58,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role,
     fullName: roleRow?.full_name ?? null,
     branchId: roleRow?.branch_id ?? null,
+    canViewConversations: roleRow?.can_view_conversations ?? true,
   };
 }
 
