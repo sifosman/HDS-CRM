@@ -33,8 +33,8 @@ import {
   CUSTOMER_TYPE_LABELS,
   CUSTOMER_TYPE_COLORS,
   formatCurrency,
-  formatDate,
   formatPhone,
+  formatLastMessage,
 } from "@/lib/constants";
 
 export function CustomersTable({
@@ -146,7 +146,7 @@ export function CustomersTable({
                 <TableHead className="w-[8%] text-right truncate">Total</TableHead>
                 <TableHead className="w-[10%] text-right truncate">Total Value</TableHead>
                 <TableHead className="w-[10%] truncate">Lead Status</TableHead>
-                <TableHead className="w-[10%] truncate">Last Interaction</TableHead>
+                <TableHead className="w-[10%] truncate">Last Message</TableHead>
                 <TableHead className="w-[2%]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -216,7 +216,7 @@ export function CustomersTable({
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-0">
-                    {formatDate(customer.last_interaction_at)}
+                    {formatLastMessage(customer.last_interaction_at)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <Link

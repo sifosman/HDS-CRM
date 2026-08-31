@@ -219,6 +219,30 @@ export function formatDateTime(value: string | null | undefined): string {
   });
 }
 
+/**
+ * Format a timestamp for the "latest message" display.
+ * - Today: just the time, e.g. "14:32"
+ * - Yesterday: "Yesterday 14:32"
+ * - Older: "3 Aug, 14:32"
+ */
+export function formatLastMessage(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+  const time = date.toLocaleTimeString("en-ZA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  if (date >= startOfToday) return time;
+  if (date >= startOfYesterday) return `Yesterday ${time}`;
+  return `${date.toLocaleDateString("en-ZA", {
+    day: "numeric",
+    month: "short",
+  })}, ${time}`;
+}
+
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return "—";
   if (phone.startsWith("+27")) return phone;

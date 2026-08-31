@@ -43,6 +43,7 @@ import {
   formatDate,
   formatPhone,
   formatDateTime,
+  formatLastMessage,
 } from "@/lib/constants";
 
 export default async function CustomerDetailPage({
@@ -123,7 +124,7 @@ export default async function CustomerDetailPage({
       </div>
 
       {/* Profile Header */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Customer Type</CardTitle>
@@ -142,6 +143,16 @@ export default async function CustomerDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm">{formatDate(customer.first_interaction_at)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Last Message</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm" title={formatDateTime(customer.last_interaction_at)}>
+              {formatLastMessage(customer.last_interaction_at)}
+            </p>
           </CardContent>
         </Card>
         <Card>
