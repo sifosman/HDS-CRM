@@ -134,20 +134,20 @@ export function CustomersTable({
 
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Converted</TableHead>
-                <TableHead className="text-right">Pending</TableHead>
-                <TableHead className="text-right">Sent</TableHead>
-                <TableHead className="text-right">Total Quotes</TableHead>
-                <TableHead className="text-right">Total Value</TableHead>
-                <TableHead>Lead Status</TableHead>
-                <TableHead>Last Interaction</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[18%] truncate">Name</TableHead>
+                <TableHead className="w-[12%] truncate">Phone</TableHead>
+                <TableHead className="w-[10%] truncate">Type</TableHead>
+                <TableHead className="w-[7%] text-right truncate">Converted</TableHead>
+                <TableHead className="w-[7%] text-right truncate">Pending</TableHead>
+                <TableHead className="w-[6%] text-right truncate">Sent</TableHead>
+                <TableHead className="w-[8%] text-right truncate">Total</TableHead>
+                <TableHead className="w-[10%] text-right truncate">Total Value</TableHead>
+                <TableHead className="w-[10%] truncate">Lead Status</TableHead>
+                <TableHead className="w-[10%] truncate">Last Interaction</TableHead>
+                <TableHead className="w-[2%]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -166,45 +166,45 @@ export function CustomersTable({
                 const totalQuotes = breakdown?.total ?? customer.total_quotes ?? 0;
                 return (
                 <TableRow key={customer.id} className="cursor-pointer transition-colors hover:bg-muted/50 active:bg-muted/80 active:scale-[0.995]">
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium truncate max-w-0">
                     <Link
                       href={`/customers/${encodeURIComponent(customer.phone_number)}`}
-                      className="hover:underline"
+                      className="hover:underline truncate block"
                     >
                       {customer.name || "Unknown"}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-0">
                     {formatPhone(customer.phone_number)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="truncate max-w-0">
                     <Badge className={CUSTOMER_TYPE_COLORS[customer.customer_type || "unknown"] || CUSTOMER_TYPE_COLORS.unknown}>
                       {CUSTOMER_TYPE_LABELS[customer.customer_type || "unknown"] ||
                         "Unknown"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <span className={converted > 0 ? "font-medium text-green-600 dark:text-green-400" : "text-muted-foreground"}>
                       {converted}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <span className={pending > 0 ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>
                       {pending}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <span className={sent > 0 ? "font-medium text-blue-600 dark:text-blue-400" : "text-muted-foreground"}>
                       {sent}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-right font-medium whitespace-nowrap">
                     {totalQuotes}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     {formatCurrency(customer.total_quote_value)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="truncate max-w-0">
                     {customer.lead_status && (
                       <Badge
                         className={LEAD_STATUS_COLORS[customer.lead_status]}
@@ -215,10 +215,10 @@ export function CustomersTable({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-0">
                     {formatDate(customer.last_interaction_at)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Link
                       href={`/customers/${encodeURIComponent(customer.phone_number)}`}
                     >
