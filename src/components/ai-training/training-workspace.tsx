@@ -48,6 +48,7 @@ import {
   createChangeRequestAction,
   retryNotificationAction,
   updateChangeRequestStatusAction,
+  deleteChangeRequestAction,
 } from "@/app/(authenticated)/ai-training/actions";
 import {
   ChangeRequestDetailDialog,
@@ -988,6 +989,16 @@ export function TrainingWorkspace({
                   prev.map((cr) => (cr.id === selectedChangeRequest.id ? r.data : cr)),
                 );
                 setSelectedChangeRequest(r.data);
+              }
+            });
+          }}
+          onDelete={() => {
+            deleteChangeRequestAction(selectedChangeRequest.id).then((r) => {
+              if (r.ok) {
+                setChangeRequests((prev) =>
+                  prev.filter((cr) => cr.id !== selectedChangeRequest.id),
+                );
+                setSelectedChangeRequest(null);
               }
             });
           }}

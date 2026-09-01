@@ -565,6 +565,53 @@ export async function updateChangeRequestStatusAction(
   return { ok: true, data: undefined };
 }
 
+export async function deleteChangeRequestAction(
+  requestId: string,
+): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  if (user.role !== "owner" && user.role !== "manager")
+    return { ok: false, error: "Only owners and managers can delete change requests" };
+
+  // Use admin client to bypass RLS (the action-level role check above is the
+  // real gatekeeper — RLS only allows the CR owner to delete, but managers
+  // need to delete duplicates they didn't create).
+  const admin = createAdminClient();
+
+  // Fetch the CR first so we can log the deletion in the audit log
+  const { data: existing } = await admin
+    .from("ai_training_change_requests")
+    .select("id, title, status, session_id, labels")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!existing) return { ok: false, error: "Change request not found" };
+
+  const { error } = await admin
+    .from("ai_training_change_requests")
+    .delete()
+    .eq("id", requestId);
+
+  if (error) return { ok: false, error: error.message };
+
+  await logAdvisorEvent({
+    ownerId: user.id,
+    actorId: user.id,
+    sessionId: (existing as { session_id?: string }).session_id ?? undefined,
+    entityType: "change_request",
+    entityId: requestId,
+    action: "delete",
+    before: {
+      title: (existing as { title: string }).title,
+      status: (existing as { status: string }).status,
+      labels: (existing as { labels: string[] }).labels ?? [],
+    },
+  });
+
+  revalidatePath("/ai-training");
+  return { ok: true, data: undefined };
+}
+
 // ---------------------------------------------------------------------------
 // Data fetching (for server components)
 // ---------------------------------------------------------------------------

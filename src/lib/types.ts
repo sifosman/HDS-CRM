@@ -655,6 +655,7 @@ export type AdvisorChangeRequest = {
   notification_error: string | null;
   notification_provider_response: Record<string, unknown> | null;
   notified_at: string | null;
+  labels: string[];
   created_at: string;
   updated_at: string;
 };

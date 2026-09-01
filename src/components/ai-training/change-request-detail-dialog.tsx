@@ -18,7 +18,10 @@ import {
   PlusCircle,
   Edit3,
   User,
+  Trash2,
+  Copy,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -91,18 +94,24 @@ export function ChangeRequestDetailDialog({
   onClose,
   onStatusChange,
   onRetry,
+  onDelete,
 }: {
   request: AdvisorChangeRequest;
   ownerName?: string;
   onClose: () => void;
   onStatusChange: (status: AdvisorChangeRequest["status"]) => void;
   onRetry: () => void;
+  onDelete?: () => void;
 }) {
   const pricingChanges = (request.pricing_changes ?? []) as AdvisorPricingChange[];
   const hasPricing = pricingChanges.length > 0;
   const addCount = pricingChanges.filter((p) => p.action === "add").length;
   const updateCount = pricingChanges.filter((p) => p.action === "update").length;
   const removeCount = pricingChanges.filter((p) => p.action === "remove").length;
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isDuplicate = (request.labels ?? []).includes("duplicate");
+  const canDelete = onDelete && (isDuplicate || request.status === "rejected");
 
   const createdDate = new Date(request.created_at);
   const notifiedDate = request.notified_at ? new Date(request.notified_at) : null;
@@ -132,6 +141,12 @@ export function ChangeRequestDetailDialog({
                 <Mail className="h-3 w-3" />
                 {request.notification_status}
               </Badge>
+              {isDuplicate && (
+                <Badge variant="outline" className="gap-1 text-gray-500 border-gray-300">
+                  <Copy className="h-3 w-3" />
+                  duplicate
+                </Badge>
+              )}
               {request.affected_areas.map((area) => (
                 <Badge key={area} variant="outline" className="gap-1">
                   <Tag className="h-3 w-3" />
@@ -342,6 +357,16 @@ export function ChangeRequestDetailDialog({
               Retry email
             </Button>
           )}
+          {canDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          )}
           <div className="flex items-center gap-2 ml-auto">
             <Select
               value={request.status}
@@ -361,6 +386,33 @@ export function ChangeRequestDetailDialog({
             <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
         </DialogFooter>
+
+        {/* Delete confirmation */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete change request?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will permanently delete &ldquo;{request.title}&rdquo;. This cannot be undone.
+              {isDuplicate && " This request is marked as a duplicate."}
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  onDelete?.();
+                }}
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

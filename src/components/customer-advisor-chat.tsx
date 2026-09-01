@@ -18,6 +18,7 @@ import {
 import {
   retryNotificationAction,
   updateChangeRequestStatusAction,
+  deleteChangeRequestAction,
 } from "@/app/(authenticated)/ai-training/actions";
 
 type CustomerAdvisorChatProps = {
@@ -430,6 +431,16 @@ export function CustomerAdvisorChat({
                   ),
                 );
                 setSelectedChangeRequest(r.data);
+              }
+            });
+          }}
+          onDelete={() => {
+            deleteChangeRequestAction(selectedChangeRequest.id).then((r) => {
+              if (r.ok) {
+                setChangeRequests((prev) =>
+                  prev.filter((cr) => cr.id !== selectedChangeRequest.id),
+                );
+                setSelectedChangeRequest(null);
               }
             });
           }}
