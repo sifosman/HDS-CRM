@@ -25,8 +25,9 @@ export async function GET(
     }
 
     const contentType = response.headers.get("content-type") || "image/jpeg";
-    // Stream the response body directly through to avoid Buffer JSON serialization
-    return new NextResponse(response.body, {
+    const blob = await response.blob();
+
+    return new NextResponse(blob, {
       status: 200,
       headers: {
         "Content-Type": contentType,
