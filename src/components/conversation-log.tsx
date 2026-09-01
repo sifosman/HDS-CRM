@@ -102,14 +102,15 @@ export function ConversationLog({
             ? stripImageAnalysis(rawText)
             : rawText;
           const hasCustomerText = cleanText.length > 0;
-          // Rewrite Supabase Storage URLs to go through the same-origin proxy
-          // so images load reliably in the browser.
+          // Use the direct Supabase URL for next/image (server-side optimization)
+          // and the proxied same-origin URL for the <a href> link.
+          const directImageUrl = hasImageUrl ? msg.image_url! : null;
           const proxiedImageUrl = hasImageUrl
             ? proxyStorageUrl(msg.image_url!)
             : null;
           // For messages without a stored image, extract the AI's analysis
           // so we can show what the photo contained.
-          const imageAnalysis = !proxiedImageUrl && isImageMessage
+          const imageAnalysis = !directImageUrl && isImageMessage
             ? extractImageAnalysis(rawText)
             : null;
 
@@ -141,16 +142,16 @@ export function ConversationLog({
                     placeholder so the user knows a photo was sent. */}
                 {isImageMessage && (
                   <div className="mb-2">
-                    {proxiedImageUrl ? (
+                    {directImageUrl ? (
                       <a
-                        href={proxiedImageUrl}
+                        href={proxiedImageUrl ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block group"
                       >
                         <div className="relative w-72 h-48 rounded-md overflow-hidden border border-border/50">
                           <Image
-                            src={proxiedImageUrl}
+                            src={directImageUrl}
                             alt="Customer image"
                             fill
                             className="object-cover transition-opacity group-hover:opacity-90"
