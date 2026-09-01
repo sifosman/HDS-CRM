@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/lib/types";
@@ -52,19 +51,19 @@ function extractImageAnalysis(text: string | null | undefined): string | null {
 }
 
 /**
- * Rewrite Supabase Storage URLs to go through the Next.js rewrite proxy
- * (/storage/...) so images are served from the same origin. This avoids
- * third-party image loading issues (referrer/Cloudflare blocks) when
- * displaying customer photos in the conversation log.
+ * Rewrite Supabase Storage URLs to go through the Next.js API route proxy
+ * (/api/customer-image/...) so images are served from the same origin.
+ * This avoids cross-origin image loading issues that prevent <img> tags
+ * from rendering Supabase images in the browser.
  */
 const SUPABASE_HOST = "xzsibbbghotreolzwnyk.supabase.co";
 function proxyStorageUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.host === SUPABASE_HOST && parsed.pathname.startsWith("/storage/")) {
-      // Replace the host with the proxy path; keep the rest of the path + query
-      const proxyPath = parsed.pathname + parsed.search + parsed.hash;
-      return proxyPath;
+      // Strip leading slash from pathname since the catch-all route adds it back
+      const pathWithoutLeadingSlash = parsed.pathname.replace(/^\//, "");
+      return `/api/customer-image/${pathWithoutLeadingSlash}${parsed.search}${parsed.hash}`;
     }
   } catch {
     // Not a valid URL — return as-is
@@ -102,15 +101,14 @@ export function ConversationLog({
             ? stripImageAnalysis(rawText)
             : rawText;
           const hasCustomerText = cleanText.length > 0;
-          // Use the direct Supabase URL for next/image (server-side optimization)
-          // and the proxied same-origin URL for the <a href> link.
-          const directImageUrl = hasImageUrl ? msg.image_url! : null;
+          // Rewrite Supabase Storage URLs to go through the same-origin API
+          // route proxy so images load reliably in the browser.
           const proxiedImageUrl = hasImageUrl
             ? proxyStorageUrl(msg.image_url!)
             : null;
           // For messages without a stored image, extract the AI's analysis
           // so we can show what the photo contained.
-          const imageAnalysis = !directImageUrl && isImageMessage
+          const imageAnalysis = !proxiedImageUrl && isImageMessage
             ? extractImageAnalysis(rawText)
             : null;
 
@@ -142,20 +140,19 @@ export function ConversationLog({
                     placeholder so the user knows a photo was sent. */}
                 {isImageMessage && (
                   <div className="mb-2">
-                    {directImageUrl ? (
+                    {proxiedImageUrl ? (
                       <a
-                        href={proxiedImageUrl ?? undefined}
+                        href={proxiedImageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block group"
                       >
-                        <div className="relative w-72 h-48 rounded-md overflow-hidden border border-border/50">
-                          <Image
-                            src={directImageUrl}
+                        <div className="relative rounded-md overflow-hidden border border-border/50 inline-block">
+                          <img
+                            src={proxiedImageUrl}
                             alt="Customer image"
-                            fill
-                            className="object-cover transition-opacity group-hover:opacity-90"
-                            sizes="288px"
+                            className="max-h-48 max-w-full object-cover transition-opacity group-hover:opacity-90"
+                            loading="lazy"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
                             <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
