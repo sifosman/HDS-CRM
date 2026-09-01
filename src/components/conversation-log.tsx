@@ -52,19 +52,19 @@ function extractImageAnalysis(text: string | null | undefined): string | null {
 }
 
 /**
- * Rewrite Supabase Storage URLs to go through the Next.js API route proxy
- * (/api/customer-image/...) so images are served from the same origin.
- * This avoids cross-origin image loading issues that prevent <img> tags
- * from rendering Supabase images in the browser.
+ * Rewrite Supabase Storage URLs to go through the Next.js rewrite proxy
+ * (/storage/...) so images are served from the same origin. The rewrite
+ * proxy returns proper binary data (unlike API routes which serialize
+ * binary as JSON Buffer on Vercel). The CustomerImage component fetches
+ * the proxied URL via fetch() and creates a data URL for the <img> src.
  */
 const SUPABASE_HOST = "xzsibbbghotreolzwnyk.supabase.co";
 function proxyStorageUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.host === SUPABASE_HOST && parsed.pathname.startsWith("/storage/")) {
-      // Strip leading slash from pathname since the catch-all route adds it back
-      const pathWithoutLeadingSlash = parsed.pathname.replace(/^\//, "");
-      return `/api/customer-image/${pathWithoutLeadingSlash}${parsed.search}${parsed.hash}`;
+      const proxyPath = parsed.pathname + parsed.search + parsed.hash;
+      return proxyPath;
     }
   } catch {
     // Not a valid URL — return as-is
