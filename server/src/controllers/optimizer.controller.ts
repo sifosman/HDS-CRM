@@ -847,10 +847,16 @@ export const generateQuote = async (req: Request, res: Response) => {
 
     // Save quote to database with all required fields for PayFast integration
     // Compute the full totals (including hardware) for accurate DB persistence
+    // IMPORTANT: The price lists are VAT-INCLUSIVE ("Price VAT Incl" in the AI
+    // Price sheet / hds_prices_william; the default list is the WooCommerce
+    // retail catalog). The customer pays the computed total as-is, so VAT is
+    // reported as the 15% portion WITHIN the total (15/115), never added on
+    // top. This keeps quotes.total aligned with the PDF grand total, the
+    // chatbot message and the PayFast charge amount.
     const totalEdgingCostForSave = parseFloat(edgingCostTotal.toFixed(2));
-    const subtotalForSave = parseFloat((grandTotal + totalEdgingCostForSave + totalCuttingFee + hardwareTotal).toFixed(2));
-    const vatForSave = parseFloat((subtotalForSave * 0.15).toFixed(2));
-    const finalTotalForSave = parseFloat((subtotalForSave + vatForSave).toFixed(2));
+    const finalTotalForSave = parseFloat((grandTotal + totalEdgingCostForSave + totalCuttingFee + hardwareTotal).toFixed(2));
+    const vatForSave = parseFloat((finalTotalForSave * 15 / 115).toFixed(2));
+    const subtotalForSave = parseFloat((finalTotalForSave - vatForSave).toFixed(2));
 
     let quoteSaveData: any;
 
@@ -890,7 +896,7 @@ export const generateQuote = async (req: Request, res: Response) => {
           }],
           totals: {
             subtotal: subtotalForSave,
-            tax: vatForSave, // 15% VAT
+            tax: vatForSave, // 15% VAT portion within the VAT-inclusive total
             finalTotal: finalTotalForSave
           },
           // Include explicit branch info for downstream consumers (invoice/email)
@@ -907,7 +913,9 @@ export const generateQuote = async (req: Request, res: Response) => {
       };
     } catch (dataError) {
       console.error('Error creating quote save data:', dataError);
-      // Fallback to minimal quote data
+      // Fallback to minimal quote data (VAT-inclusive: VAT is a portion within grandTotal)
+      const fallbackVat = parseFloat((grandTotal * 15 / 115).toFixed(2));
+      const fallbackSubtotal = parseFloat((grandTotal - fallbackVat).toFixed(2));
       quoteSaveData = {
         filename: pdfId,
         cutlistId: dynamicCutlistId, // Use the generated cutlist ID
@@ -924,16 +932,16 @@ export const generateQuote = async (req: Request, res: Response) => {
             total: grandTotal
           }],
           totals: {
-            subtotal: grandTotal,
-            tax: grandTotal * 0.15,
-            finalTotal: grandTotal * 1.15
+            subtotal: fallbackSubtotal,
+            tax: fallbackVat,
+            finalTotal: grandTotal
           },
           // Include explicit branch info if available even in fallback
           branchData: branchData || null
         },
-        subtotal: grandTotal,
-        tax: grandTotal * 0.15,
-        total: grandTotal * 1.15,
+        subtotal: fallbackSubtotal,
+        tax: fallbackVat,
+        total: grandTotal,
         status: 'pending',
         cutlistPdfUrl: cutlistPdfUrl
       };
@@ -978,7 +986,7 @@ export const generateQuote = async (req: Request, res: Response) => {
           method: 'Pending Payment',
           reference: `QUOTE-${quoteId}`,
           date: new Date().toISOString(),
-          amount: finalTotalForSave, // Include 15% VAT + hardware to match quote total
+          amount: finalTotalForSave, // VAT-inclusive payable (boards + edging + cutting + hardware)
           payment_id: `PENDING-${Date.now()}`
         });
         if (invoiceResult.success && invoiceResult.data?.invoiceNumber) {
@@ -1038,11 +1046,13 @@ export const generateQuote = async (req: Request, res: Response) => {
       }
     }
 
-    // Calculate final totals (VAT-inclusive) — hardware included
+    // Calculate final totals (VAT-inclusive) — hardware included.
+    // Prices are VAT-inclusive, so finalTotal is the payable amount and VAT
+    // is the 15% portion within it.
     const totalEdgingCost = parseFloat(edgingCostTotal.toFixed(2));
-    const subtotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee + hardwareTotal).toFixed(2));
-    const vat = parseFloat((subtotal * 0.15).toFixed(2));
-    const finalTotal = parseFloat((subtotal + vat).toFixed(2));
+    const finalTotal = parseFloat((grandTotal + totalEdgingCost + totalCuttingFee + hardwareTotal).toFixed(2));
+    const vat = parseFloat((finalTotal * 15 / 115).toFixed(2));
+    const subtotal = parseFloat((finalTotal - vat).toFixed(2));
 
     // Return the processed data with all cost components
     res.status(200).json({

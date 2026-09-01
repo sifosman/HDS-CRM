@@ -975,6 +975,7 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       // Extract sections data (same as quote PDF)
       const sections = parsedQuoteData.sections || [];
+      const hardwareTotal = parseFloat(parsedQuoteData.hardwareTotal || 0) || 0;
       
       // Debug: Log the sections data structure
       console.log('🔍 DEBUG: Sections data:', JSON.stringify(sections, null, 2));
@@ -993,7 +994,12 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       // Parse quote data to get the actual totals
       try {
-        const parsedQuoteData = JSON.parse(quoteData.quote_data || '{}');
+        // Supabase returns jsonb columns as objects — only parse when we get a string.
+        // JSON.parse on an object throws, which previously killed the edging/cutting
+        // fee calculation and made invoices show R0.00 fees.
+        const parsedQuoteData = typeof quoteData.quote_data === 'string'
+          ? JSON.parse(quoteData.quote_data || '{}')
+          : (quoteData.quote_data || {});
         console.log('📊 Parsed quote data keys:', Object.keys(parsedQuoteData));
         
         // Always calculate edging and cutting fees from sections data first
@@ -1070,8 +1076,11 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
           const quoteTotals = parsedQuoteData.totals;
           console.log('💰 Found totals in quote data:', quoteTotals);
           
-          // The quote already has calculated totals - use the subtotal as our base
-          finalTotal = parseFloat(quoteTotals.subtotal || quoteTotals.finalTotal || 0);
+          // VAT-inclusive totals: finalTotal is the payable amount (VAT is a
+          // portion within it). Legacy rows (pre VAT-inclusive fix) stored the
+          // payable in subtotal with 15% wrongly added on top in finalTotal —
+          // those rows are recomputed from sections below / backfilled.
+          finalTotal = parseFloat(quoteTotals.finalTotal || quoteTotals.subtotal || 0);
           
           // Calculate board total by subtracting fees from final total
           boardTotal = finalTotal - totalEdgingCost - totalCuttingFee;
@@ -1097,8 +1106,8 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
           boardTotal = sections.reduce((sum: number, section: any) => sum + (section.sectionTotal || 0), 0);
           boardTotal = parseFloat(boardTotal.toFixed(2));
           
-          // Calculate final grand total with edging and cutting fee included
-          finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
+          // Calculate final grand total with edging, cutting fee and hardware included
+          finalTotal = boardTotal + totalEdgingCost + totalCuttingFee + hardwareTotal;
           
           console.log('✅ Calculated from sections - Board:', boardTotal, 'Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee, 'Total:', finalTotal);
         }
@@ -1117,9 +1126,9 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
         boardTotal = parseFloat(boardTotal.toFixed(2));
         console.log('✅ Board total calculated from sections:', boardTotal);
         
-        // Calculate final total as: board total + edging + cutting fee
-        finalTotal = boardTotal + totalEdgingCost + totalCuttingFee;
-        console.log('✅ Final total calculated as board + edging + cutting:', finalTotal);
+        // Calculate final total as: board total + edging + cutting fee + hardware
+        finalTotal = boardTotal + totalEdgingCost + totalCuttingFee + hardwareTotal;
+        console.log('✅ Final total calculated as board + edging + cutting + hardware:', finalTotal);
       } else if (quoteData.total && !isNaN(quoteData.total)) {
         console.log('⚠️ No sections data, using database quote.total as fallback:', quoteData.total);
         finalTotal = parseFloat(quoteData.total);
@@ -1283,7 +1292,7 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       // Edging costs row
       doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
-      doc.text(`Total Edging Cost (${totalEdgingMeters.toFixed(2)}m @ R${EDGING_PRICE_PER_METER}/m)`, 60, summaryY + 8);
+      doc.text(`Total Edging Cost (${totalEdgingMeters.toFixed(2)}m)`, 60, summaryY + 8);
       doc.text(`R ${totalEdgingCost.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
       
       summaryY += summaryRowHeight;
@@ -1297,14 +1306,25 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
 
       summaryY += summaryRowHeight;
 
-      // Grand total row (no VAT)
+      // Hardware row (only when hardware was quoted)
+      if (hardwareTotal > 0) {
+        doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight).stroke();
+        doc.text('Hardware & Accessories', 60, summaryY + 8);
+        doc.text(`R ${hardwareTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
+        summaryY += summaryRowHeight;
+      }
+
+      // Grand total row — VAT-inclusive payable (VAT is a portion within it)
       doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
          .fillAndStroke('#003366', '#000000');
-      
+
       doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-      doc.text('TOTAL:', 60, summaryY + 8);
+      doc.text('TOTAL (VAT INCL):', 60, summaryY + 8);
       doc.text(`R ${finalTotal.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
-      doc.font('Helvetica');
+      doc.font('Helvetica').fontSize(8).fillColor('#333333');
+      const vatIncluded = parseFloat((finalTotal * 15 / 115).toFixed(2));
+      doc.text(`Includes 15% VAT: R ${vatIncluded.toFixed(2)}`, 60, summaryY + summaryRowHeight + 4);
+      doc.fontSize(10).fillColor('#333333');
       
       // Payment Status Section
       doc.moveDown(1);
@@ -1962,15 +1982,22 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
     y += sumRowH;
   });
 
-  // Grand total row (black background, red amount)
+  // Grand total row (black background, red amount) — VAT-inclusive payable:
+  // price lists are VAT-inclusive, so the customer pays this total as-is.
   drawRect(sumX, y, sumW, sumRowH + 5, COLOR_BLACK);
   doc.fontSize(12).fillColor(COLOR_WHITE).font('Helvetica-Bold');
-  doc.text('GRAND TOTAL', sumX + 10, y + 11, { width: sumColW[0] - 15 });
+  doc.text('GRAND TOTAL (VAT INCL)', sumX + 10, y + 11, { width: sumColW[0] - 15 });
   doc.fillColor(COLOR_RED);
   doc.text(`R ${finalTotal.toFixed(2)}`, sumX + sumColW[0], y + 11, {
     width: sumColW[1] - 10, align: 'right'
   });
-  y += sumRowH + 5 + 20;
+  y += sumRowH + 5;
+
+  // VAT note — VAT is a 15% portion within the total, not added on top
+  const vatIncluded = parseFloat((finalTotal * 15 / 115).toFixed(2));
+  doc.fontSize(8).fillColor(COLOR_TEXT_GRAY).font('Helvetica');
+  doc.text(`Includes 15% VAT: R ${vatIncluded.toFixed(2)}`, sumX, y + 3, { width: sumW, align: 'right' });
+  y += 20;
 
   // ====== 5. CONTACT & PAYMENT INFO (two side-by-side cards) ======
   y = ensureSpace(200, y);
