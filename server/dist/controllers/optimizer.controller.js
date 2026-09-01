@@ -231,8 +231,8 @@ const generateQuote = async (req, res) => {
             if (!m)
                 return false;
             const hasPremiumWhite = m.includes('premium white');
-            const hasMelChip = m.includes('mel chip') || m.includes('melamine chip');
-            return hasPremiumWhite && hasMelChip;
+            const hasChip = m.includes('chip') || m.includes('mel chip') || m.includes('melamine chip');
+            return hasPremiumWhite && hasChip;
         };
         // Process each material section
         const processedSections = [];
