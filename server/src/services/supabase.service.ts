@@ -446,6 +446,123 @@ const SupabaseService = {
   },
 
   /**
+   * Find a recent chatbot quote for a phone number within a time window.
+   * Used for quote deduplication — if a customer generates multiple quotes
+   * in the same session, we update the existing one instead of creating duplicates.
+   * Returns the most recent matching quote, or null.
+   */
+  async getRecentChatbotQuote(phoneNumber: string, withinMinutes: number = 30): Promise<any> {
+    try {
+      if (!phoneNumber) return { success: false, data: null };
+
+      // Normalize phone number (strip leading +, convert 0X to 27X)
+      let normalized = phoneNumber.replace(/^\+/, '');
+      if (normalized.startsWith('0')) {
+        normalized = '27' + normalized.substring(1);
+      }
+
+      const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000).toISOString();
+
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, quote_number, filename, customer_phone, total, created_at, source')
+        .eq('source', 'chatbot')
+        .eq('customer_phone', normalized)
+        .gte('created_at', cutoff)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('getRecentChatbotQuote error:', error);
+        return { success: false, data: null, error: error.message };
+      }
+
+      return { success: true, data: data || null };
+    } catch (error: any) {
+      console.error('Error in getRecentChatbotQuote:', error);
+      return { success: false, data: null, error: error.message };
+    }
+  },
+
+  /**
+   * Count recent chatbot quotes for a phone number within a time window.
+   * Used to block excessive quote generation in a single session.
+   */
+  async countRecentChatbotQuotes(phoneNumber: string, withinMinutes: number = 30): Promise<number> {
+    try {
+      if (!phoneNumber) return 0;
+
+      let normalized = phoneNumber.replace(/^\+/, '');
+      if (normalized.startsWith('0')) {
+        normalized = '27' + normalized.substring(1);
+      }
+
+      const cutoff = new Date(Date.now() - withinMinutes * 60 * 1000).toISOString();
+
+      const { count, error } = await supabase
+        .from('quotes')
+        .select('id', { count: 'exact', head: true })
+        .eq('source', 'chatbot')
+        .eq('customer_phone', normalized)
+        .gte('created_at', cutoff);
+
+      if (error) {
+        console.error('countRecentChatbotQuotes error:', error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error: any) {
+      console.error('Error in countRecentChatbotQuotes:', error);
+      return 0;
+    }
+  },
+
+  /**
+   * Update an existing quote with new data (for quote versioning / dedup).
+   * Updates the quote_data, totals, and PDF URLs on the existing record
+   * instead of creating a new quote row.
+   */
+  async updateExistingQuote(quoteNumber: string, updateData: any): Promise<any> {
+    try {
+      const updatePayload: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (updateData.quoteData !== undefined) updatePayload.quote_data = updateData.quoteData;
+      if (updateData.subtotal !== undefined) updatePayload.subtotal = updateData.subtotal;
+      if (updateData.tax !== undefined) updatePayload.tax = updateData.tax;
+      if (updateData.total !== undefined) updatePayload.total = updateData.total;
+      if (updateData.cutlistUrl !== undefined) updatePayload.cutlist_url = updateData.cutlistUrl;
+      if (updateData.cutlistPdfUrl !== undefined) {
+        // Only update cutlist_url if cutlistUrl wasn't explicitly set
+        if (updateData.cutlistUrl === undefined) updatePayload.cutlist_url = updateData.cutlistPdfUrl;
+      }
+      if (updateData.filename !== undefined) updatePayload.filename = updateData.filename;
+      if (updateData.cutlistId !== undefined) updatePayload.cutlist_id = updateData.cutlistId;
+
+      const { data, error } = await supabase
+        .from('quotes')
+        .update(updatePayload)
+        .eq('quote_number', quoteNumber)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('updateExistingQuote error:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('updateExistingQuote: updated quote', quoteNumber);
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Error in updateExistingQuote:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Create a new quote in the database
    *
    * Table schema:

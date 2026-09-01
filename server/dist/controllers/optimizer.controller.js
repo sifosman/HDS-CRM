@@ -147,7 +147,7 @@ const importIQData = async (req, res) => {
 exports.importIQData = importIQData;
 // Generate a complete quote with optimization, pricing, and PDF
 const generateQuote = async (req, res) => {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     try {
         const { sections, customerName, projectName, phoneNumber, branchData, hardware, source, priceList } = req.body;
         // Validate input — allow hardware-only quotes too (no sections required if hardware present)
@@ -158,6 +158,51 @@ const generateQuote = async (req, res) => {
         }
         if (!customerName) {
             return res.status(400).json({ message: 'Customer name is required' });
+        }
+        // ====== QUOTE DEDUPLICATION (chatbot only) ======
+        // When a chatbot customer iterates their cutting list in the same session,
+        // update the existing quote instead of creating a duplicate.
+        // This prevents denominator inflation (one customer = 7 quotes in a day).
+        let existingQuoteNumber = null;
+        let isQuoteUpdate = false;
+        if (source === 'chatbot' && phoneNumber) {
+            try {
+                const recentCount = await supabase_service_1.default.countRecentChatbotQuotes(phoneNumber, 30);
+                const recentQuote = await supabase_service_1.default.getRecentChatbotQuote(phoneNumber, 30);
+                // Block excessive quote generation (>3 in 30 min = likely a loop bug)
+                if (recentCount >= 4) {
+                    console.log(`[DEDUP] Blocked excessive quote generation: ${recentCount} quotes in 30min for ${phoneNumber}`);
+                    return res.status(429).json({
+                        success: false,
+                        message: 'Too many quotes generated in a short period. Please confirm the order with the customer before generating another quote.',
+                        existingQuoteNumber: ((_a = recentQuote === null || recentQuote === void 0 ? void 0 : recentQuote.data) === null || _a === void 0 ? void 0 : _a.quote_number) || null,
+                        recentQuoteCount: recentCount
+                    });
+                }
+                // If there's a recent quote, check if this is a revision (same materials)
+                if (recentQuote.success && recentQuote.data) {
+                    const recentTotal = Number(recentQuote.data.total || 0);
+                    // Extract materials from the incoming sections
+                    const incomingMaterials = (sections || []).map((s) => (s.material || '').toLowerCase().trim()).sort();
+                    // We can't easily compare materials without the old quote_data, but we can
+                    // use the total as a heuristic: if the new quote total is within 20% of the
+                    // old one, treat it as a revision. This is conservative — large changes
+                    // (different products) will create a new quote as expected.
+                    //
+                    // Actually, the better approach: always update the most recent quote if it's
+                    // within 30 minutes. The bot prompt tells the customer "I'll update your
+                    // existing quote" so the user expectation is set. Different products in the
+                    // same session = still the same customer conversation, so one quote record
+                    // is correct.
+                    existingQuoteNumber = recentQuote.data.quote_number;
+                    isQuoteUpdate = true;
+                    console.log(`[DEDUP] Will update existing quote ${existingQuoteNumber} instead of creating new (recent within 30min, count=${recentCount})`);
+                }
+            }
+            catch (dedupErr) {
+                // Non-fatal — if dedup check fails, proceed with normal quote creation
+                console.warn('[DEDUP] Non-fatal error checking for recent quote:', dedupErr);
+            }
         }
         // ====== EDGING TYPE PRICING ======
         // Chatbot quotes can specify an edgingType per section. Each type has a different per-meter price.
@@ -190,12 +235,17 @@ const generateQuote = async (req, res) => {
         let edgingCostTotal = 0;
         let totalBoardsUsed = 0; // Track total boards used for cutting fee
         // Generate a unique quote ID with branch name BEFORE processing sections
+        // If this is a quote update (dedup), reuse the existing quote number
         const now = new Date();
         const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
         const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-        // Include branch name in quote ID if available
         let quoteId;
-        if (branchData && branchData.trading_as) {
+        if (isQuoteUpdate && existingQuoteNumber) {
+            // Reuse the existing quote number — this is a revision, not a new quote
+            quoteId = existingQuoteNumber;
+            console.log(`[DEDUP] Reusing existing quote ID: ${quoteId}`);
+        }
+        else if (branchData && branchData.trading_as) {
             // Create branch abbreviation from trading_as (more descriptive)
             let branchAbbr = '';
             const words = branchData.trading_as.split(' ').filter((word) => word.length > 0);
@@ -395,7 +445,7 @@ const generateQuote = async (req, res) => {
             });
             const solution = (0, optimizer_service_1.optimizeCuttingLayout)(stockPieces, optimizerCutPieces, cutWidth, layout);
             console.log('Optimization result:', {
-                solutionStockPiecesCount: ((_a = solution.stockPieces) === null || _a === void 0 ? void 0 : _a.length) || 0,
+                solutionStockPiecesCount: ((_b = solution.stockPieces) === null || _b === void 0 ? void 0 : _b.length) || 0,
                 solutionStockPieces: JSON.stringify(solution.stockPieces)
             });
             // Generate and upload cutlist PDF to cutlists bucket
@@ -790,14 +840,31 @@ const generateQuote = async (req, res) => {
             total: quoteSaveData.total,
             hasCutlistId: !!quoteSaveData.cutlistId,
             hasQuoteData: !!quoteSaveData.quoteData,
-            itemsCount: ((_c = (_b = quoteSaveData.quoteData) === null || _b === void 0 ? void 0 : _b.items) === null || _c === void 0 ? void 0 : _c.length) || 0
+            itemsCount: ((_d = (_c = quoteSaveData.quoteData) === null || _c === void 0 ? void 0 : _c.items) === null || _d === void 0 ? void 0 : _d.length) || 0,
+            isQuoteUpdate
         });
-        const quoteResult = await supabase_service_1.default.createQuote(quoteSaveData);
+        // If this is a quote update (dedup), update the existing record instead of inserting
+        let quoteResult;
+        if (isQuoteUpdate && existingQuoteNumber) {
+            console.log(`[DEDUP] Updating existing quote ${existingQuoteNumber} instead of creating new`);
+            quoteResult = await supabase_service_1.default.updateExistingQuote(existingQuoteNumber, {
+                quoteData: quoteSaveData.quoteData,
+                subtotal: quoteSaveData.subtotal,
+                tax: quoteSaveData.tax,
+                total: quoteSaveData.total,
+                cutlistUrl: quoteSaveData.cutlistUrl || quoteSaveData.cutlistPdfUrl,
+                filename: quoteSaveData.filename,
+                cutlistId: quoteSaveData.cutlistId,
+            });
+        }
+        else {
+            quoteResult = await supabase_service_1.default.createQuote(quoteSaveData);
+        }
         if (!quoteResult.success) {
             console.error('Failed to save quote to database:', quoteResult.error);
         }
         else {
-            console.log('Quote saved to database successfully with ID:', (_d = quoteResult.data) === null || _d === void 0 ? void 0 : _d.id);
+            console.log('Quote saved to database successfully with ID:', (_e = quoteResult.data) === null || _e === void 0 ? void 0 : _e.id);
             // Create invoice and generate PDF at quote creation time
             try {
                 console.log('🚀 Creating invoice at quote creation time for:', quoteId);
@@ -809,7 +876,7 @@ const generateQuote = async (req, res) => {
                     amount: finalTotalForSave, // Include 15% VAT + hardware to match quote total
                     payment_id: `PENDING-${Date.now()}`
                 });
-                if (invoiceResult.success && ((_e = invoiceResult.data) === null || _e === void 0 ? void 0 : _e.invoiceNumber)) {
+                if (invoiceResult.success && ((_f = invoiceResult.data) === null || _f === void 0 ? void 0 : _f.invoiceNumber)) {
                     invoiceNumber = invoiceResult.data.invoiceNumber;
                     // Generate and upload invoice PDF immediately
                     if (invoiceNumber) {

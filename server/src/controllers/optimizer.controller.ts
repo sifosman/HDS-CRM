@@ -187,6 +187,54 @@ export const generateQuote = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Customer name is required' });
     }
 
+    // ====== QUOTE DEDUPLICATION (chatbot only) ======
+    // When a chatbot customer iterates their cutting list in the same session,
+    // update the existing quote instead of creating a duplicate.
+    // This prevents denominator inflation (one customer = 7 quotes in a day).
+    let existingQuoteNumber: string | null = null;
+    let isQuoteUpdate = false;
+
+    if (source === 'chatbot' && phoneNumber) {
+      try {
+        const recentCount = await SupabaseService.countRecentChatbotQuotes(phoneNumber, 30);
+        const recentQuote = await SupabaseService.getRecentChatbotQuote(phoneNumber, 30);
+
+        // Block excessive quote generation (>3 in 30 min = likely a loop bug)
+        if (recentCount >= 4) {
+          console.log(`[DEDUP] Blocked excessive quote generation: ${recentCount} quotes in 30min for ${phoneNumber}`);
+          return res.status(429).json({
+            success: false,
+            message: 'Too many quotes generated in a short period. Please confirm the order with the customer before generating another quote.',
+            existingQuoteNumber: recentQuote?.data?.quote_number || null,
+            recentQuoteCount: recentCount
+          });
+        }
+
+        // If there's a recent quote, check if this is a revision (same materials)
+        if (recentQuote.success && recentQuote.data) {
+          const recentTotal = Number(recentQuote.data.total || 0);
+          // Extract materials from the incoming sections
+          const incomingMaterials = (sections || []).map((s: any) => (s.material || '').toLowerCase().trim()).sort();
+          // We can't easily compare materials without the old quote_data, but we can
+          // use the total as a heuristic: if the new quote total is within 20% of the
+          // old one, treat it as a revision. This is conservative — large changes
+          // (different products) will create a new quote as expected.
+          //
+          // Actually, the better approach: always update the most recent quote if it's
+          // within 30 minutes. The bot prompt tells the customer "I'll update your
+          // existing quote" so the user expectation is set. Different products in the
+          // same session = still the same customer conversation, so one quote record
+          // is correct.
+          existingQuoteNumber = recentQuote.data.quote_number;
+          isQuoteUpdate = true;
+          console.log(`[DEDUP] Will update existing quote ${existingQuoteNumber} instead of creating new (recent within 30min, count=${recentCount})`);
+        }
+      } catch (dedupErr) {
+        // Non-fatal — if dedup check fails, proceed with normal quote creation
+        console.warn('[DEDUP] Non-fatal error checking for recent quote:', dedupErr);
+      }
+    }
+
     // ====== EDGING TYPE PRICING ======
     // Chatbot quotes can specify an edgingType per section. Each type has a different per-meter price.
     // BotSailor and web quotes don't pass edgingType, so they fall back to the default R14/m.
@@ -222,13 +270,17 @@ export const generateQuote = async (req: Request, res: Response) => {
     let totalBoardsUsed = 0; // Track total boards used for cutting fee
 
     // Generate a unique quote ID with branch name BEFORE processing sections
+    // If this is a quote update (dedup), reuse the existing quote number
     const now = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const randomNum = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    
-    // Include branch name in quote ID if available
+
     let quoteId;
-    if (branchData && branchData.trading_as) {
+    if (isQuoteUpdate && existingQuoteNumber) {
+      // Reuse the existing quote number — this is a revision, not a new quote
+      quoteId = existingQuoteNumber;
+      console.log(`[DEDUP] Reusing existing quote ID: ${quoteId}`);
+    } else if (branchData && branchData.trading_as) {
       // Create branch abbreviation from trading_as (more descriptive)
       let branchAbbr = '';
       const words = branchData.trading_as.split(' ').filter((word: string) => word.length > 0);
@@ -893,10 +945,26 @@ export const generateQuote = async (req: Request, res: Response) => {
       total: quoteSaveData.total,
       hasCutlistId: !!quoteSaveData.cutlistId,
       hasQuoteData: !!quoteSaveData.quoteData,
-      itemsCount: quoteSaveData.quoteData?.items?.length || 0
+      itemsCount: quoteSaveData.quoteData?.items?.length || 0,
+      isQuoteUpdate
     });
-    
-    const quoteResult = await SupabaseService.createQuote(quoteSaveData);
+
+    // If this is a quote update (dedup), update the existing record instead of inserting
+    let quoteResult;
+    if (isQuoteUpdate && existingQuoteNumber) {
+      console.log(`[DEDUP] Updating existing quote ${existingQuoteNumber} instead of creating new`);
+      quoteResult = await SupabaseService.updateExistingQuote(existingQuoteNumber, {
+        quoteData: quoteSaveData.quoteData,
+        subtotal: quoteSaveData.subtotal,
+        tax: quoteSaveData.tax,
+        total: quoteSaveData.total,
+        cutlistUrl: quoteSaveData.cutlistUrl || quoteSaveData.cutlistPdfUrl,
+        filename: quoteSaveData.filename,
+        cutlistId: quoteSaveData.cutlistId,
+      });
+    } else {
+      quoteResult = await SupabaseService.createQuote(quoteSaveData);
+    }
     
     if (!quoteResult.success) {
       console.error('Failed to save quote to database:', quoteResult.error);
