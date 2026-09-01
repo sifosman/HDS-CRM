@@ -96,6 +96,70 @@ export async function getDashboardStats() {
       ? Math.round((acceptedQuotesCount / fullChatbotQuotes.length) * 100)
       : 0;
 
+  // Per-unique-customer conversion rate — prevents multi-quote customers
+  // (e.g. one customer getting 7 quotes in a day) from distorting the rate.
+  // Counts unique phone numbers that have at least one accepted quote vs
+  // total unique phone numbers with quotes.
+  const quotedPhoneSet = new Set(
+    fullChatbotQuotes
+      .map((q) => q.customer_phone)
+      .filter((p): p is string => !!p)
+  );
+  const acceptedPhoneSet = new Set(
+    acceptedQuotes
+      .map((q) => q.customer_phone)
+      .filter((p): p is string => !!p)
+  );
+  const uniqueQuotedCustomers = quotedPhoneSet.size;
+  const uniqueAcceptedCustomers = acceptedPhoneSet.size;
+  const conversionRatePerCustomer =
+    uniqueQuotedCustomers > 0
+      ? Math.round((uniqueAcceptedCustomers / uniqueQuotedCustomers) * 100)
+      : 0;
+
+  // Quote-age cohort breakdown — shows acceptance rate by quote age bucket.
+  // This separates real regression from maturation artifact (fresh quotes
+  // haven't had time to convert yet).
+  const cohortBuckets = [
+    { label: "0-3 days", minDays: 0, maxDays: 3 },
+    { label: "4-7 days", minDays: 4, maxDays: 7 },
+    { label: "8-14 days", minDays: 8, maxDays: 14 },
+    { label: "15+ days", minDays: 15, maxDays: 999 },
+  ];
+  const nowMs = Date.now();
+  const quoteAgeCohorts = cohortBuckets.map((bucket) => {
+    const bucketQuotes = fullChatbotQuotes.filter((q) => {
+      const ageDays = (nowMs - new Date(q.created_at).getTime()) / (1000 * 60 * 60 * 24);
+      return ageDays >= bucket.minDays && ageDays <= bucket.maxDays;
+    });
+    const bucketAccepted = bucketQuotes.filter(
+      (q) => acceptance[q.id]?.accepted
+    );
+    const bucketPhones = new Set(
+      bucketQuotes.map((q) => q.customer_phone).filter((p): p is string => !!p)
+    );
+    const bucketAcceptedPhones = new Set(
+      bucketAccepted
+        .map((q) => q.customer_phone)
+        .filter((p): p is string => !!p)
+    );
+    return {
+      label: bucket.label,
+      totalQuotes: bucketQuotes.length,
+      acceptedQuotes: bucketAccepted.length,
+      rate:
+        bucketQuotes.length > 0
+          ? Math.round((bucketAccepted.length / bucketQuotes.length) * 100)
+          : 0,
+      uniqueCustomers: bucketPhones.size,
+      uniqueAccepted: bucketAcceptedPhones.size,
+      ratePerCustomer:
+        bucketPhones.size > 0
+          ? Math.round((bucketAcceptedPhones.size / bucketPhones.size) * 100)
+          : 0,
+    };
+  });
+
   // Pipeline stages
   const pipeline = [
     "new",
@@ -132,6 +196,12 @@ export async function getDashboardStats() {
     activeLeads,
     quotesThisWeek: chatbotQuotesThisWeek,
     conversionRate,
+    // Per-unique-customer metrics (prevents multi-quote distortion)
+    conversionRatePerCustomer,
+    uniqueQuotedCustomers,
+    uniqueAcceptedCustomers,
+    // Quote-age cohort breakdown
+    quoteAgeCohorts,
     totalCustomers: customers.length,
     pipeline,
     monthlyRevenue,

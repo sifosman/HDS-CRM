@@ -262,6 +262,20 @@ export default async function ReportsPage({
         ? Math.round((acceptedQuotesCount / windowQuotes.length) * 100)
         : 0;
 
+    // Per-unique-customer conversion rate (prevents multi-quote distortion)
+    const quotedPhones = new Set(
+      windowQuotes.map((q) => q.customer_phone).filter((p): p is string => !!p)
+    );
+    const acceptedPhones = new Set(
+      acceptedWindowQuotes
+        .map((q) => q.customer_phone)
+        .filter((p): p is string => !!p)
+    );
+    const conversionRatePerCustomer =
+      quotedPhones.size > 0
+        ? Math.round((acceptedPhones.size / quotedPhones.size) * 100)
+        : 0;
+
     // Customer type distribution (all customers — type doesn't change by window)
     const typeDistribution = Object.entries(CUSTOMER_TYPE_LABELS).map(
       ([key, label]) => ({
@@ -371,6 +385,9 @@ export default async function ReportsPage({
       totalQuoteValue,
       avgQuoteSize,
       conversionRate,
+      conversionRatePerCustomer,
+      uniqueQuotedCustomers: quotedPhones.size,
+      uniqueAcceptedCustomers: acceptedPhones.size,
       newCustomers,
       returningCustomers,
       typeDistribution,
@@ -414,7 +431,7 @@ export default async function ReportsPage({
             title="Conversion Rate"
             value={`${data.conversionRate}%`}
             icon={TrendingUp}
-            description={`${data.acceptedQuotesCount} accepted / ${data.windowQuotes.length} quotes`}
+            description={`${data.acceptedQuotesCount} accepted / ${data.windowQuotes.length} quotes · ${data.conversionRatePerCustomer}% per customer (${data.uniqueAcceptedCustomers}/${data.uniqueQuotedCustomers})`}
           />
           <KpiCard
             title="New Customers"

@@ -54,7 +54,7 @@ export default async function DashboardPage() {
           title="Conversion Rate"
           value={`${stats.conversionRate}%`}
           icon={TrendingUp}
-          description={`${stats.acceptedQuotesCount} accepted / ${stats.totalQuotes} quotes`}
+          description={`${stats.acceptedQuotesCount} accepted / ${stats.totalQuotes} quotes · ${stats.conversionRatePerCustomer}% per customer (${stats.uniqueAcceptedCustomers}/${stats.uniqueQuotedCustomers})`}
         />
         <KpiCard
           title="Accepted Quotes"
@@ -89,6 +89,45 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quote-Age Cohort Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Close Rate by Quote Age</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Quote Age</th>
+                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">Total Quotes</th>
+                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">Accepted</th>
+                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">Rate (per quote)</th>
+                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">Unique Customers</th>
+                  <th className="text-right py-2 px-3 font-medium text-muted-foreground">Rate (per customer)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.quoteAgeCohorts.map((cohort) => (
+                  <tr key={cohort.label} className="border-b last:border-0">
+                    <td className="py-2 px-3 font-medium">{cohort.label}</td>
+                    <td className="text-right py-2 px-3">{cohort.totalQuotes}</td>
+                    <td className="text-right py-2 px-3">{cohort.acceptedQuotes}</td>
+                    <td className="text-right py-2 px-3 font-semibold">{cohort.rate}%</td>
+                    <td className="text-right py-2 px-3">{cohort.uniqueCustomers}</td>
+                    <td className="text-right py-2 px-3 font-semibold">{cohort.ratePerCustomer}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Fresh quotes (0-3 days) haven&apos;t had time to convert yet. Compare cohorts
+            of similar age to see real conversion trends.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Recent Activity */}
       <Card>
