@@ -56,14 +56,19 @@ function extractImageAnalysis(text: string | null | undefined): string | null {
  * (/storage/...) so images are served from the same origin. The rewrite
  * proxy returns proper binary data (unlike API routes which serialize
  * binary as JSON Buffer on Vercel). The CustomerImage component fetches
- * the proxied URL via fetch() and creates a data URL for the <img> src.
+ * the proxied URL via fetch() and creates a blob URL for the <img> src.
+ *
+ * A cache-busting query parameter is appended to bypass stale CDN caches
+ * that may still hold the old corrupted JSON Buffer responses.
  */
 const SUPABASE_HOST = "xzsibbbghotreolzwnyk.supabase.co";
 function proxyStorageUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.host === SUPABASE_HOST && parsed.pathname.startsWith("/storage/")) {
-      const proxyPath = parsed.pathname + parsed.search + parsed.hash;
+      // Append cache-busting parameter to bypass stale CDN cache
+      const sep = parsed.search ? "&" : "?";
+      const proxyPath = `${parsed.pathname}${parsed.search}${sep}v=fix${parsed.hash}`;
       return proxyPath;
     }
   } catch {
