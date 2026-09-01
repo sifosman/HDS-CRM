@@ -32,6 +32,25 @@ function stripImageAnalysis(text: string | null | undefined): string {
 }
 
 /**
+ * Extract the AI's image analysis from the message text. This is used to
+ * show a description of the photo when the image itself was not stored
+ * (older messages from before image storage was implemented).
+ *
+ * Returns a cleaned-up summary string, or null if no analysis is present.
+ */
+function extractImageAnalysis(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const match = text.match(/\[IMAGE ANALYSIS:\s*([\s\S]*?)\]\s*(?:\[IMAGE TYPE:|\[PHOTO QUALITY FLAG:|$)/i);
+  if (!match) return null;
+  let analysis = match[1].trim();
+  // Truncate very long analyses for display
+  if (analysis.length > 300) {
+    analysis = analysis.slice(0, 300) + "…";
+  }
+  return analysis;
+}
+
+/**
  * Rewrite Supabase Storage URLs to go through the Next.js rewrite proxy
  * (/storage/...) so images are served from the same origin. This avoids
  * third-party image loading issues (referrer/Cloudflare blocks) when
@@ -87,6 +106,11 @@ export function ConversationLog({
           const proxiedImageUrl = hasImageUrl
             ? proxyStorageUrl(msg.image_url!)
             : null;
+          // For messages without a stored image, extract the AI's analysis
+          // so we can show what the photo contained.
+          const imageAnalysis = !proxiedImageUrl && isImageMessage
+            ? extractImageAnalysis(rawText)
+            : null;
 
           return (
             <div
@@ -136,9 +160,16 @@ export function ConversationLog({
                         </div>
                       </a>
                     ) : (
-                      <div className="flex items-center gap-2 rounded-md border border-dashed border-border/60 px-3 py-2 text-xs italic opacity-70">
-                        <ImageOff className="h-4 w-4 shrink-0" />
-                        <span>Photo sent (image not stored)</span>
+                      <div className="rounded-md border border-dashed border-border/60 px-3 py-2 text-xs">
+                        <div className="flex items-center gap-2 opacity-70 mb-1">
+                          <ImageOff className="h-4 w-4 shrink-0" />
+                          <span className="italic">Photo sent (image not stored)</span>
+                        </div>
+                        {imageAnalysis && (
+                          <p className="text-muted-foreground whitespace-pre-wrap break-words mt-1">
+                            {imageAnalysis}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
