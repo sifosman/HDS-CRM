@@ -1,11 +1,12 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const SUPABASE_URL = "https://xzsibbbghotreolzwnyk.supabase.co";
 
 /**
- * Proxies Supabase Storage images through the Next.js server so they can be
- * loaded by the browser as same-origin resources. This avoids cross-origin
- * image loading issues that prevent <img> tags from rendering Supabase images.
+ * Proxies Supabase Storage images through the Next.js server.
+ * Returns a JSON response with a base64 data URL that the client can use
+ * directly as an <img> src. This avoids Vercel's binary response serialization
+ * issues that corrupt image data when returned directly from API routes.
  *
  * Usage: /api/customer-image/storage/v1/object/public/customer-images/...
  */
@@ -21,24 +22,31 @@ export async function GET(
     const response = await fetch(supabaseUrl);
 
     if (!response.ok) {
-      return new Response("Image not found", { status: response.status });
+      return NextResponse.json(
+        { error: "Image not found" },
+        { status: response.status }
+      );
     }
 
     const contentType = response.headers.get("content-type") || "image/jpeg";
-    // Use arrayBuffer -> Uint8Array to ensure binary data is returned properly
     const buffer = await response.arrayBuffer();
-    const uint8 = new Uint8Array(buffer);
+    const base64 = Buffer.from(buffer).toString("base64");
+    const dataUrl = `data:${contentType};base64,${base64}`;
 
-    return new Response(uint8, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, immutable",
-        "Access-Control-Allow-Origin": "*",
-        "Content-Length": String(uint8.byteLength),
-      },
-    });
+    return NextResponse.json(
+      { dataUrl },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=86400, immutable",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
   } catch {
-    return new Response("Failed to fetch image", { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch image" },
+      { status: 500 }
+    );
   }
 }

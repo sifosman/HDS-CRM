@@ -5,9 +5,8 @@ import { ImageIcon } from "lucide-react";
 
 /**
  * Renders a customer image by fetching it via the same-origin API proxy
- * and displaying it as a blob URL. This bypasses cross-origin <img> tag
- * loading issues that prevent Supabase Storage images from rendering
- * directly in the browser.
+ * and displaying it as a base64 data URL. This bypasses cross-origin <img>
+ * tag loading issues and Vercel binary response serialization issues.
  */
 export function CustomerImage({
   src,
@@ -18,27 +17,29 @@ export function CustomerImage({
   alt: string;
   href: string;
 }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    let revoked: string | null = null;
+    let cancelled = false;
     setError(false);
 
     fetch(src)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
+        return res.json();
       })
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        revoked = url;
-        setBlobUrl(url);
+      .then((data) => {
+        if (!cancelled && data.dataUrl) {
+          setDataUrl(data.dataUrl);
+        }
       })
-      .catch(() => setError(true));
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
 
     return () => {
-      if (revoked) URL.revokeObjectURL(revoked);
+      cancelled = true;
     };
   }, [src]);
 
@@ -59,9 +60,9 @@ export function CustomerImage({
       className="block group"
     >
       <div className="relative rounded-md overflow-hidden border border-border/50 inline-block">
-        {blobUrl ? (
+        {dataUrl ? (
           <img
-            src={blobUrl}
+            src={dataUrl}
             alt={alt}
             className="max-h-48 max-w-full object-cover transition-opacity group-hover:opacity-90"
           />
