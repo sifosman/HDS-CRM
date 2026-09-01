@@ -51,6 +51,17 @@ interface Solution {
   }>;
 }
 
+// Helper: detect white melamine boards that qualify for free cutting promo.
+// Only "Premium White" melamine chipboard qualifies — NOT Iceberg White,
+// Pure White, UV White, Platinum White MDF, or other white variants.
+const isWhiteMelamine = (material: string): boolean => {
+  const m = String(material || '').toLowerCase().trim();
+  if (!m) return false;
+  const hasPremiumWhite = m.includes('premium white');
+  const hasMelChip = m.includes('mel chip') || m.includes('melamine chip');
+  return hasPremiumWhite && hasMelChip;
+};
+
 // Convert units
 const convertUnit = (value: number, fromUnit: number, toUnit: number): number => {
   // Units: 0 = mm, 1 = inch, 2 = foot
@@ -1057,13 +1068,14 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
           console.log(`🔍 DEBUG: Total edging meters: ${totalEdgingMeters}m`);
           console.log(`🔍 DEBUG: Total edging cost: R${totalEdgingCost}`);
           
-          // Calculate cutting fee (R70 per board)
+          // Calculate cutting fee (R70 per board) — white melamine boards exempt (free cutting special)
           const cuttingFeePerBoard = 70; // R70 per board
           const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
-          totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
-          
-          console.log(`🔍 DEBUG: Total boards used: ${totalBoardsUsed}`);
-          console.log(`🔍 DEBUG: Cutting fee: ${totalBoardsUsed} boards × R${cuttingFeePerBoard} = R${totalCuttingFee}`);
+          const chargeableBoardsUsed = sections.reduce((sum: number, section: any) => sum + (isWhiteMelamine(section.material) ? 0 : (section.boardsNeeded || 0)), 0);
+          totalCuttingFee = parseFloat((chargeableBoardsUsed * cuttingFeePerBoard).toFixed(2));
+
+          console.log(`🔍 DEBUG: Total boards used: ${totalBoardsUsed}, chargeable: ${chargeableBoardsUsed}`);
+          console.log(`🔍 DEBUG: Cutting fee: ${chargeableBoardsUsed} boards × R${cuttingFeePerBoard} = R${totalCuttingFee}`);
           
           console.log('✅ Calculated fees - Edging:', totalEdgingCost, 'Cutting:', totalCuttingFee);
         } else {
@@ -1142,9 +1154,13 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       // Define variables needed for PDF display
       const cuttingFeePerBoard = 70; // R70 per board (for display purposes)
-      const totalBoardsUsed = sections.length > 0 
+      const totalBoardsUsed = sections.length > 0
         ? sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0)
         : Math.ceil(finalTotal / 500); // Estimate boards if no sections data
+      // Chargeable boards (white melamine exempt from cutting fee)
+      const chargeableBoardsUsed = sections.length > 0
+        ? sections.reduce((sum: number, section: any) => sum + (isWhiteMelamine(section.material) ? 0 : (section.boardsNeeded || 0)), 0)
+        : totalBoardsUsed;
       
       console.log('💰 Final amounts for invoice:');
       console.log('  Board Total:', boardTotal);
@@ -1297,11 +1313,16 @@ export const generateInvoicePdf = (quoteData: any, branchData?: any): Promise<{ 
       
       summaryY += summaryRowHeight;
 
-      // Cutting fee row
+      // Cutting fee row — white melamine boards are free (special promo)
+      const cuttingLabel = chargeableBoardsUsed === 0 && totalBoardsUsed > 0
+        ? `Cutting Fee — FREE (White Melamine Special)`
+        : chargeableBoardsUsed < totalBoardsUsed
+          ? `Cutting Fee (R${cuttingFeePerBoard} × ${chargeableBoardsUsed} board(s)) — White Melamine free`
+          : `Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`;
       doc.rect(50, summaryY, summaryColWidth * 2, summaryRowHeight)
          .fillAndStroke('#ffffff', '#000000');
       doc.fillColor('#000000');
-      doc.text(`Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, 60, summaryY + 8);
+      doc.text(cuttingLabel, 60, summaryY + 8);
       doc.text(`R ${totalCuttingFee.toFixed(2)}`, 60 + summaryColWidth, summaryY + 8);
 
       summaryY += summaryRowHeight;
@@ -1643,7 +1664,9 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
 
   const cuttingFeePerBoard = 70;
   const totalBoardsUsed = sections.reduce((sum: number, section: any) => sum + (section.boardsNeeded || 0), 0);
-  const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+  // White melamine boards are exempt from cutting fee (free cutting special)
+  const chargeableBoardsUsed = sections.reduce((sum: number, section: any) => sum + (isWhiteMelamine(section.material) ? 0 : (section.boardsNeeded || 0)), 0);
+  const totalCuttingFee = parseFloat((chargeableBoardsUsed * cuttingFeePerBoard).toFixed(2));
   const hwTotal = parseFloat((Number(hardwareTotal || 0)).toFixed(2));
   const finalTotal = boardTotal + totalEdgingCost + totalCuttingFee + hwTotal;
 
@@ -1959,10 +1982,17 @@ export const generateQuotePdf = (quoteData: any, isPaid: boolean = false): Promi
   const sumRowH = 28;
   const sumColW = [sumW * 0.65, sumW * 0.35];
 
+  // Cutting fee label — reflects white melamine free cutting special
+  const cuttingFeeLabel = chargeableBoardsUsed === 0 && totalBoardsUsed > 0
+    ? `Cutting Fee — FREE (White Melamine Special)`
+    : chargeableBoardsUsed < totalBoardsUsed
+      ? `Cutting Fee (R${cuttingFeePerBoard} × ${chargeableBoardsUsed} board(s)) — White Melamine free`
+      : `Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`;
+
   const summaryRows = [
     { label: 'Total Board Cost', value: `R ${boardTotal.toFixed(2)}` },
     { label: `Total Edging Cost (${totalEdgingMeters.toFixed(2)}m)`, value: `R ${totalEdgingCost.toFixed(2)}` },
-    { label: `Cutting Fee (R${cuttingFeePerBoard} per board × ${totalBoardsUsed} board(s))`, value: `R ${totalCuttingFee.toFixed(2)}` },
+    { label: cuttingFeeLabel, value: `R ${totalCuttingFee.toFixed(2)}` },
   ];
 
   // Add hardware row if hardware items present

@@ -149,7 +149,7 @@ exports.importIQData = importIQData;
 const generateQuote = async (req, res) => {
     var _a, _b, _c, _d, _e, _f;
     try {
-        const { sections, customerName, projectName, phoneNumber, branchData, hardware, source, priceList } = req.body;
+        const { sections, customerName, projectName, phoneNumber, branchData, hardware, source, priceList, freeCutting } = req.body;
         // Validate input — allow hardware-only quotes too (no sections required if hardware present)
         const hasSections = sections && Array.isArray(sections) && sections.length > 0;
         const hasHardware = hardware && Array.isArray(hardware) && hardware.length > 0;
@@ -223,6 +223,17 @@ const generateQuote = async (req, res) => {
             const key = Object.keys(EDGING_PRICES).find(k => k.toLowerCase() === (edgingType || '').toLowerCase().trim());
             return key ? EDGING_PRICES[key] : DEFAULT_EDGING_PRICE_PER_METER;
         };
+        // Helper: detect white melamine boards that qualify for free cutting promo.
+        // Only "Premium White" melamine chipboard qualifies — NOT Iceberg White,
+        // Pure White, UV White, Platinum White MDF, or other white variants.
+        const isWhiteMelamine = (material) => {
+            const m = String(material || '').toLowerCase().trim();
+            if (!m)
+                return false;
+            const hasPremiumWhite = m.includes('premium white');
+            const hasMelChip = m.includes('mel chip') || m.includes('melamine chip');
+            return hasPremiumWhite && hasMelChip;
+        };
         // Process each material section
         const processedSections = [];
         const pdfSections = [];
@@ -234,6 +245,7 @@ const generateQuote = async (req, res) => {
         let cutlistPdfUrl = '';
         let edgingCostTotal = 0;
         let totalBoardsUsed = 0; // Track total boards used for cutting fee
+        let chargeableBoardsUsed = 0; // Boards that incur cutting fee (white melamine exempt)
         // Generate a unique quote ID with branch name BEFORE processing sections
         // If this is a quote update (dedup), reuse the existing quote number
         const now = new Date();
@@ -466,6 +478,10 @@ const generateQuote = async (req, res) => {
             // 8. Calculate boards needed and wastage statistics
             const boardsNeeded = solution.stockPieces.length;
             totalBoardsUsed += boardsNeeded; // Add to total boards for cutting fee
+            // White melamine boards are exempt from cutting fee (R620 free cutting special)
+            if (!isWhiteMelamine(material)) {
+                chargeableBoardsUsed += boardsNeeded;
+            }
             const boardArea = length * width * boardsNeeded;
             let usedArea = 0;
             // Calculate the total area of all cut pieces (use clamped dimensions)
@@ -596,9 +612,11 @@ const generateQuote = async (req, res) => {
                 })) }));
         }
         // Quote ID already generated earlier in the function
-        // Calculate cutting fee (same as in PDF quote - R70 per board)
+        // Calculate cutting fee (R70 per board) — white melamine boards are exempt (free cutting special)
         const cuttingFeePerBoard = 70; // R70 per board
-        const totalCuttingFee = parseFloat((totalBoardsUsed * cuttingFeePerBoard).toFixed(2));
+        // freeCutting override: if explicitly requested (e.g. promo), waive all cutting fees
+        const effectiveChargeableBoards = freeCutting === true ? 0 : chargeableBoardsUsed;
+        const totalCuttingFee = parseFloat((effectiveChargeableBoards * cuttingFeePerBoard).toFixed(2));
         // ====== HARDWARE LINE ITEMS ======
         // Hardware items (handles, hinges, drawer runners, sinks, etc.) are simple
         // line items: quantity × unit price. No cutting fee, no edging, no nesting.
@@ -692,6 +710,8 @@ const generateQuote = async (req, res) => {
             sections: pdfSections,
             grandTotal,
             totalCuttingFee,
+            totalBoardsUsed,
+            chargeableBoardsUsed,
             phoneNumber,
             branchData,
             bankingDetails, // Add the matched banking details
