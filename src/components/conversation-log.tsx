@@ -31,6 +31,27 @@ function stripImageAnalysis(text: string | null | undefined): string {
     .trim();
 }
 
+/**
+ * Rewrite Supabase Storage URLs to go through the Next.js rewrite proxy
+ * (/storage/...) so images are served from the same origin. This avoids
+ * third-party image loading issues (referrer/Cloudflare blocks) when
+ * displaying customer photos in the conversation log.
+ */
+const SUPABASE_HOST = "xzsibbbghotreolzwnyk.supabase.co";
+function proxyStorageUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.host === SUPABASE_HOST && parsed.pathname.startsWith("/storage/")) {
+      // Replace the host with the proxy path; keep the rest of the path + query
+      const proxyPath = parsed.pathname + parsed.search + parsed.hash;
+      return proxyPath;
+    }
+  } catch {
+    // Not a valid URL — return as-is
+  }
+  return url;
+}
+
 export function ConversationLog({
   conversations,
 }: {
@@ -61,6 +82,11 @@ export function ConversationLog({
             ? stripImageAnalysis(rawText)
             : rawText;
           const hasCustomerText = cleanText.length > 0;
+          // Rewrite Supabase Storage URLs to go through the same-origin proxy
+          // so images load reliably in the browser.
+          const proxiedImageUrl = hasImageUrl
+            ? proxyStorageUrl(msg.image_url!)
+            : null;
 
           return (
             <div
@@ -90,16 +116,16 @@ export function ConversationLog({
                     placeholder so the user knows a photo was sent. */}
                 {isImageMessage && (
                   <div className="mb-2">
-                    {hasImageUrl ? (
+                    {proxiedImageUrl ? (
                       <a
-                        href={msg.image_url!}
+                        href={proxiedImageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block group"
                       >
                         <div className="relative rounded-md overflow-hidden border border-border/50 inline-block">
                           <img
-                            src={msg.image_url!}
+                            src={proxiedImageUrl}
                             alt="Customer image"
                             className="max-h-48 max-w-full object-cover transition-opacity group-hover:opacity-90"
                             loading="lazy"
