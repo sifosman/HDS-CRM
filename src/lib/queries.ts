@@ -498,24 +498,47 @@ export async function getChatbotQuoteAcceptance(
 
   // (a) Customer messages for these phones (role = 'user').
   //     Fetch all of them; we filter by created_at >= quote.created_at in JS.
-  const [messagesRes, profilesRes] = await Promise.all([
-    supabase
+  //     Supabase's default row limit is 1000 — we paginate to avoid silently
+  //     dropping recent messages (which would cause recent quotes to show 0
+  //     accepted even when customers have sent acceptance keywords).
+  const PAGE_SIZE = 1000;
+  const fetchMessagesPage = async (offset: number) => {
+    const res = await supabase
       .from("ai_conversations")
       .select("phone_number, message_text, created_at")
       .in("phone_number", phoneList)
       .eq("role", "user")
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("customer_profiles")
-      .select("phone_number, lead_status")
-      .in("phone_number", phoneList),
-  ]);
+      .order("created_at", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (res.error) throw res.error;
+    return (res.data || []) as {
+      phone_number: string | null;
+      message_text: string | null;
+      created_at: string;
+    }[];
+  };
 
-  const messages = (messagesRes.data || []) as {
+  const profilesPromise = supabase
+    .from("customer_profiles")
+    .select("phone_number, lead_status")
+    .in("phone_number", phoneList);
+
+  // Paginate: keep fetching until a page returns fewer than PAGE_SIZE rows.
+  const messages: {
     phone_number: string | null;
     message_text: string | null;
     created_at: string;
-  }[];
+  }[] = [];
+  let offset = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const page = await fetchMessagesPage(offset);
+    messages.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  const profilesRes = await profilesPromise;
   const profiles = (profilesRes.data || []) as {
     phone_number: string | null;
     lead_status: string | null;
