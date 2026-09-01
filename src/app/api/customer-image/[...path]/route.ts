@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 const SUPABASE_URL = "https://xzsibbbghotreolzwnyk.supabase.co";
 
@@ -21,21 +21,24 @@ export async function GET(
     const response = await fetch(supabaseUrl);
 
     if (!response.ok) {
-      return new NextResponse("Image not found", { status: response.status });
+      return new Response("Image not found", { status: response.status });
     }
 
     const contentType = response.headers.get("content-type") || "image/jpeg";
-    const blob = await response.blob();
+    // Use arrayBuffer -> Uint8Array to ensure binary data is returned properly
+    const buffer = await response.arrayBuffer();
+    const uint8 = new Uint8Array(buffer);
 
-    return new NextResponse(blob, {
+    return new Response(uint8, {
       status: 200,
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=86400, immutable",
         "Access-Control-Allow-Origin": "*",
+        "Content-Length": String(uint8.byteLength),
       },
     });
   } catch {
-    return new NextResponse("Failed to fetch image", { status: 500 });
+    return new Response("Failed to fetch image", { status: 500 });
   }
 }
