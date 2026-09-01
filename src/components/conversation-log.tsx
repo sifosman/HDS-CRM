@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Conversation } from "@/lib/types";
 import { formatDateTime } from "@/lib/constants";
 import { ImageIcon, ImageOff } from "lucide-react";
+import { CustomerImage } from "@/components/customer-image";
 
 /**
  * Strip the AI's internal image analysis markers from the message text so
@@ -141,24 +142,11 @@ export function ConversationLog({
                 {isImageMessage && (
                   <div className="mb-2">
                     {proxiedImageUrl ? (
-                      <a
+                      <CustomerImage
+                        src={proxiedImageUrl}
+                        alt="Customer image"
                         href={proxiedImageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block group"
-                      >
-                        <div className="relative rounded-md overflow-hidden border border-border/50 inline-block">
-                          <img
-                            src={proxiedImageUrl}
-                            alt="Customer image"
-                            className="max-h-48 max-w-full object-cover transition-opacity group-hover:opacity-90"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
-                            <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                      </a>
+                      />
                     ) : (
                       <div className="rounded-md border border-dashed border-border/60 px-3 py-2 text-xs">
                         <div className="flex items-center gap-2 opacity-70 mb-1">
