@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/lib/types";
@@ -147,14 +148,15 @@ export function ConversationLog({
                         rel="noopener noreferrer"
                         className="block group"
                       >
-                        <div className="relative rounded-md overflow-hidden border border-border/50 inline-block">
-                          <img
+                        <div className="relative w-72 h-48 rounded-md overflow-hidden border border-border/50">
+                          <Image
                             src={proxiedImageUrl}
                             alt="Customer image"
-                            className="max-h-48 max-w-full object-cover transition-opacity group-hover:opacity-90"
-                            loading="lazy"
+                            fill
+                            className="object-cover transition-opacity group-hover:opacity-90"
+                            sizes="288px"
                           />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
                             <ImageIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </div>
