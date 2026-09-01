@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import https from "node:https";
 
-const SUPABASE_URL = "https://xzsibbbghotreolzwnyk.supabase.co";
+const SUPABASE_HOST = "xzsibbbghotreolzwnyk.supabase.co";
 
 /**
  * Proxies Supabase Storage images through the Next.js server.
- * Returns a JSON response with a base64 data URL that the client can use
- * directly as an <img> src. This avoids Vercel's binary response serialization
- * issues that corrupt image data when returned directly from API routes.
+ * Returns a JSON response with a base64 data URL.
+ *
+ * Uses node:https instead of fetch() because Vercel's fetch() serializes
+ * binary responses as {"type":"Buffer","data":[...]} JSON, corrupting
+ * the image data.
  *
  * Usage: /api/customer-image/storage/v1/object/public/customer-images/...
  */
@@ -16,21 +19,33 @@ export async function GET(
 ) {
   const { path } = await params;
   const fullPath = path.join("/");
-  const supabaseUrl = `${SUPABASE_URL}/${fullPath}`;
+  const urlPath = `/${fullPath}`;
 
   try {
-    const response = await fetch(supabaseUrl);
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Image not found" },
-        { status: response.status }
+    const chunks: Buffer[] = await new Promise((resolve, reject) => {
+      const req = https.get(
+        {
+          hostname: SUPABASE_HOST,
+          path: urlPath,
+          method: "GET",
+        },
+        (res) => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk: Buffer) => chunks.push(chunk));
+          res.on("end", () => resolve(chunks));
+          res.on("error", reject);
+        }
       );
-    }
+      req.on("error", reject);
+    });
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const buffer = await response.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
+    const buffer = Buffer.concat(chunks);
+    const contentType = "image/jpeg";
+    const base64 = buffer.toString("base64");
     const dataUrl = `data:${contentType};base64,${base64}`;
 
     return NextResponse.json(
