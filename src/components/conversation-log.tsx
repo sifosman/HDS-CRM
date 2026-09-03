@@ -62,6 +62,62 @@ function extractImageAnalysis(text: string | null | undefined): string | null {
  * that may still hold the old corrupted JSON Buffer responses.
  */
 const SUPABASE_HOST = "xzsibbbghotreolzwnyk.supabase.co";
+
+/**
+ * Locate the quote PDF URL for a message. The workflow stores it in
+ * inconsistent places depending on the code path:
+ *   - conversation_metadata.quotePdfUrl (some assistant messages)
+ *   - tool_results.quotePdfUrl (tool-role messages from generate_quote)
+ *   - plain text like "📄 https://.../hdsquotes/Q-..." (most assistant messages)
+ * Checking all three makes the PDF accessible from every quote message,
+ * including historical ones.
+ */
+const QUOTE_PDF_URL_RE =
+  /https:\/\/xzsibbbghotreolzwnyk\.supabase\.co\/storage\/v1\/object\/public\/hdsquotes\/[A-Za-z0-9._-]+/i;
+
+function extractQuotePdfUrl(msg: Conversation): string | null {
+  const meta = msg.conversation_metadata as Record<string, unknown> | null;
+  if (typeof meta?.quotePdfUrl === "string" && meta.quotePdfUrl) {
+    return meta.quotePdfUrl;
+  }
+  const toolRes = msg.tool_results as Record<string, unknown> | null;
+  if (typeof toolRes?.quotePdfUrl === "string" && toolRes.quotePdfUrl) {
+    return toolRes.quotePdfUrl;
+  }
+  return msg.message_text?.match(QUOTE_PDF_URL_RE)?.[0] ?? null;
+}
+
+function extractQuoteTotal(msg: Conversation): number | null {
+  if (msg.quote_total != null) return msg.quote_total;
+  const meta = msg.conversation_metadata as Record<string, unknown> | null;
+  if (typeof meta?.quoteTotal === "number") return meta.quoteTotal;
+  const toolRes = msg.tool_results as Record<string, unknown> | null;
+  if (typeof toolRes?.finalTotal === "number") return toolRes.finalTotal;
+  return null;
+}
+
+/**
+ * Split text on URLs and render each as a clickable link, so quote/invoice
+ * PDF URLs pasted into the message text can be opened directly.
+ */
+function renderTextWithLinks(text: string) {
+  return text.split(/(https?:\/\/[^\s)>\]]+)/g).map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline break-all text-primary"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 function proxyStorageUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -117,6 +173,13 @@ export function ConversationLog({
           const imageAnalysis = !proxiedImageUrl && isImageMessage
             ? extractImageAnalysis(rawText)
             : null;
+          const quotePdfUrl = !isUser ? extractQuotePdfUrl(msg) : null;
+          const quoteTotal = !isUser ? extractQuoteTotal(msg) : null;
+          const quoteLabel =
+            msg.quote_id ??
+            (msg.tool_results as Record<string, unknown> | null)?.quoteId as string ??
+            quotePdfUrl?.match(/hdsquotes\/([A-Za-z0-9._-]+)/)?.[1] ??
+            null;
 
           return (
             <div
@@ -168,17 +231,13 @@ export function ConversationLog({
                   </div>
                 )}
 
-                {/* Quote PDF attachment: when a message has a quote_id and
-                    the PDF URL is available in conversation_metadata, show a
-                    clickable link to open the quote PDF. */}
-                {msg.quote_id && (() => {
-                  const meta = msg.conversation_metadata as Record<string, unknown> | null;
-                  const pdfUrl = (meta?.quotePdfUrl as string) || null;
-                  const quoteTotal = msg.quote_total ?? (meta?.quoteTotal as number) ?? null;
-                  if (!pdfUrl) return null;
+                {/* Quote PDF attachment: shown whenever a PDF URL can be
+                    located (metadata, tool result, or message text) so every
+                    quote sent to the customer is openable from the history. */}
+                {quotePdfUrl && (() => {
                   return (
                     <a
-                      href={pdfUrl}
+                      href={quotePdfUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-2 mb-2 hover:bg-background transition-colors group"
@@ -186,7 +245,7 @@ export function ConversationLog({
                       <FileText className="h-5 w-5 shrink-0 text-red-500" />
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs font-medium truncate">
-                          Quote {msg.quote_id}
+                          Quote {quoteLabel ?? "PDF"}
                         </span>
                         {quoteTotal != null && (
                           <span className="text-xs text-muted-foreground">
@@ -203,7 +262,7 @@ export function ConversationLog({
                     remaining text, show a small label. */}
                 {hasCustomerText ? (
                   <p className="whitespace-pre-wrap break-words">
-                    {cleanText.slice(0, 500)}
+                    {renderTextWithLinks(cleanText.slice(0, 500))}
                   </p>
                 ) : isImageMessage ? (
                   <p className="text-xs italic opacity-70">
