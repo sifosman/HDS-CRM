@@ -810,6 +810,51 @@ export async function getIntelligenceStats() {
   };
 }
 
+/**
+ * Fetch all customer (user-role) messages for activity-time and product-demand
+ * analytics. Paginated to avoid Supabase's default 1000-row limit silently
+ * dropping messages.
+ */
+export async function getUserMessagesForAnalytics(): Promise<
+  Pick<Conversation, "phone_number" | "message_text" | "created_at">[]
+> {
+  const supabase = await createClient();
+  const PAGE_SIZE = 1000;
+  const messages: Pick<Conversation, "phone_number" | "message_text" | "created_at">[] = [];
+  let offset = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data, error } = await supabase
+      .from("ai_conversations")
+      .select("phone_number, message_text, created_at")
+      .eq("role", "user")
+      .order("created_at", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data || []) as Pick<Conversation, "phone_number" | "message_text" | "created_at">[];
+    messages.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return messages;
+}
+
+/**
+ * Product-demand intelligence reports (all time). These are LLM-generated
+ * insights about what customers are asking for, including products HDS does
+ * not stock (details.status = "not_stocked").
+ */
+export async function getProductDemandReports(): Promise<IntelligenceReport[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("intelligence_reports")
+    .select("*")
+    .eq("category", "product_demand")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as IntelligenceReport[];
+}
+
 // ============================================================================
 // Phase 3 — System Health Monitoring
 // ============================================================================

@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DonutChart, BranchBarChart, CountBarChart } from "@/components/charts";
+import { DonutChart, BranchBarChart, CountBarChart, PriceObjectionFunnelChart } from "@/components/charts";
 import { KpiCard } from "@/components/kpi-card";
 import { ReportsDateToggle } from "@/components/reports-date-toggle";
 import {
@@ -26,13 +26,36 @@ import {
   getBranches,
   getSegmentStats,
   getCustomerTypeStats,
+  getUserMessagesForAnalytics,
+  getProductDemandReports,
 } from "@/lib/queries";
+import {
+  computeHourActivity,
+  computeDayActivity,
+  computeQuotedProducts,
+  computeProductMentions,
+  computeUnstockedDemand,
+  computeObjectionStats,
+  computeGrowthOpportunities,
+} from "@/lib/report-analytics";
 import {
   formatCurrency,
   CUSTOMER_TYPE_LABELS,
   CUSTOMER_TYPE_COLORS,
 } from "@/lib/constants";
-import { FileText, DollarSign, Users, TrendingUp, CheckCircle2 } from "lucide-react";
+import {
+  FileText,
+  DollarSign,
+  Users,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  CalendarDays,
+  Package,
+  PackageX,
+  MessageSquareWarning,
+  Lightbulb,
+} from "lucide-react";
 import type { Quote, QuoteAcceptanceMap } from "@/lib/types";
 
 type RangeKey = "weekly" | "monthly" | "yearly" | "all" | "custom";
@@ -315,21 +338,24 @@ export default async function ReportsPage({
         customerByPhone.set(c.phone_number.replace(/^\+/, ""), c);
       }
     }
-    const locationMap: Record<string, { count: number; value: number }> = {};
+    const locationMap: Record<string, { count: number; value: number; accepted: number }> = {};
     windowQuotes.forEach((q) => {
+      const isAccepted = acceptanceMap[q.id]?.accepted ? 1 : 0;
       if (!q.customer_phone) {
         const city = "Unknown";
-        if (!locationMap[city]) locationMap[city] = { count: 0, value: 0 };
+        if (!locationMap[city]) locationMap[city] = { count: 0, value: 0, accepted: 0 };
         locationMap[city].count++;
         locationMap[city].value += Number(q.total || 0);
+        if (isAccepted) locationMap[city].accepted++;
         return;
       }
       const normalizedPhone = q.customer_phone.replace(/^\+/, "");
       const customer = customerByPhone.get(normalizedPhone);
       const city = customer?.city?.trim() || "Unknown";
-      if (!locationMap[city]) locationMap[city] = { count: 0, value: 0 };
+      if (!locationMap[city]) locationMap[city] = { count: 0, value: 0, accepted: 0 };
       locationMap[city].count++;
       locationMap[city].value += Number(q.total || 0);
+      if (isAccepted) locationMap[city].accepted++;
     });
     const quotesByLocation = Object.entries(locationMap)
       .map(([location, stats]) => ({ location, ...stats }))
@@ -403,6 +429,44 @@ export default async function ReportsPage({
   }
 
   const chatbotData = computeReportData(chatbotQuotes, acceptance);
+
+  // ---- Extended analytics: activity times, product demand, objections ----
+  const [userMessages, productDemandReports] = await Promise.all([
+    getUserMessagesForAnalytics(),
+    getProductDemandReports(),
+  ]);
+
+  const hourActivity = computeHourActivity(userMessages, rangeStart, rangeEnd);
+  const dayActivity = computeDayActivity(userMessages, rangeStart, rangeEnd);
+  const quotedProducts = computeQuotedProducts(chatbotQuotes, rangeStart, rangeEnd);
+  const productMentions = computeProductMentions(userMessages, rangeStart, rangeEnd);
+  const unstockedDemand = computeUnstockedDemand(
+    userMessages,
+    productDemandReports,
+    rangeStart,
+    rangeEnd
+  );
+  const { stats: objectionStats } = computeObjectionStats(customers);
+
+  const windowMessageCount = userMessages.filter((m) => {
+    const d = new Date(m.created_at);
+    return !isNaN(d.getTime()) && d >= rangeStart && d <= rangeEnd;
+  }).length;
+
+  const growthOpportunities = computeGrowthOpportunities({
+    quotesByLocation: chatbotData.quotesByLocation,
+    windowQuotes: chatbotData.windowQuotes,
+    acceptance,
+    unstockedDemand,
+    hourActivity,
+    dayActivity,
+    objectionStats,
+    totalMessages: windowMessageCount,
+  });
+
+  const peakHour = [...hourActivity].sort((a, b) => b.count - a.count)[0];
+  const busiestDay = [...dayActivity].sort((a, b) => b.count - a.count)[0];
+  const totalObjectionCount = objectionStats.reduce((s, o) => s + o.count, 0);
 
   function ReportSection({
     data,
@@ -658,6 +722,357 @@ export default async function ReportsPage({
       </Suspense>
 
       <ReportSection data={chatbotData} label="Chatbot" />
+
+      {/* ---- Customer Activity Patterns: when customers message ---- */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              Messages by Hour of Day
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Customer message volume per hour, South African time
+              ({rangeLabel(validRange).toLowerCase()})
+            </p>
+          </CardHeader>
+          <CardContent>
+            {windowMessageCount === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No customer messages in this period
+              </p>
+            ) : (
+              <>
+                <CountBarChart
+                  data={hourActivity.map((h) => ({ label: h.label, value: h.count }))}
+                  label="Messages"
+                />
+                {peakHour && peakHour.count > 0 && (
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Peak hour: <span className="font-medium text-foreground">{peakHour.label}</span>{" "}
+                    with {peakHour.count} messages from {peakHour.customers} customer
+                    {peakHour.customers === 1 ? "" : "s"} — use this to plan staffing and
+                    handover coverage
+                  </p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              Activity by Day of Week
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Customer message volume per weekday, South African time
+              ({rangeLabel(validRange).toLowerCase()})
+            </p>
+          </CardHeader>
+          <CardContent>
+            {windowMessageCount === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No customer messages in this period
+              </p>
+            ) : (
+              <>
+                <CountBarChart
+                  data={dayActivity.map((d) => ({ label: d.label, value: d.count }))}
+                  label="Messages"
+                />
+                {busiestDay && busiestDay.count > 0 && (
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Busiest day:{" "}
+                    <span className="font-medium text-foreground">{busiestDay.label}</span> with{" "}
+                    {busiestDay.count} messages from {busiestDay.customers} customer
+                    {busiestDay.customers === 1 ? "" : "s"}
+                  </p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ---- Product demand ---- */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              Most Quoted Products
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Products appearing on quotes ({rangeLabel(validRange).toLowerCase()}) — boards
+              ranked by value, with hardware lines
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Quotes</TableHead>
+                  <TableHead className="text-right">Units</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quotedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No quotes with product data in this period
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  quotedProducts.map((p) => (
+                    <TableRow key={`${p.type}-${p.name}`}>
+                      <TableCell className="font-medium max-w-[170px] truncate" title={p.name}>
+                        {p.name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={p.type === "board" ? "default" : "secondary"}>
+                          {p.type === "board" ? "Board" : "Hardware"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{p.quotes}</TableCell>
+                      <TableCell className="text-right">{p.units}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(p.value)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Most Asked-For Products (Chats)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Customer messages mentioning each product, mapped to the price list
+              ({rangeLabel(validRange).toLowerCase()})
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-right">Mentions</TableHead>
+                  <TableHead className="text-right">Customers</TableHead>
+                  <TableHead className="text-right">In Price List</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {productMentions.filter((m) => m.mentions > 0).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      No product mentions detected in this period
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  productMentions
+                    .filter((m) => m.mentions > 0)
+                    .slice(0, 12)
+                    .map((m) => (
+                      <TableRow key={m.label}>
+                        <TableCell className="font-medium max-w-[200px] truncate" title={m.label}>
+                          {m.label}
+                        </TableCell>
+                        <TableCell className="text-right">{m.mentions}</TableCell>
+                        <TableCell className="text-right">{m.customers}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={m.stocked ? "secondary" : "destructive"}>
+                            {m.stocked ? "Yes" : "No"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ---- Products asked for that we do not stock ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PackageX className="h-4 w-4 text-muted-foreground" />
+            Requested But Not Stocked
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Products customers asked for that HDS does not carry
+            ({rangeLabel(validRange).toLowerCase()}) — from chat keyword analysis plus
+            AI-detected demand gaps. Each one is a potential stocking or
+            alternative-product opportunity.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Mentions</TableHead>
+                <TableHead className="text-right">Customers</TableHead>
+                <TableHead>Notes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {unstockedDemand.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    No unstocked product requests detected in this period
+                  </TableCell>
+                </TableRow>
+              ) : (
+                unstockedDemand.map((m) => (
+                  <TableRow key={m.label}>
+                    <TableCell className="font-medium">{m.label}</TableCell>
+                    <TableCell className="text-right">{m.mentions}</TableCell>
+                    <TableCell className="text-right">
+                      {m.customers > 0 ? m.customers : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {m.note || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* ---- Objection analysis ---- */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquareWarning className="h-4 w-4 text-muted-foreground" />
+              Objection Reasons
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              All-time objection themes detected by the AI across customer profiles
+              (objections are not timestamped)
+            </p>
+          </CardHeader>
+          <CardContent>
+            {objectionStats.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No objections recorded yet
+              </p>
+            ) : (
+              <PriceObjectionFunnelChart
+                data={objectionStats.slice(0, 10).map((o) => ({
+                  stage: o.shortLabel,
+                  count: o.count,
+                  rate: totalObjectionCount > 0 ? Math.round((o.count / totalObjectionCount) * 100) : 0,
+                }))}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Objection Breakdown</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Where each objection comes from and how many customers raised it
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Objection</TableHead>
+                  <TableHead className="text-right">Customers</TableHead>
+                  <TableHead className="text-right">Times Raised</TableHead>
+                  <TableHead className="text-right">Share</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {objectionStats.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      No objections recorded yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  objectionStats.map((o) => (
+                    <TableRow key={o.tag}>
+                      <TableCell className="font-medium">{o.label}</TableCell>
+                      <TableCell className="text-right">{o.customers}</TableCell>
+                      <TableCell className="text-right">{o.count}</TableCell>
+                      <TableCell className="text-right">
+                        {totalObjectionCount > 0
+                          ? Math.round((o.count / totalObjectionCount) * 100)
+                          : 0}
+                        %
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ---- Growth opportunities ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-muted-foreground" />
+            Growth Opportunities
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Auto-generated from the data above ({rangeLabel(validRange).toLowerCase()} unless
+            noted) — ranked by priority
+          </p>
+        </CardHeader>
+        <CardContent>
+          {growthOpportunities.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No growth opportunities detected for this period. Try a wider date range.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {growthOpportunities.map((o, i) => (
+                <div
+                  key={`${o.area}-${i}`}
+                  className="flex gap-3 rounded-lg border p-3"
+                >
+                  <Badge
+                    variant={
+                      o.priority === "high"
+                        ? "destructive"
+                        : o.priority === "medium"
+                          ? "default"
+                          : "secondary"
+                    }
+                    className="h-fit shrink-0 capitalize"
+                  >
+                    {o.priority}
+                  </Badge>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      <span className="text-muted-foreground font-normal">[{o.area}] </span>
+                      {o.title}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{o.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Customer Type Breakdown with Conversion (shared — based on all customers) */}
       <Card>
