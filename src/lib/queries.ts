@@ -761,6 +761,10 @@ export async function getIntelligenceReports(
     .from("intelligence_reports")
     .select("*")
     .gte("report_date", dateFrom.split("T")[0])
+    // Exclude William Sentinel entries — they run every 15 min and flood
+    // this table. Sentinel alerts are shown on the AI Performance report
+    // page via getAiMonitorAlerts() instead.
+    .not("insight_summary", "ilike", "SENTINEL:%")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as IntelligenceReport[];
@@ -770,7 +774,9 @@ export async function getIntelligenceStats() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("intelligence_reports")
-    .select("category, severity, report_date, conversation_count");
+    .select("category, severity, report_date, conversation_count")
+    // Exclude William Sentinel entries — see getIntelligenceReports() above.
+    .not("insight_summary", "ilike", "SENTINEL:%");
   if (error) throw error;
 
   const reports = data || [];
