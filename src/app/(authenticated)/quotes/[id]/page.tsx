@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   FileText,
   ExternalLink,
+  Scissors,
   Phone,
   Mail,
   MapPin,
@@ -27,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getQuoteById, getQuotePdfUrl, getQuoteAcceptance } from "@/lib/queries";
+import { getQuoteById, getQuotePdfUrl, getCutlistUrl, getQuoteAcceptance } from "@/lib/queries";
 import {
   formatCurrency,
   formatDate,
@@ -105,6 +106,7 @@ export default async function QuoteDetailPage({
   }
 
   const pdfUrl = getQuotePdfUrl(quote);
+  const cutlistUrl = getCutlistUrl(quote);
   const acceptance = await getQuoteAcceptance(quote);
   const quoteData = (quote.quote_data ?? {}) as QuoteData;
   const sections = quoteData.sections ?? [];
@@ -179,6 +181,14 @@ export default async function QuoteDetailPage({
                 <FileText className="h-4 w-4 mr-2" />
                 No PDF
               </Button>
+            )}
+            {cutlistUrl && (
+              <a href={cutlistUrl} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" variant="outline">
+                  <Scissors className="h-4 w-4 mr-2" />
+                  Cutting List
+                </Button>
+              </a>
             )}
           </div>
         </div>
@@ -466,15 +476,25 @@ export default async function QuoteDetailPage({
         </Card>
       )}
 
-      {/* PDF link footer */}
-      {pdfUrl && (
-        <div className="flex justify-end">
-          <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open PDF in new tab
-            </Button>
-          </a>
+      {/* PDF + cutlist link footer */}
+      {(pdfUrl || cutlistUrl) && (
+        <div className="flex justify-end gap-2">
+          {pdfUrl && (
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open Quote PDF
+              </Button>
+            </a>
+          )}
+          {cutlistUrl && (
+            <a href={cutlistUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Scissors className="h-4 w-4 mr-2" />
+                Open Cutting List
+              </Button>
+            </a>
+          )}
         </div>
       )}
     </div>

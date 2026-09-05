@@ -16,14 +16,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, FileText, ExternalLink } from "lucide-react";
+import { Search, FileText, ExternalLink, Scissors } from "lucide-react";
 import type { Quote, QuoteAcceptanceMap } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/constants";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 function quotePdfUrl(q: Quote): string | null {
-  if (q.cutlist_url) return q.cutlist_url;
   if (!q.filename || !SUPABASE_URL) return null;
   return `${SUPABASE_URL}/storage/v1/object/public/hdsquotes/${encodeURIComponent(q.filename)}`;
 }
@@ -126,13 +125,14 @@ export function AcceptedQuotesTable({
                 <TableHead>Determined By</TableHead>
                 <TableHead>Evidence</TableHead>
                 <TableHead>PDF</TableHead>
+                <TableHead>Cutlist</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {acceptedQuotes.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="text-center text-muted-foreground py-8"
                   >
                     No customer-accepted quotes yet
@@ -199,12 +199,28 @@ export function AcceptedQuotesTable({
                           rel="noopener noreferrer"
                           className="inline-flex text-primary hover:underline"
                           onClick={(e) => e.stopPropagation()}
-                          title="Open PDF"
+                          title="Open Quote PDF"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </a>
                       ) : (
                         <FileText className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {q.cutlist_url ? (
+                        <a
+                          href={q.cutlist_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Open Cutting List PDF"
+                        >
+                          <Scissors className="h-4 w-4" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   </TableRow>

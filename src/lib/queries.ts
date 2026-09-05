@@ -661,15 +661,23 @@ export async function getQuoteById(id: string): Promise<Quote | null> {
  *
  * Quote PDFs are stored in the Supabase Storage `hdsquotes` bucket, named
  * after the quote's `filename` column (e.g. "Q-20260817-7450-HDSWALT").
- * The `cutlist_url` column on the quotes table is unreliable (usually null),
- * so we construct the URL from the bucket + filename instead.
+ * The `cutlist_url` column stores a separate cutting list PDF — it should
+ * NOT be used as the quote PDF. Use `getCutlistUrl` for that.
  */
-export function getQuotePdfUrl(quote: Pick<Quote, "filename" | "cutlist_url">): string | null {
-  if (quote.cutlist_url) return quote.cutlist_url;
+export function getQuotePdfUrl(quote: Pick<Quote, "filename">): string | null {
   if (!quote.filename) return null;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) return null;
   return `${supabaseUrl}/storage/v1/object/public/hdsquotes/${encodeURIComponent(quote.filename)}`;
+}
+
+/**
+ * Build the public URL for a quote's cutting list PDF, if one exists.
+ * Cutting lists are stored in the `cutlists` bucket and referenced via
+ * the `cutlist_url` column on the quotes table.
+ */
+export function getCutlistUrl(quote: Pick<Quote, "cutlist_url">): string | null {
+  return quote.cutlist_url ?? null;
 }
 
 export async function getBranches(): Promise<Branch[]> {
