@@ -36,7 +36,7 @@ export default async function DashboardPage() {
           title="Chatbot Revenue"
           value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
-          description="From chatbot quotes"
+          description={`From chatbot quotes · ${stats.totalQuotes} total quotes`}
         />
         <KpiCard
           title="Active Leads"
