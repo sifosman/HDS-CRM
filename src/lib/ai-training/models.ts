@@ -16,7 +16,7 @@ export const ADVISOR_MODELS: ReadonlyArray<{
   {
     id: "anthropic/claude-sonnet-5",
     label: "Claude Sonnet 5",
-    description: "Anthropic — strong reasoning and structured output. Recommended default.",
+    description: "Anthropic — strong reasoning and structured output. Currently used by the WhatsApp chatbot workflow (switched from Qwen 2026-09-05 after model evaluation).",
     defaultMaxTokens: 4096,
     supportsVision: true,
     supportsAudio: false,
@@ -48,7 +48,7 @@ export const ADVISOR_MODELS: ReadonlyArray<{
   {
     id: "qwen/qwen3.8-max",
     label: "Qwen 3.8 Max",
-    description: "Qwen — currently used by the WhatsApp chatbot workflow.",
+    description: "Qwen — previous WhatsApp chatbot model (until 2026-09-05). Kept as rollback option.",
     defaultMaxTokens: 4096,
     supportsVision: true,
     supportsAudio: false,
